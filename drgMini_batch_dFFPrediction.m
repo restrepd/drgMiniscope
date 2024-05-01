@@ -22,7 +22,6 @@ for filNum=first_file:handles.no_files
     
     %Make sure that all the files exist
     dFF_file=handles.dFF_file{filNum};
-    if iscell(handles.this_path)
         this_path=handles.this_path{filNum};
     else
         this_path=handles.this_path;

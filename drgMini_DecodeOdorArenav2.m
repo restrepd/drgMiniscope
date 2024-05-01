@@ -1,4 +1,5 @@
-function handles_out=drgDecodeOdorArenav2(handles_choices)
+function handles_out=drgMini_DecodeOdorArenav2(handles_choices)
+
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 close all
 
@@ -51,7 +52,7 @@ if exist('handles_choices')==0
 
     %Note: The data brought into the Kording lab jupyter notebbok seems to be
     %binned in 200 msec bins
-    dt=0.2;
+    dt=0.2; %Time bins for decoding
     dt_miniscope=1/30;
     n_shuffle=5; %Note that n_shuffle is changed to a maximum of ii_n_training
 

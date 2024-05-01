@@ -22,8 +22,8 @@ warning('off')
 % name{1}='/home/restrepd/minian/20220824_FCM22/20220824_FCM22_012.avi';
 % out_name{1}='/home/restrepd/minian/20220824_FCM22/20220824_FCM22_012_ncorre.mat';
 
-name{1}='/Users/restrepd/Documents/Grants/BRAIN Technology R01 June 30th 2023/Figures/20230518_PVG8f001_40Hz.sld - 20230518_PVG8f_PMT60_PWR2_NM920_40HZ_E_30_Iter_3501_output.tif';
-out_name{1}='/Users/restrepd/Documents/Grants/BRAIN Technology R01 June 30th 2023/Figures/20230518_PVG8f001_40Hz.sld - 20230518_PVG8f_PMT60_PWR2_NM920_40HZ_E_30_Iter_3501_output_ncorr.mat';
+name{1}='/Users/restrepd/Documents/Projects/Basal_Forebrain/290424/0_fiji.avi';
+out_name{1}='/Users/restrepd/Documents/Projects/Basal_Forebrain/290424/0_fiji_ncorre.mat';
 
 
 % % File 21
@@ -83,7 +83,7 @@ end
 
 config=[];
 config = get_defaults_mc(config);
-config.use_gpu = 1;
+config.use_gpu = 0;
 config.file_type='tif';
 
 if all_files_here==1
