@@ -6,11 +6,16 @@ close all
 if exist('handles_choices')==0
     clear all
 
-
-    %First troubleshooting files
+    %Troubleshooting Fabio's files May 14th
     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
-    dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-    arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
+    dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
+    arena_file='20220729_FCM22withodor_odorarena_L4_sync.mat';
+
+    % 
+    % %First troubleshooting files
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
+    % dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
 
 %     %Second troubleshooting files
 %     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
@@ -122,7 +127,25 @@ load([this_path arena_file])
 
 %Extract trials
 trials=[];
+trials.ii_odor=[];
+trials.x_odor=[];
+trials.y_odor=[];
 
+trials.ii_laneodor1=[];
+trials.x_laneodor1=[];
+trials.y_laneodor1=[];
+
+trials.ii_laneodor4=[];
+trials.x_laneodor4=[];
+trials.y_laneodor4=[];
+
+trials.ii_lanewater1=[];
+trials.x_lanewater1=[];
+trials.y_lanewater1=[];
+
+trials.ii_lanewater4=[];
+trials.x_lanewater4=[];
+trials.y_lanewater4=[];
 
 %Extract odor on using the camera sync
 at_end=0;

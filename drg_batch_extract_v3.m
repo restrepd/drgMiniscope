@@ -8,7 +8,7 @@ clear all
 config =[];
 config = get_defaults(config);
 
-config.trace_output_option='baseline_adjusted'; %'baseline_adjusted', 'raw', 'noneg'
+config.trace_output_option='noneg'; %'baseline_adjusted', 'raw', 'noneg'
  
 % config.avg_cell_radius=5;
 % config.num_partitions_x=2;
@@ -27,7 +27,7 @@ config.trace_output_option='baseline_adjusted'; %'baseline_adjusted', 'raw', 'no
 % config.cellfind_min_snr = 5; %4
 % config.thresholds.T_min_snr=10; %7
 
-config.avg_cell_radius=7;
+config.avg_cell_radius=14;
 config.num_partitions_x=1;
 config.num_partitions_y=1;
 config.spatial_highpass_cutoff = 5;
