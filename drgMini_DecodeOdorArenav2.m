@@ -7,14 +7,15 @@ if exist('handles_choices')==0
     clear all
 
     %Troubleshooting Fabio's files May 14th
-    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
-    dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
-    arena_file='20220729_FCM22withodor_odorarena_L4_sync.mat';
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
+    % dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
+    % arena_file='20220729_FCM22withodor_odorarena_L4_sync.mat';
 
     % 
     % %First troubleshooting files
-    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
-    % dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
+    dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
     % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
 
 %     %Second troubleshooting files

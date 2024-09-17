@@ -1,4 +1,4 @@
-function handles_out=drgMini_dFFprediction(handles_choices)
+function handles_out=drgMini_dFFpredictionv2(handles_choices)
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 
 warning('off')
@@ -9,9 +9,9 @@ if exist('handles_choices')==0
     clear all
     close all
 
-    handles_choices.resume_processing=0; %Make this 1 if you want the program to keep all fits already calculated
+    handles_choices.resume_processing=1; %Make this 1 if you want the program to keep all fits already calculated
 
-    handles_choice.is_sphgpu=1;
+    handles_choice.is_sphgpu=0;
     is_sphgpu=handles_choice.is_sphgpu;
 
     % if gpuDeviceCount>0
@@ -40,26 +40,35 @@ if exist('handles_choices')==0
     handles_choices.save_tag='deczdFFopt2'; %This will be used in the name of the save file
     %Files for dFF data
 
-    % %First troubleshooting file
-    % if is_sphgpu==1
-    %     this_path='/data/SFTP/PreProcessedDR/20220804_FCM22/';
+    %First troubleshooting file
+    if is_sphgpu==1
+        this_path='/data/SFTP/PreProcessedDR/20220804_FCM22/';
+    else
+        this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
+    end
+    dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+
+    % if handles_choices.distances_in_mm==0
+    %     arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
     % else
-    %     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
+    arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
     % end
-    % dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-    % 
-    % % if handles_choices.distances_in_mm==0
-    % %     arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
-    % % else
-    %     arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
-    % % end
+    handles_choices.group=1;
+
 
     %Lane 4 only
-    this_path='/data/SFTP/PreProcessedDR/20220526_FCM6_withodor_lane4/';
+    % this_path='/data/SFTP/PreProcessedDR/20220526_FCM6_withodor_lane4/';
+    % 
+    % dFF_file='20220526_FCM6_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
+    % 
+    % arena_file='20220526_FCM6withodor_odorarena_L4_sync_mm.mat';
+    % 
+    % handles_choices.group=2;
 
-    dFF_file='20220526_FCM6_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
-
-    arena_file='20220526_FCM6withodor_odorarena_L4_sync_mm.mat';
+    %Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4
+    %Group 2 is rewarded, with odor lane 4, no odor in lane 1
+    %Group 3 is rewarded, with odor lane 1, no odor in lane 4
+    %Group 4 is rewarded, with no odor in lane 1 and lane 4
 
 
     % handles_choices.process_these_ROIs=[5 8 29 55 98 107 137 138 204];
@@ -139,7 +148,6 @@ if exist('handles_choices')==0
     %7 ann optimize hyper parameters, this is VERY slow!
 
 
-    handles_choices.group=1; %1=odor plume, 2=spatial
 
 
    
@@ -185,6 +193,7 @@ else
     this_path=handles_choices.this_path;
     dFF_file=handles_choices.dFF_file;
     arena_file=handles_choices.arena_file;
+
 
 
     % which_odor_plume=handles_choices.which_odor_plume;   %1=use odor plume from the publication, 2=use odor plume simulated by Aaron
@@ -257,76 +266,85 @@ else
 end
 
 %Now make mean_plume matrices for lanes 1 and 4
+%Determine which lanes have odorants
+%Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4
+%Group 2 is rewarded, with odor lane 4, no odor in lane 1
+%Group 3 is rewarded, with odor lane 1, no odor in lane 4
+%Group 4 is rewarded, with no odor in lane 1 and lane 4
 
-%lane 1
-this_lane=1; %Note that I had mistakenly made lane 1 close to y=0
+switch handles_choices.group
+    case 1
+        %Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4
+        handles_choices.lane1_odor_on=1;
+        handles_choices.lane4_odor_on=1;
+    case 2
+        %Group 2 is rewarded, with odor lane 4, no odor in lane 1
+        handles_choices.lane1_odor_on=0;
+        handles_choices.lane4_odor_on=1;
+    case 3
+        %Group 3 is rewarded, with odor lane 1, no odor in lane 4
+        handles_choices.lane1_odor_on=1;
+        handles_choices.lane4_odor_on=0;
+    case 4
+        %Group 4 is rewarded, with no odor in lane 1 and lane 4
+        handles_choices.lane1_odor_on=0;
+        handles_choices.lane4_odor_on=0;
+end
+
+%Calculate mean for lane 4
+this_lane=4; %Note that I had mistakenly made lane 1 close to y=0, this is =1, not 4 even though I am calcualting lane 4
 for ii_source=1:length(odor_plumes.source)
     if (odor_plumes.source(ii_source).lane==this_lane)&(odor_plumes.source(ii_source).cm_from_floor==handles_choices.cm_from_floor)
         this_source=ii_source;
     end
 end
-
 x_for_plume=10*odor_plumes.source(this_source).x;
 y_for_plume=10*(odor_plumes.source(this_source).y-min(odor_plumes.source(this_source).y));
-mean_plume_lane1=odor_plumes.source(this_source).mean_plume;
-mean_plume_lane1=mean_plume_lane1-min(mean_plume_lane1(:));
-mean_plume_lane1(mean_plume_lane1==0)=min(mean_plume_lane1(mean_plume_lane1~=0));
+mean_plume_l4=odor_plumes.source(this_source).mean_plume;
 
-%Shift the plume to 7 cm (20 mm)
-
-
-if handles_choices.weber_fechner==0
-    mean_plume_lane1=handles_choices.multiplier*mean_plume_lane1.^handles_choices.alpha;
-else
-    %Weber-Frechner
-    mean_plume_lane1=handles_choices.multiplier*log10(mean_plume_lane1);
-end
-
-%lane 4
-this_lane=4;
+%Calculate mean lane 1
+this_lane=1; %Note that I had mistakenly made lane 4 close to y=480, this is =4, not 1 even though I am calcualting lane 4
 for ii_source=1:length(odor_plumes.source)
     if (odor_plumes.source(ii_source).lane==this_lane)&(odor_plumes.source(ii_source).cm_from_floor==handles_choices.cm_from_floor)
         this_source=ii_source;
     end
 end
-
-% x_for_plume=10*odor_plumes.source(this_source).x;
-% y_for_plume=10*(odor_plumes.source(this_source).y-min(odor_plumes.source(this_source).y));
-mean_plume_lane4=odor_plumes.source(this_source).mean_plume;
-mean_plume_lane4=mean_plume_lane4-min(mean_plume_lane4(:));
-mean_plume_lane4(mean_plume_lane4==0)=min(mean_plume_lane4(mean_plume_lane4~=0));
-
-if handles_choices.weber_fechner==0
-    mean_plume_lane4=handles_choices.multiplier*mean_plume_lane4.^handles_choices.alpha;
+mean_plume_l1=odor_plumes.source(this_source).mean_plume;
+ 
+mean_plume_l4=mean_plume_l4-min(mean_plume_l4(:));
+mean_plume_l1=mean_plume_l1-min(mean_plume_l1(:));
+ 
+min_nonzero=min([min(mean_plume_l4(mean_plume_l4~=0)) min(mean_plume_l1(mean_plume_l1~=0))]);
+ 
+if handles_choices.lane4_odor_on==1
+    mean_plume_l4(mean_plume_l4==0)=min_nonzero;
 else
-    %Weber-Frechner
-    mean_plume_lane4=handles_choices.multiplier*log10(mean_plume_lane4);
+    mean_plume_l4(:,:)=min_nonzero;
 end
 
-minC=min([min(mean_plume_lane1(:)) min(mean_plume_lane4(:))]);
-maxC=min([max(mean_plume_lane1(:)) max(mean_plume_lane4(:))]);
+%Shift the plume to 7 cm (20 mm)
+if handles_choices.weber_fechner==0
+    mean_plume_l4=handles_choices.multiplier*mean_plume_l4.^handles_choices.alpha;
+else
+    %Weber-Frechner
+    mean_plume_l4=handles_choices.multiplier*log10(mean_plume_l4);
+end
 
-%Now shift to the actual dimensions of the odorant arena
-new_mean_plume_lane4=mean_plume_lane4(y_for_plume<=480,:);
-mean_plume_lane4=[];
-mean_plume_lane4=new_mean_plume_lane4;
-new_mean_plume_lane1=mean_plume_lane1(y_for_plume>=20,:);
+if handles_choices.lane1_odor_on==1
+    mean_plume_l1(mean_plume_l1==0)=min_nonzero;
+else
+    mean_plume_l1(:,:)=min_nonzero;
+end
 
-%Now shift the center to 7 cm from end
-dy=abs(y_for_plume(2)-y_for_plume(1));
-ii_dy_shift=20/dy;
-mean_plume_lane1=zeros(size(new_mean_plume_lane1,1),size(new_mean_plume_lane1,2));
-mean_plume_lane1(ii_dy_shift+1:end,:)=new_mean_plume_lane1(1:size(new_mean_plume_lane1,1)-ii_dy_shift,:);
-new_y_for_plume=y_for_plume(:,y_for_plume<=480);
-y_for_plume=[];
-y_for_plume=new_y_for_plume;
-ii_y_center=find(y_for_plume==410);
-mean_plume_lane1(1:ii_y_center-1,:)=mean_plume_lane1(ii_y_center+ii_y_center-1:-1:ii_y_center+1,:);
+if handles_choices.weber_fechner==0
+    mean_plume_l1=handles_choices.multiplier*mean_plume_l1.^handles_choices.alpha;
+else
+    %Weber-Frechner
+    mean_plume_l1=handles_choices.multiplier*log10(mean_plume_l1);
+end
 
-% if handles_choices.distances_in_mm==1
-mean_plume_lane1(:,:)=mean_plume_lane1(end:-1:1,:);
-mean_plume_lane4(:,:)=mean_plume_lane4(end:-1:1,:);
-% end
+minC=min([min(mean_plume_l4(:)) min(mean_plume_l1(:))]);
+maxC=max([max(mean_plume_l4(:)) max(mean_plume_l1(:))]);
 
 if handles_choices.displayFigures==1
     figNo=figNo+1;
@@ -339,7 +357,83 @@ if handles_choices.displayFigures==1
     hFig = figure(figNo);
     set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
-    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_lane4')
+    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_l4')
+    colormap fire
+    shading interp
+    caxis([minC maxC]);
+    set(gca, 'YDir', 'reverse');
+    % xlim(x_range)
+    % ylim(y_range)
+    % Ax = gca;
+    % Ax.Color = 'k';
+    xlabel('x (mm)')
+    ylabel('y (mm)')
+
+    title('Mean odor plume lane 4 before shift')
+
+    figNo=figNo+1;
+    try
+        close(figNo)
+    catch
+    end
+
+    %Plot the shifted odor plume
+    hFig = figure(figNo);
+    set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+
+    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_l1')
+    colormap fire
+    shading interp
+    caxis([minC maxC]);
+    set(gca, 'YDir', 'reverse');
+    % xlim(x_range)
+    % ylim(y_range)
+    % Ax = gca;
+    % Ax.Color = 'k';
+    xlabel('x (mm)')
+    ylabel('y (mm)')
+
+    title('Mean odor plume lane 1 before shift')
+end
+ 
+%Now shift to the actual dimensions of the odorant arena
+new_mean_plume_l1=mean_plume_l1(y_for_plume>=20,:);
+mean_plume_l1=[];
+mean_plume_l1=new_mean_plume_l1;
+new_mean_plume_l4=mean_plume_l4(y_for_plume<=480,:);
+mean_plume_l4=new_mean_plume_l4;
+
+new_y_for_plume=y_for_plume(:,y_for_plume<=480);
+y_for_plume=[];
+y_for_plume=new_y_for_plume;
+
+%Now shift the center of lane 4 to 70 mm
+new_mean_plume_l4(y_for_plume>=20,:)=mean_plume_l4(y_for_plume<=460,:);
+from_y_ii=find(y_for_plume<70,1,'first');
+new_mean_plume_l4(length(y_for_plume):-1:from_y_ii,:)=mean_plume_l4((y_for_plume>50)&(y_for_plume<=120),:);
+mean_plume_l4=new_mean_plume_l4;
+
+% dy=abs(y_for_plume(2)-y_for_plume(1));
+% ii_dy_shift=20/dy;
+% mean_plume_l4=zeros(size(new_mean_plume_l4,1),size(new_mean_plume_l4,2));
+% mean_plume_l4(ii_dy_shift+1:end,:)=new_mean_plume_l4(1:size(new_mean_plume_l4,1)-ii_dy_shift,:);
+% ii_y_center=find(y_for_plume==410);
+% mean_plume_l4(1:ii_y_center-1,:)=mean_plume_l4(ii_y_center+ii_y_center-1:-1:ii_y_center+1,:);
+% 
+
+if handles_choices.displayFigures==1
+    figNo=figNo+1;
+    try
+        close(figNo)
+    catch
+    end
+
+    %Plot the shifted odor plume
+    hFig = figure(figNo);
+    set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+
+ 
+    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_l4')
     colormap fire
     shading interp
     caxis([minC maxC]);
@@ -363,7 +457,7 @@ if handles_choices.displayFigures==1
     hFig = figure(figNo);
     set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
-    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_lane1')
+    drg_pcolor(repmat(x_for_plume,length(y_for_plume),1)',repmat(y_for_plume,length(x_for_plume),1),mean_plume_l1')
     colormap fire
     shading interp
     caxis([minC maxC]);
@@ -416,7 +510,7 @@ end
 % dFF=readmatrix([this_path dFF_file]); %Timepoints x ROIs
 
 load([this_path arena_file])
-
+ 
 %Note that Ryan divided by 4
 % if handles_choices.distances_in_mm~=1
 %     arena.xsync=4*arena.xsync;
@@ -691,7 +785,7 @@ end
 
 dFF_times=[1:no_time_points]*dt_miniscope;
 
-no_neurons=size(dFF,2)-1;
+no_neurons=size(dFF,2);
 if ~isfield(handles_choices,'process_these_ROIs')
     handles_choices.process_these_ROIs=[1:no_neurons];
 end
@@ -702,7 +796,7 @@ else
     resume_processing=handles_choices.resume_processing;
 end
 
-
+ 
 if resume_processing==1
     load([this_path arena_file(1:end-4) '_' handles_choices.save_tag '_' num2str(handles_choices.algo) ...
     num2str(handles_choices.weber_fechner) num2str(handles_choices.alpha)...
@@ -722,7 +816,7 @@ for ii_time_bin=1:no_time_bins
     time_to=time_binned(ii_time_bin)+dt/2;
     pos_binned(ii_time_bin,:)=mean(pos((dFF_times>=time_from)&(dFF_times<time_to),:),1);
     for ii_neuron=1:no_neurons
-        neural_data(ii_time_bin,ii_neuron)=mean(dFF((dFF_times>=time_from)&(dFF_times<time_to),ii_neuron+1),1);
+        neural_data(ii_time_bin,ii_neuron)=mean(dFF((dFF_times>=time_from)&(dFF_times<time_to),ii_neuron),1);
     end
 end
 
@@ -737,6 +831,7 @@ trials.odor_trNo=0;
 
 trim_factor=no_time_bins/no_time_points;
 
+dii_bin_trial=[];
 dii_trial=[];
 for trNo=1:length(trials.ii_odor)
     if trials.jj_l1>0
@@ -750,26 +845,27 @@ for trNo=1:length(trials.ii_odor)
             this_water=find((trials.ii_lanewater1>trials.ii_odor(trNo))&(trials.ii_lanewater1<ii_next));
             if ~isempty(this_water)
                 trials.hit1=trials.hit1+1;
-                trials.hit1_ii_start(trials.hit1)=ceil(trim_factor*trials.ii_odor(trNo));
-                trials.hit1_ii_end(trials.hit1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
+                trials.hit1_ii_bin_start(trials.hit1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.hit1_ii_bin_end(trials.hit1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
                 trials.lane1=trials.lane1+1;
-                trials.lane1_ii_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
-                trials.lane1_ii_end(trials.lane1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
+                trials.lane1_ii_bin_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane1_ii_bin_end(trials.lane1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
+                dii_bin_trial=[dii_bin_trial trials.hit1_ii_bin_end(trials.hit1)-trials.hit1_ii_bin_start(trials.hit1)];
                 dii_trial=[dii_trial trials.hit1_ii_end(trials.hit1)-trials.hit1_ii_start(trials.hit1)];
                 trials.odor_trNo=trials.odor_trNo+1;
-                trials.odor_ii_start(trials.odor_trNo)=trials.hit1_ii_start(trials.hit1);
-                trials.odor_ii_end(trials.odor_trNo)=trials.hit1_ii_end(trials.hit1);
+                trials.odor_ii_bin_start(trials.odor_trNo)=trials.hit1_ii_bin_start(trials.hit1);
+                trials.odor_ii_bin_end(trials.odor_trNo)=trials.hit1_ii_bin_end(trials.hit1);
                 trials.odor_trial_type(trials.odor_trNo)=1;
                 trials.odor_lane(trials.odor_trNo)=1;
                 pfft=1;
             else
                 trials.miss1=trials.miss1+1;
-                trials.miss1_ii_start(trials.miss1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.miss1_ii_bin_start(trials.miss1)=ceil(trim_factor*trials.ii_odor(trNo));
                 trials.lane1=trials.lane1+1;
-                trials.lane1_ii_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
-                trials.lane1_ii_end(trials.lane1)=-1;
+                trials.lane1_ii_bin_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane1_ii_bin_end(trials.lane1)=-1;
                 trials.odor_trNo=trials.odor_trNo+1;
-                trials.odor_ii_start(trials.odor_trNo)=trials.miss1_ii_start(trials.miss1);
+                trials.odor_ii_bin_start(trials.odor_trNo)=trials.miss1_ii_bin_start(trials.miss1);
                 trials.odor_trial_type(trials.odor_trNo)=2;
                 trials.odor_lane(trials.odor_trNo)=1;
                 pfft=1;
@@ -788,13 +884,20 @@ for trNo=1:length(trials.ii_odor)
             this_water=find((trials.ii_lanewater4>trials.ii_odor(trNo))&(trials.ii_lanewater4<ii_next));
             if ~isempty(this_water)
                 trials.hit4=trials.hit4+1;
-                trials.hit4_ii_start(trials.hit4)=ceil(trim_factor*trials.ii_odor(trNo));
-                trials.hit4_ii_end(trials.hit4)=ceil(trim_factor*trials.ii_lanewater4(this_water));
+                trials.hit4_ii_bin_start(trials.hit4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.hit4_ii_bin_end(trials.hit4)=ceil(trim_factor*trials.ii_lanewater4(this_water));
+                trials.hit4_ii_start(trials.hit4)=trials.ii_odor(trNo);
+                trials.hit4_ii_end(trials.hit4)=trials.ii_lanewater4(this_water);
                 trials.lane4=trials.lane4+1;
-                trials.lane4_ii_start(trials.lane4)=ceil(trim_factor*trials.ii_odor(trNo));
-                trials.lane4_ii_end(trials.lane4)=ceil(trim_factor*trials.ii_lanewater4(this_water));
+                trials.lane4_ii_bin_start(trials.lane4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane4_ii_bin_end(trials.lane4)=ceil(trim_factor*trials.ii_lanewater4(this_water));
+                trials.lane4_ii_start(trials.lane4)=trials.ii_odor(trNo);
+                trials.lane4_ii_end(trials.lane4)=trials.ii_lanewater4(this_water);
+                dii_bin_trial=[dii_bin_trial trials.hit4_ii_bin_end(trials.hit4)-trials.hit4_ii_bin_start(trials.hit4)];
                 dii_trial=[dii_trial trials.hit4_ii_end(trials.hit4)-trials.hit4_ii_start(trials.hit4)];
                 trials.odor_trNo=trials.odor_trNo+1;
+                trials.odor_ii_bin_start(trials.odor_trNo)=trials.hit4_ii_bin_start(trials.hit4);
+                trials.odor_ii_bin_end(trials.odor_trNo)=trials.hit4_ii_bin_end(trials.hit4);
                 trials.odor_ii_start(trials.odor_trNo)=trials.hit4_ii_start(trials.hit4);
                 trials.odor_ii_end(trials.odor_trNo)=trials.hit4_ii_end(trials.hit4);
                 trials.odor_trial_type(trials.odor_trNo)=3;
@@ -802,11 +905,15 @@ for trNo=1:length(trials.ii_odor)
                 pfft=1;
             else
                 trials.miss4=trials.miss4+1;
-                trials.miss4_ii_start(trials.miss4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.miss4_ii_bin_start(trials.miss4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.miss4_ii_start(trials.miss4)=trials.ii_odor(trNo);
                 trials.lane4=trials.lane4+1;
-                trials.lane4_ii_start(trials.lane4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane4_ii_bin_start(trials.lane4)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane4_ii_start(trials.lane4)=trials.ii_odor(trNo);
+                trials.lane4_ii_bin_end(trials.lane4)=-1;
                 trials.lane4_ii_end(trials.lane4)=-1;
                 trials.odor_trNo=trials.odor_trNo+1;
+                trials.odor_ii_bin_start(trials.odor_trNo)=trials.miss4_ii_bin_start(trials.miss4);
                 trials.odor_ii_start(trials.odor_trNo)=trials.miss4_ii_start(trials.miss4);
                 trials.odor_trial_type(trials.odor_trNo)=4;
                 trials.odor_lane(trials.odor_trNo)=4;
@@ -817,33 +924,39 @@ for trNo=1:length(trials.ii_odor)
 end
 
 for ii_miss=1:trials.miss1
+    trials.miss1_ii_bin_end(ii_miss)=trials.miss1_ii_bin_start(ii_miss)+ceil(mean(dii_bin_trial));
     trials.miss1_ii_end(ii_miss)=trials.miss1_ii_start(ii_miss)+ceil(mean(dii_trial));
 end
 
 for ii_miss=1:trials.miss4
+    trials.miss4_ii_bin_end(ii_miss)=trials.miss4_ii_bin_start(ii_miss)+ceil(mean(dii_bin_trial));
     trials.miss4_ii_end(ii_miss)=trials.miss4_ii_start(ii_miss)+ceil(mean(dii_trial));
 end
 
 for ii_odor=1:trials.odor_trNo
     if trials.odor_trial_type(ii_odor)==4
+        trials.odor_ii_bin_end(ii_odor)=trials.odor_ii_bin_start(ii_odor)+ceil(mean(dii_bin_trial));
         trials.odor_ii_end(ii_odor)=trials.odor_ii_start(ii_odor)+ceil(mean(dii_trial));
     end
     if trials.odor_trial_type(ii_odor)==2
+        trials.odor_ii_bin_end(ii_odor)=trials.odor_ii_bin_start(ii_odor)+ceil(mean(dii_bin_trial));
         trials.odor_ii_end(ii_odor)=trials.odor_ii_start(ii_odor)+ceil(mean(dii_trial));
     end
 end
 
 if trials.jj_l1>0
-    for iil1=1:length(trials.lane1_ii_end)
-        if trials.lane1_ii_end(iil1)==-1
+    for iil1=1:length(trials.lane1_ii_bin_end)
+        if trials.lane1_ii_bin_end(iil1)==-1
+            trials.lane1_ii_bin_end(iil1)=trials.lane1_ii_bin_start(iil1)+ceil(mean(dii_bin_trial));
             trials.lane1_ii_end(iil1)=trials.lane1_ii_start(iil1)+ceil(mean(dii_trial));
         end
     end
 end
 
 if trials.jj_l4>0
-    for iil1=1:length(trials.lane4_ii_end)
-        if trials.lane4_ii_end(iil1)==-1
+    for iil1=1:length(trials.lane4_ii_bin_end)
+        if trials.lane4_ii_bin_end(iil1)==-1
+            trials.lane4_ii_bin_end(iil1)=trials.lane4_ii_bin_start(iil1)+ceil(mean(dii_bin_trial));
             trials.lane4_ii_end(iil1)=trials.lane4_ii_start(iil1)+ceil(mean(dii_trial));
         end
     end
@@ -888,16 +1001,16 @@ if handles_choices.displayFigures==1
 
         %These are hits
         for iil1=1:trials.hit1
-            plot(pos_binned(trials.hit1_ii_start(iil1):trials.hit1_ii_end(iil1),1),pos_binned(trials.hit1_ii_start(iil1):trials.hit1_ii_end(iil1),2),'-r')
-            plot(pos_binned(trials.hit1_ii_start(iil1),1),pos_binned(trials.hit1_ii_start(iil1),2),'or')
-            plot(pos_binned(trials.hit1_ii_end(iil1),1),pos_binned(trials.hit1_ii_end(iil1),2),'xr')
+            plot(pos_binned(trials.hit1_ii_bin_start(iil1):trials.hit1_ii_bin_end(iil1),1),pos_binned(trials.hit1_ii_bin_start(iil1):trials.hit1_ii_bin_end(iil1),2),'-r')
+            plot(pos_binned(trials.hit1_ii_bin_start(iil1),1),pos_binned(trials.hit1_ii_bin_start(iil1),2),'or')
+            plot(pos_binned(trials.hit1_ii_bin_end(iil1),1),pos_binned(trials.hit1_ii_bin_end(iil1),2),'xr')
         end
 
         %These are miss
         for iil1=1:trials.miss1
-            plot(pos_binned(trials.miss1_ii_start(iil1):trials.miss1_ii_end(iil1),1),pos_binned(trials.miss1_ii_start(iil1):trials.miss1_ii_end(iil1),2),'-b')
-            plot(pos_binned(trials.miss1_ii_start(iil1),1),pos_binned(trials.miss1_ii_start(iil1),2),'ob')
-            plot(pos_binned(trials.miss1_ii_end(iil1),1),pos_binned(trials.miss1_ii_end(iil1),2),'xb')
+            plot(pos_binned(trials.miss1_ii_bin_start(iil1):trials.miss1_ii_bin_end(iil1),1),pos_binned(trials.miss1_ii_bin_start(iil1):trials.miss1_ii_bin_end(iil1),2),'-b')
+            plot(pos_binned(trials.miss1_ii_bin_start(iil1),1),pos_binned(trials.miss1_ii_bin_start(iil1),2),'ob')
+            plot(pos_binned(trials.miss1_ii_bin_end(iil1),1),pos_binned(trials.miss1_ii_bin_end(iil1),2),'xb')
         end
 
         set(gca, 'YDir', 'reverse');
@@ -922,16 +1035,16 @@ if handles_choices.displayFigures==1
 
         %These are hits
         for iil4=1:trials.hit4
-            plot(pos_binned(trials.hit4_ii_start(iil4):trials.hit4_ii_end(iil4),1),pos_binned(trials.hit4_ii_start(iil4):trials.hit4_ii_end(iil4),2),'-r')
-            plot(pos_binned(trials.hit4_ii_start(iil4),1),pos_binned(trials.hit4_ii_start(iil4),2),'or')
-            plot(pos_binned(trials.hit4_ii_end(iil4),1),pos_binned(trials.hit4_ii_end(iil4),2),'xr')
+            plot(pos_binned(trials.hit4_ii_bin_start(iil4):trials.hit4_ii_bin_end(iil4),1),pos_binned(trials.hit4_ii_bin_start(iil4):trials.hit4_ii_bin_end(iil4),2),'-r')
+            plot(pos_binned(trials.hit4_ii_bin_start(iil4),1),pos_binned(trials.hit4_ii_bin_start(iil4),2),'or')
+            plot(pos_binned(trials.hit4_ii_bin_end(iil4),1),pos_binned(trials.hit4_ii_bin_end(iil4),2),'xr')
         end
 
         %These are miss
         for iil4=1:trials.miss4
-            plot(pos_binned(trials.miss4_ii_start(iil4):trials.miss4_ii_end(iil4),1),pos_binned(trials.miss4_ii_start(iil4):trials.miss4_ii_end(iil4),2),'-b')
-            plot(pos_binned(trials.miss4_ii_start(iil4),1),pos_binned(trials.miss4_ii_start(iil4),2),'ob')
-            plot(pos_binned(trials.miss4_ii_end(iil4),1),pos_binned(trials.miss4_ii_end(iil4),2),'xb')
+            plot(pos_binned(trials.miss4_ii_bin_start(iil4):trials.miss4_ii_bin_end(iil4),1),pos_binned(trials.miss4_ii_bin_start(iil4):trials.miss4_ii_bin_end(iil4),2),'-b')
+            plot(pos_binned(trials.miss4_ii_bin_start(iil4),1),pos_binned(trials.miss4_ii_bin_start(iil4),2),'ob')
+            plot(pos_binned(trials.miss4_ii_bin_end(iil4),1),pos_binned(trials.miss4_ii_bin_end(iil4),2),'xb')
         end
 
         set(gca, 'YDir', 'reverse');
@@ -994,7 +1107,7 @@ else
     per_ROI=handles_out.per_ROI;
 
 end
-
+ 
 if resume_processing==0
     per_ROI_sh=[];
     for this_ROI=handles_choices.process_these_ROIs
@@ -1033,8 +1146,8 @@ for this_ROI=handles_choices.process_these_ROIs
 
                     % x_pred(trNo).data=[];
 
-                    x_predictedstart=trials.odor_ii_start(trNo);
-                    x_predictedend=trials.odor_ii_end(trNo);
+                    x_predictedstart=trials.odor_ii_bin_start(trNo);
+                    x_predictedend=trials.odor_ii_bin_end(trNo);
                     training_range_template(x_predictedstart:x_predictedend)=1;
                     if trials.odor_lane(trNo)==1
                         lane_template(x_predictedstart:x_predictedend)=1;
@@ -1043,7 +1156,7 @@ for this_ROI=handles_choices.process_these_ROIs
                             this_y=pos_binned(x_ii,2);
                             [minabx,ii_minax]=min(abs(x_for_plume-this_x));
                             [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                            this_ca=mean_plume_lane1(ii_minay,ii_minax);
+                            this_ca=mean_plume_l1(ii_minay,ii_minax);
                             odor_plume_template(x_ii)=this_ca;
                         end
                     else
@@ -1053,7 +1166,7 @@ for this_ROI=handles_choices.process_these_ROIs
                             this_y=pos_binned(x_ii,2);
                             [minabx,ii_minax]=min(abs(x_for_plume-this_x));
                             [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                            this_ca=mean_plume_lane4(ii_minay,ii_minax);
+                            this_ca=mean_plume_l4(ii_minay,ii_minax);
                             odor_plume_template(x_ii)=this_ca;
                         end
                     end
@@ -1062,7 +1175,7 @@ for this_ROI=handles_choices.process_these_ROIs
                 start_toc=toc;
                 % Create the parallel pool once before the main loop
                 % if isempty(gcp('nocreate'))
-                parpool;  % This will use the default number of workers
+                % parpool;  % This will use the default number of workers
                 % end
                 % parfor trNo=1:trials.odor_trNo
                 for trNo=1:trials.odor_trNo
@@ -1071,16 +1184,16 @@ for this_ROI=handles_choices.process_these_ROIs
                     % if trNo==1
                     %     ii_test_range_start=1;
                     % else
-                    %     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+                    %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
                     % end
 
-                    ii_test_range_start=trials.odor_ii_start(trNo);
-                    ii_test_range_end=trials.odor_ii_end(trNo);
+                    ii_test_range_start=trials.odor_ii_bin_start(trNo);
+                    ii_test_range_end=trials.odor_ii_bin_end(trNo);
 
                     % if trNo==trials.odor_trNo
                     %     ii_test_range_end=no_time_bins;
                     % else
-                    %     ii_test_range_end=trials.odor_ii_end(trNo)+15;
+                    %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
                     % end
 
                     this_test_range(ii_test_range_start:ii_test_range_end)=1;
@@ -1306,25 +1419,55 @@ for this_ROI=handles_choices.process_these_ROIs
 
                 thisRxy=corrcoef([all_dFF' all_dFFpred_xy']);
                 per_ROI(this_ROI).results.Rxy=thisRxy(1,2);
-                thisRxyl1=corrcoef([all_dFFl1' all_dFFpredl1_xy']);
-                per_ROI(this_ROI).results.Rxyl1=thisRxyl1(1,2);
-                thisRxyl4=corrcoef([all_dFFl4' all_dFFpredl4_xy']);
-                per_ROI(this_ROI).results.Rxyl4=thisRxyl4(1,2);
+
+                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xy))
+                    thisRxyl1=corrcoef([all_dFFl1' all_dFFpredl1_xy']);
+                    per_ROI(this_ROI).results.Rxyl1=thisRxyl1(1,2);
+                else
+                    per_ROI(this_ROI).results.Rxyl1=NaN;
+                end
+                
+                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xy))
+                    thisRxyl4=corrcoef([all_dFFl4' all_dFFpredl4_xy']);
+                    per_ROI(this_ROI).results.Rxyl4=thisRxyl4(1,2);
+                else
+                    per_ROI(this_ROI).results.Rxyl4=NaN;
+                end
 
                 thisRxyop=corrcoef([all_dFF' all_dFFpred_xyop']);
                 per_ROI(this_ROI).results.Rxyop=thisRxyop(1,2);
-                thisRxyopl1=corrcoef([all_dFFl1' all_dFFpredl1_xyop']);
-                per_ROI(this_ROI).results.Rxyopl1=thisRxyopl1(1,2);
-                thisRxyopl4=corrcoef([all_dFFl4' all_dFFpredl4_xyop']);
-                per_ROI(this_ROI).results.Rxyopl4=thisRxyopl4(1,2);
+
+                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xyop))
+                    thisRxyopl1=corrcoef([all_dFFl1' all_dFFpredl1_xyop']);
+                    per_ROI(this_ROI).results.Rxyopl1=thisRxyopl1(1,2);
+                else
+                    per_ROI(this_ROI).results.Rxyopl1=NaN;
+                end
+
+                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xyop))
+                    thisRxyopl4=corrcoef([all_dFFl4' all_dFFpredl4_xyop']);
+                    per_ROI(this_ROI).results.Rxyopl4=thisRxyopl4(1,2);
+                else
+                    per_ROI(this_ROI).results.Rxyopl4=NaN;
+                end
 
 
                 thisRop=corrcoef([all_dFF' all_dFFpred_op']);
                 per_ROI(this_ROI).results.Rop=thisRop(1,2);
-                thisRopl1=corrcoef([all_dFFl1' all_dFFpredl1_op']);
-                per_ROI(this_ROI).results.Ropl1=thisRopl1(1,2);
-                thisRopl4=corrcoef([all_dFFl4' all_dFFpredl4_op']);
-                per_ROI(this_ROI).results.Ropl4=thisRop(1,2);
+
+                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_op))
+                    thisRopl1=corrcoef([all_dFFl1' all_dFFpredl1_op']);
+                    per_ROI(this_ROI).results.Ropl1=thisRopl1(1,2);
+                else
+                    per_ROI(this_ROI).results.Ropl1=NaN;
+                end
+
+                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_op))
+                    thisRopl4=corrcoef([all_dFFl4' all_dFFpredl4_op']);
+                    per_ROI(this_ROI).results.Ropl4=thisRop(1,2);
+                else
+                    per_ROI(this_ROI).results.Ropl4=NaN;
+                end
 
                 fprintf(1, 'ROI No %d, rho for prediction dFFxy, dFFop dFFxyop %d %d %d\n'...
                     ,this_ROI, per_ROI(this_ROI).results.Rxy,per_ROI(this_ROI).results.Rop...
@@ -1367,8 +1510,8 @@ for this_ROI=handles_choices.process_these_ROIs
                 Mdl_dFFop_pars(trNo).pars=[];
                 Mdl_dFFxyop_pars(trNo).pars=[];
 
-                x_predictedstart=trials.odor_ii_start(trNo);
-                x_predictedend=trials.odor_ii_end(trNo);
+                x_predictedstart=trials.odor_ii_bin_start(trNo);
+                x_predictedend=trials.odor_ii_bin_end(trNo);
                 training_range_template(x_predictedstart:x_predictedend)=1;
                 if trials.odor_lane(trNo)==1
                     lane_template(x_predictedstart:x_predictedend)=1;
@@ -1377,7 +1520,7 @@ for this_ROI=handles_choices.process_these_ROIs
                         this_y=pos_binned(x_ii,2);
                         [minabx,ii_minax]=min(abs(x_for_plume-this_x));
                         [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                        this_ca=mean_plume_lane1(ii_minay,ii_minax);
+                        this_ca=mean_plume_l1(ii_minay,ii_minax);
                         odor_plume_template(x_ii)=this_ca;
                     end
                 else
@@ -1387,7 +1530,7 @@ for this_ROI=handles_choices.process_these_ROIs
                         this_y=pos_binned(x_ii,2);
                         [minabx,ii_minax]=min(abs(x_for_plume-this_x));
                         [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                        this_ca=mean_plume_lane4(ii_minay,ii_minax);
+                        this_ca=mean_plume_l4(ii_minay,ii_minax);
                         odor_plume_template(x_ii)=this_ca;
                     end
                 end
@@ -1413,17 +1556,17 @@ for this_ROI=handles_choices.process_these_ROIs
                         % if trNo==1
                         %     ii_test_range_start=1;
                         % else
-                        %     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+                        %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
                         % end
                         %
                         % if trNo==trials.odor_trNo
                         %     ii_test_range_end=no_time_bins;
                         % else
-                        %     ii_test_range_end=trials.odor_ii_end(trNo)+15;
+                        %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
                         % end
 
-                        ii_test_range_start=trials.odor_ii_start(trNo);
-                        ii_test_range_end=trials.odor_ii_end(trNo);
+                        ii_test_range_start=trials.odor_ii_bin_start(trNo);
+                        ii_test_range_end=trials.odor_ii_bin_end(trNo);
 
                         this_test_range(ii_test_range_start:ii_test_range_end)=1;
                         this_training_range=logical(training_range_template)&(~logical(this_test_range));
@@ -2153,7 +2296,7 @@ sh_sparsityl1l4=zeros(no_neurons,n_shuffle_SI);
 sh_spatial_rhol1l4=zeros(no_neurons,n_shuffle_SI);
 sh_delta_center_of_mass=zeros(no_neurons,n_shuffle_SI);
 
-
+glm_pvalues=[];
 for this_ROI=handles_choices.process_these_ROIs
 
     %Initialize variables
@@ -2173,6 +2316,19 @@ for this_ROI=handles_choices.process_these_ROIs
     these_all_dFF=(per_ROI(this_ROI).results.all_dFF)-min(per_ROI(this_ROI).results.all_dFF);
     these_all_lanes=per_ROI(this_ROI).results.all_lanes;
 
+    %GLM
+    glm_dFF=[];
+    glm_dFF_ii=0;
+
+    glm_dFFl1=[];
+    glm_dFFl1_ii=0;
+
+    glm_dFFl4=[];
+    glm_dFFl4_ii=0;
+
+    glm_dFFl14=[];
+    glm_dFFl14_ii=0;
+
     %Now calculate activity for the odor arena activity map
     for ii_t=1:length(per_ROI(this_ROI).results.all_dFF)
 
@@ -2190,6 +2346,40 @@ for this_ROI=handles_choices.process_these_ROIs
         this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
         sum_dFF_activity=sum_dFF_activity+these_all_dFF(ii_t);
 
+        glm_dFF_ii=glm_dFF_ii+1;
+        glm_dFF.data(glm_dFF_ii)=these_all_dFF(ii_t);
+        glm_dFF.x(glm_dFF_ii)=this_x_ii;
+        glm_dFF.y(glm_dFF_ii)=this_y_ii;
+        glm_dFF.xy(glm_dFF_ii)=(this_y_ii-1)*10+this_x_ii;
+
+        if this_y_ii<=3
+            glm_dFF.lane(glm_dFF_ii)=0; %This is the lane 4 area in the arena
+        else
+            if this_y_ii>=7
+                glm_dFF.lane(glm_dFF_ii)=1; %This is lane 1 area in the areana
+            else
+                glm_dFF.lane(glm_dFF_ii)=2; %This is the center
+            end
+        end
+
+        if these_all_lanes(ii_t)==4
+            glm_dFF.lane_trial(glm_dFF_ii)=0; %Lane 4 trial
+            glm_dFFl14_ii=glm_dFFl14_ii+1;
+            glm_dFFl14.data(glm_dFFl14_ii)=these_all_dFF(ii_t);
+            glm_dFFl14.lane_trial(glm_dFFl14_ii)=0; %Lane 4 trial
+            glm_dFFl4_ii=glm_dFFl4_ii+1;
+            glm_dFFl4.data(glm_dFFl4_ii)=these_all_dFF(ii_t);
+            glm_dFFl4.xy(glm_dFFl4_ii)=(this_y_ii-1)*10+this_x_ii;
+        else
+            glm_dFF.lane_trial(glm_dFF_ii)=1; %Lane 1 trial
+            glm_dFFl14_ii=glm_dFFl14_ii+1;
+            glm_dFFl14.data(glm_dFFl14_ii)=these_all_dFF(ii_t);
+            glm_dFFl14.lane_trial(glm_dFFl14_ii)=1; %Lane 4 trial
+            glm_dFFl1_ii=glm_dFFl1_ii+1;
+            glm_dFFl1.data(glm_dFFl1_ii)=these_all_dFF(ii_t);
+            glm_dFFl1.xy(glm_dFFl1_ii)=(this_y_ii-1)*10+this_x_ii;
+        end
+
         if these_all_lanes(ii_t)==1
             this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_all_dFF(ii_t);
             this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
@@ -2200,6 +2390,63 @@ for this_ROI=handles_choices.process_these_ROIs
             sum_dFFl4_activity=sum_dFFl4_activity+these_all_dFF(ii_t);
         end
     end
+
+    % %Perform the glm
+    % fprintf(1, ['glm for lane 1 vs lane 4 trials with x and y\n'])
+    %
+    % fprintf(1, ['\n\nglm for dFF\n'])
+    % tbl = table(glm_dFF.data',glm_dFF.x',glm_dFF.y',glm_dFF.lane_trial',...
+    %     'VariableNames',{'dFF','x','y','trial'});
+    % mdl = fitglm(tbl,'dFF~x+y+trial'...
+    %     ,'CategoricalVars',[4])
+
+
+
+    %Perform the glm
+    fprintf(1, ['glm for lane 1 vs lane 4 trials with xy\n'])
+
+    fprintf(1, ['\n\nglm for dFF\n'])
+    tbl = table(glm_dFF.data',glm_dFF.xy',glm_dFF.lane_trial',...
+        'VariableNames',{'dFF','xy','trial'});
+    mdl = fitglm(tbl,'dFF~xy+trial'...
+        ,'CategoricalVars',[3])
+
+    glm_pvalues.ROI(this_ROI).pValues=mdl.Coefficients.pValue;
+
+     %Perform the glm
+    fprintf(1, ['glm for lane 1 vs lane 4 trials without xy\n'])
+
+    fprintf(1, ['\n\nglm for dFF lane 1 vs 4, no xy\n'])
+    tbl = table(glm_dFFl14.data',glm_dFFl14.lane_trial',...
+        'VariableNames',{'dFF','trial'});
+    mdl = fitglm(tbl,'dFF~trial'...
+        ,'CategoricalVars',[2])
+
+    glm_l14_pvalues.ROI(this_ROI).pValues=mdl.Coefficients.pValue;
+
+    %Perform the lane 1 glm
+    fprintf(1, ['glm for lane 1 trials with xy\n'])
+
+    fprintf(1, ['\n\nglm for dFF lane 1\n'])
+    tbl = table(glm_dFFl1.data',glm_dFFl1.xy',...
+        'VariableNames',{'dFF','xy'});
+    mdl = fitglm(tbl,'dFF~xy')
+
+    glm_l1_pvalues.ROI(this_ROI).pValues=mdl.Coefficients.pValue;
+
+    %Perform the lane 4 glm
+    fprintf(1, ['glm for lane 4 trials with xy\n'])
+
+    fprintf(1, ['\n\nglm for dFF lane 4\n'])
+    tbl = table(glm_dFFl4.data',glm_dFFl4.xy',...
+        'VariableNames',{'dFF','xy'});
+    mdl = fitglm(tbl,'dFF~xy')
+
+    glm_l4_pvalues.ROI(this_ROI).pValues=mdl.Coefficients.pValue;
+
+    % %Do the ranksum/t-test
+    % fprintf(1, ['\n\nRanksum or t-test p values for average MI for each electrode calculated per mouse for PAC theta' freq_names{pacii+1} '\n'])
+    % [output_data] = drgMutiRanksumorTtest(input_data);
 
     for ii_x=1:10
         for ii_y=1:10
@@ -2236,6 +2483,9 @@ for this_ROI=handles_choices.process_these_ROIs
     no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
 
     y_shift=max(per_ROI(this_ROI).results.all_dFF);
+    if y_shift==0
+        y_shift=1;
+    end
 
     %Plot dFF timecourses
     subplot(2,3,1:3)
@@ -2277,6 +2527,7 @@ for this_ROI=handles_choices.process_these_ROIs
     ylim([-y_shift y_shift*(ii_plot+1)])
 
 
+
     %Show Rhos
 
     %Rop
@@ -2306,6 +2557,9 @@ for this_ROI=handles_choices.process_these_ROIs
     max_this_dFFl4_activity=max(this_dFFl4_activity(:));
     max_this_dFFl1_activity=max(this_dFFl1_activity(:));
     max_activity=max([max_this_dFF_activity max_this_dFFl1_activity max_this_dFFl4_activity]);
+    if max_activity==0
+        max_activity=1;
+    end
     % min_this_dFF_activity=min(this_dFF_activity(:));
     delta_ac=max_activity/255;
     this_masked_dFF_activity=this_dFF_activity;
@@ -2316,6 +2570,7 @@ for this_ROI=handles_choices.process_these_ROIs
     this_cmap(1,:)=[0.2 0.2 0.2];
     colormap(this_cmap)
     clim([-1.5*delta_ac max_activity])
+
     shading interp
     set(gca, 'YDir', 'reverse');
 
@@ -2474,7 +2729,7 @@ for this_ROI=handles_choices.process_these_ROIs
 
 
     end
-    
+
     %Calculate information content
     %I will use information theory Markus et al 1994 https://doi.org/10.1002/hipo.450040404,
 
@@ -2702,12 +2957,12 @@ for this_ROI=handles_choices.process_these_ROIs
                 end
             end
         end
-        
+
 
         %Lane 4
         %Please note I am doing this calculations in all space bins within the
         %mouse's trajectory
-        
+
         for ii_x=1:10
             for ii_y=1:10
                 if sh_maps(ii_sh).this_dFF_activity_n(ii_x,ii_y)>0
@@ -2792,6 +3047,11 @@ handles_out.sh_information_contentl1l4=sh_information_contentl1l4;
 handles_out.sh_sparsityl1l4=sh_sparsityl1l4;
 handles_out.sh_spatial_rhol1l4=sh_spatial_rhol1l4;
 handles_out.sh_delta_center_of_mass=sh_delta_center_of_mass;
+
+handles_out.glm_pvalues=glm_pvalues;
+handles_out.glm_l14_pvalues=glm_l14_pvalues;
+handles_out.glm_l1_pvalues=glm_l1_pvalues;
+handles_out.glm_l4_pvalues=glm_l4_pvalues;
 
 
 

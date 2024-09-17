@@ -1,4 +1,4 @@
-function handles_out=drgMini_DecodeLaneOdorArenav2(handles_choices)
+function handles_out=drgMini_DecodeLaneOdorArenav3(handles_choices)
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 close all
 
@@ -10,6 +10,7 @@ if exist('handles_choices')==0
     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
     dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
     arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+    pred_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm_deczdFFopt2_711103.mat';
 
     %     %Second troubleshooting files
         % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
@@ -31,6 +32,8 @@ if exist('handles_choices')==0
     %Note: The data brought into the Kording lab jupyter notebbok seems to be
     %binned in 200 msec bins
     %     dt=0.2;
+
+    which_ROIs=3; %1 Use all ROIs, 2 Use place cells, 3 use odor cells
 
     %Define the different ranges (training, valid and testing)
     training_fraction=0.9;
@@ -65,7 +68,7 @@ if exist('handles_choices')==0
     %2=only per trial is used for training
     %3=trained with data between trials
 
-    which_ml_algo=2;
+    which_ml_algo=7;
     %1 SVZ
     %2 nn
     %3 tree
@@ -117,6 +120,61 @@ else
     which_training_algorithm=handles_choices.which_training_algorithm;
 end
 
+    %Load prediction file and define place and odor cells
+    load([this_path pred_file])
+
+    spatial_rhol1l4=handles_out.spatial_rhol1l4;
+    delta_center_of_mass=handles_out.delta_center_of_mass;
+
+    no_neurons=length(spatial_rhol1l4);
+
+if which_ROIs~=1
+    p_value_odor=[];
+    p_value_lanexy_trial=[];
+    p_value_xy=[];
+    p_value_xyl1=[];
+    p_value_xyl4=[];
+    for ii_ROI=1:no_neurons
+        p_value_odor=[p_value_odor handles_out.glm_l14_pvalues.ROI(ii_ROI).pValues(2)];
+        p_value_lanexy_trial=[p_value_lanexy_trial handles_out.glm_pvalues.ROI(ii_ROI).pValues(3)];
+        p_value_xy=[p_value_xy handles_out.glm_pvalues.ROI(ii_ROI).pValues(2)];
+        p_value_xyl1=[p_value_xy handles_out.glm_l1_pvalues.ROI(ii_ROI).pValues(2)];
+        p_value_xyl4=[p_value_xy handles_out.glm_l4_pvalues.ROI(ii_ROI).pValues(2)];
+    end
+
+
+    no_place_cells=0;
+    place_cells=[];
+    no_odor_cells=0;
+    odor_cells=[];
+
+    for this_ROI=1:no_neurons
+        %Now show the place cells
+        if (abs(spatial_rhol1l4(this_ROI))>=0.4)&(delta_center_of_mass(this_ROI)<=100)...
+                &(p_value_xy(ii_ROI)<drsFDRpval(p_value_xy))&(p_value_xyl1(ii_ROI)<drsFDRpval(p_value_xyl1))&(p_value_xyl4(ii_ROI)<drsFDRpval(p_value_xyl4))
+            no_place_cells=no_place_cells+1;
+            place_cells=[place_cells this_ROI];
+            pffft=1;
+        end
+
+        %Now show the odor cells
+        if (abs(spatial_rhol1l4(this_ROI))<=0.1)&(delta_center_of_mass(this_ROI)>=300)...
+                &(p_value_odor(ii_ROI)<drsFDRpval(p_value_odor))
+            no_odor_cells=no_odor_cells+1;
+            odor_cells=[odor_cells this_ROI];
+            pffft=1;
+        end
+    end
+    switch which_ROIs
+        case 2
+            process_these_ROIs=place_cells;
+        case 3
+            process_these_ROIs=odor_cells;
+    end
+else
+    process_these_ROIs=[1:no_neurons];
+end
+
 switch which_training_algorithm
     case 1
         fprintf(1,['\nTrained with data for the entire session\n\n'])
@@ -131,12 +189,12 @@ figNo=0;
 %Restart random seeds
 rng('shuffle');
 
-try
-    delete(gcp('nocreate'))
-catch
-end
-% gcp;
-parpool;
+% try
+%     delete(gcp('nocreate'))
+% catch
+% end
+% % gcp;
+% parpool;
 
 dFF=[];
 if strcmp(dFF_file(end-3:end),'.mat')
@@ -155,8 +213,8 @@ else
         dFF=readmatrix([this_path dFF_file]);
     end
 end
-
-
+ 
+dFF=dFF(:,process_these_ROIs);
 % dFF=readmatrix([this_path dFF_file]); %Timepoints x ROIs
 
 load([this_path arena_file])
@@ -523,632 +581,638 @@ end
 tic
 %Set what part of data should be part of the training/testing/validation sets
 %Note that there was a long period of no movement after about 80% of recording, so I did not use this data.
-switch which_training_algorithm
-    case 1
-        %Train with entire session
-        ii_n_training=floor(1/(1-training_fraction));
-
-        for ii_train=1:ii_n_training
-            y_pred(ii_train).data=[];
-            label_pred(ii_train).data=[];
-        end
-
-        parfor ii_train=1:ii_n_training
-            this_test_range=zeros(1,no_time_bins);
-            ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-            ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-            if ii_train==ii_n_training
-                ii_test_range_end=no_time_bins;
-            end
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(~logical(this_test_range),:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(~logical(this_test_range),:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            label_pred(ii_train).data=predict(MdlY1,XdFFtest);
-            y_pred(ii_train).data=predict(MdlY2,XdFFtest);
-        end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-
-        %Parse out the parfor loop output
-        label_predicted=zeros(no_time_bins,1);
-        y_predicted=zeros(no_time_bins,1);
-        for ii_train=1:ii_n_training
-            this_test_range=zeros(1,no_time_bins);
-            ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-            ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-            if ii_train==ii_n_training
-                ii_test_range_end=no_time_bins;
-            end
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            label_predicted(logical(this_test_range),1)=label_pred(ii_train).data;
-            y_predicted(logical(this_test_range),1)=y_pred(ii_train).data;
-
-        end
-
-        %Now do predictions for reversed/permuted training periods
-        if n_shuffle>ii_n_training
-            n_shuffle=ii_n_training;
-        end
-        handles_choices.n_shuffle=n_shuffle;
-        label_predicted_sh=zeros(no_time_bins,n_shuffle);
-        y_predicted_sh=zeros(no_time_bins,n_shuffle);
-
-
-        %We will do a reversal and a circular permutation
-        sh_shift=0;
-        while sh_shift==0
-            sh_shift=floor(rand*n_shuffle);
-        end
-
-        pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
-        for ii_trl=1:size(pos_binned_trimmed,1)
-            pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
-        end
-
-        for ii_shuffled=1:n_shuffle
-
-            for ii_train=1:ii_n_training
-                y_pred(ii_train).data=[];
-                label_pred(ii_train).data=[];
-            end
-
-            parfor ii_train=1:ii_n_training
-
-                this_test_range=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-                if ii_train==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                ii_train_sh=ii_train+sh_shift;
-                if ii_train_sh>ii_n_training
-                    ii_train_sh=ii_train_sh-ii_n_training;
-                end
-                this_test_range_sh=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train_sh-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train_sh);
-                if ii_train_sh==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range_sh(ii_test_range_start:ii_test_range_end)=1;
-
-                %Make sure that this_test_range_sh is the same size as this_test_range
-                if sum(this_test_range_sh)>sum(this_test_range)
-                    first_ii=find(this_test_range_sh==1,1,'first');
-                    this_test_range_sh(first_ii:first_ii+sum(this_test_range_sh)-sum(this_test_range)-1)=0;
-                end
-
-                if sum(this_test_range_sh)<sum(this_test_range)
-                    first_ii=find(this_test_range_sh==1,1,'first');
-                    if first_ii+(sum(this_test_range_sh)-sum(this_test_range))>0
-                        this_test_range_sh(first_ii+(sum(this_test_range_sh)-sum(this_test_range)):first_ii-1)=1;
-                    else
-                        last_ii=find(this_test_range_sh==1,1,'last');
-                        this_test_range_sh(last_ii+1:last_ii+(sum(this_test_range)-sum(this_test_range_sh)))=1;
-                    end
-                end
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(~logical(this_test_range),:);
-
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-
-                XYtrain=pos_binned_reversed(~logical(this_test_range_sh),:);
-
-                %Decode using neural network
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-                label_pred(ii_train).data=predict(MdlY1,XdFFtest);
-                y_pred(ii_train).data=predict(MdlY2,XdFFtest);
-            end
-
-            for ii_train=1:ii_n_training
-                this_test_range=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-                if ii_train==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(ii_train).data;
-                y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(ii_train).data;
-            end
-
-        end
-
-    case 2
-        %Train with trials using a leave one out approach
-
- 
-        %training_range_template has all the trials
-        training_range_template=zeros(1,no_time_bins);
-        lane_labels=zeros(1,no_time_bins);
-        for trNo=1:trials.odor_trNo
-            y_pred(trNo).data=[];
-            label_pred(trNo).data=[];
-
-            switch align_training_start
-                case 0
-                    label_predictedstart=trials.odor_ii_start(trNo)+ii_dt_training_start;
-                case 1
-                    label_predictedstart=trials.odor_ii_end(trNo)+ii_dt_training_start;
-            end
-
-            switch align_training_end
-                case 0
-                    label_predictedend=trials.odor_ii_start(trNo)+ii_dt_training_end;
-                case 1
-                    label_predictedend=trials.odor_ii_end(trNo)+ii_dt_training_end;
-            end
- 
-            training_range_template(label_predictedstart:label_predictedend)=1;
-            lane_labels(label_predictedstart:label_predictedend)=trials.lane_identity(trNo);
-        end
-
-        %         for trNo=1:trials.odor_trNo
-        parfor trNo=1:trials.odor_trNo
-
-            this_test_range=zeros(1,no_time_bins);
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-            this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(this_training_range,:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(this_training_range,:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            tblTrn=[];
-            tblTrn = array2table(XdFFtrain);
-            Y=lane_labels(this_training_range);
-
-            switch which_ml_algo
-                case 1
-                    Mdl = fitcsvm(tblTrn,Y,'Cost',this_cost);
-                case 2
-                    Mdl = fitcnet(tblTrn,Y);
-                case 3
-                    Mdl = fitctree(tblTrn,Y);
-                case 4
-                    Mdl=fitcnb(tblTrn,Y,'Cost',this_cost);
-                case 5
-                    Mdl = fitglm(XdFFtrain,Y','Distribution','binomial');
-                case 6
-                    Mdl = fitcdiscr(tblTrn,Y,'Cost',this_cost);
-                case 7
-                    Mdl = fitcnet(tblTrn,Y,'OptimizeHyperparameters','auto');
-            end
-            %
-            %             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-            %             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            label_pred(trNo).data=predict(Mdl,XdFFtest);
-            %             y_pred(trNo).data=predict(MdlY2,XdFFtest);
-
-
-        end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-
-        %Parse out the parfor loop output
-        label_predicted=zeros(no_time_bins,1);
-        accuracy=zeros(no_time_bins,1);
-        %         y_predicted=zeros(no_time_bins,1);
-        for trNo=1:trials.odor_trNo
-            this_test_range=zeros(1,no_time_bins);
-
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            label_predicted(logical(this_test_range),1)=label_pred(trNo).data;
-            %             y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
-
-            %Compute accuracy
-            this_accuracy=zeros(size(label_pred(trNo).data,1),size(label_pred(trNo).data,2));
-            if trials.lane_identity(trNo)==1
-                these_times=logical(label_pred(trNo).data==1);
-                this_accuracy(these_times)=1;
-                this_accuracy(~these_times)=0;
-            else
-                these_times=logical(label_pred(trNo).data==1);
-                this_accuracy(these_times)=0;
-                this_accuracy(~these_times)=1;
-            end
-            accuracy(logical(this_test_range),1)=this_accuracy;
-        end
-
-        %Now do shuffled decoding
-        label_predicted_sh=zeros(no_time_bins,n_shuffle);
-        accuracy_sh=zeros(no_time_bins,n_shuffle);
-
-        for ii_shuffled=1:n_shuffle
-
-            for trNo=1:trials.odor_trNo
-                y_pred(trNo).data=[];
-                label_pred(trNo).data=[];
-            end
-
-            %get the lane_labels for this shuffling run
-            sh_lane_labels=zeros(1,no_time_bins);
-            for trNo=1:trials.odor_trNo
-                label_predictedstart=trials.odor_ii_start(trNo)-10;
-                label_predictedend=trials.odor_ii_end(trNo)+15;
-                sh_lane_labels(label_predictedstart:label_predictedend)=trials.shuffled(ii_shuffled).lane_identity(trNo);
-            end
-
-            parfor trNo=1:trials.odor_trNo
-%            for trNo=1:trials.odor_trNo
-
-
-                this_test_range=zeros(1,no_time_bins);
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(this_training_range,:);
-                % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-                XYtrain=pos_binned_trimmed(this_training_range,:);
-                % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-                %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-                %Decode using neural network
-                tblTrn=[];
-                tblTrn = array2table(XdFFtrain);
-                Y=sh_lane_labels(this_training_range);
-
-                switch which_ml_algo
-                    case 1
-                        Mdl = fitcsvm(tblTrn,Y,'Cost',this_cost);
-                    case 2
-                        Mdl = fitcnet(tblTrn,Y);
-                    case 3
-                        Mdl = fitctree(tblTrn,Y);
-                    case 4
-                        Mdl=fitcnb(tblTrn,Y,'Cost',this_cost);
-                    case 5
-                        Mdl = fitglm(XdFFtrain,Y','Distribution','binomial');
-                    case 6
-                        Mdl = fitcdiscr(tblTrn,Y,'Cost',this_cost);
-                    case 7
-                        %Note that we do not optimize the shuffled runs
-                        Mdl = fitcnet(tblTrn,Y);
-                end
-                %
-                %             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                %             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-                %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-                %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-                %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-                label_pred(trNo).data=predict(Mdl,XdFFtest);
-                %             y_pred(trNo).data=predict(MdlY2,XdFFtest);
-
-
-                %
-                %                 this_test_range=zeros(1,no_time_bins);
-                %                 if trNo==1
-                %                     ii_test_range_start=1;
-                %                 else
-                %                     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                %                 end
-                %
-                %                 if trNo==trials.odor_trNo
-                %                     ii_test_range_end=no_time_bins;
-                %                 else
-                %                     ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                %                 end
-                %
-                %                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                %                 this_training_range=logical(training_range_template)&(~logical(this_test_range));
-                %
-                %                 % ii_valid_range=ceil(valid_range*no_time_bins);
-                %                 %     ii_test_range=ceil(test_range*no_time_bins);
-                %
-                %                 XdFFtrain=X_dFF(this_training_range,:);
-                %                 % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                %                 XdFFtest=X_dFF(logical(this_test_range),:);
-                %
-                %                 XYtrain=pos_binned_reversed(this_training_range,:);
-                %
-                %
-                %
-                %                 %Decode using neural network
-                %                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                %                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-                %
-                %                 label_pred(trNo).data=predict(MdlY1,XdFFtest);
-                %                 y_pred(trNo).data=predict(MdlY2,XdFFtest);
-            end
-
-            for trNo=1:trials.odor_trNo
-                this_test_range=zeros(1,no_time_bins);
-
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(trNo).data;
-                %Compute accuracy
-                this_accuracy=zeros(size(label_pred(trNo).data,1),size(label_pred(trNo).data,2));
-                if trials.lane_identity(trNo)==1
-                    these_times=logical(label_pred(trNo).data==1);
-                    this_accuracy(these_times)=1;
-                    this_accuracy(~these_times)=0;
-                else
-                    these_times=logical(label_pred(trNo).data==1);
-                    this_accuracy(these_times)=0;
-                    this_accuracy(~these_times)=1;
-                end
-                accuracy_sh(logical(this_test_range),ii_shuffled)=this_accuracy;
-            end
-
-        end
-
+% switch which_training_algorithm
+%     case 1
+%         %Train with entire session
+%         ii_n_training=floor(1/(1-training_fraction));
+%
+%         for ii_train=1:ii_n_training
+%             y_pred(ii_train).data=[];
+%             label_pred(ii_train).data=[];
+%         end
+%
+%         parfor ii_train=1:ii_n_training
+%             this_test_range=zeros(1,no_time_bins);
+%             ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
+%             ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
+%             if ii_train==ii_n_training
+%                 ii_test_range_end=no_time_bins;
+%             end
+%             this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%             % ii_valid_range=ceil(valid_range*no_time_bins);
+%             %     ii_test_range=ceil(test_range*no_time_bins);
+%
+%             XdFFtrain=X_dFF(~logical(this_test_range),:);
+%             % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+%             XdFFtest=X_dFF(logical(this_test_range),:);
+%
+%             XYtrain=pos_binned_trimmed(~logical(this_test_range),:);
+%             % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
+%             %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
+%
+%             %Decode using neural network
+%             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+%             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+%
+%             %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
+%
+%             %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
+%             %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
+%
+%             label_pred(ii_train).data=predict(MdlY1,XdFFtest);
+%             y_pred(ii_train).data=predict(MdlY2,XdFFtest);
+%         end
+%         fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+%
+%         %Parse out the parfor loop output
+%         label_predicted=zeros(no_time_bins,1);
+%         y_predicted=zeros(no_time_bins,1);
+%         for ii_train=1:ii_n_training
+%             this_test_range=zeros(1,no_time_bins);
+%             ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
+%             ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
+%             if ii_train==ii_n_training
+%                 ii_test_range_end=no_time_bins;
+%             end
+%             this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%             label_predicted(logical(this_test_range),1)=label_pred(ii_train).data;
+%             y_predicted(logical(this_test_range),1)=y_pred(ii_train).data;
+%
+%         end
+%
+%         %Now do predictions for reversed/permuted training periods
+%         if n_shuffle>ii_n_training
+%             n_shuffle=ii_n_training;
+%         end
+%         handles_choices.n_shuffle=n_shuffle;
+%         label_predicted_sh=zeros(no_time_bins,n_shuffle);
+%         y_predicted_sh=zeros(no_time_bins,n_shuffle);
+%
+%
+%         %We will do a reversal and a circular permutation
+%         sh_shift=0;
+%         while sh_shift==0
+%             sh_shift=floor(rand*n_shuffle);
+%         end
+%
+%         pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
+%         for ii_trl=1:size(pos_binned_trimmed,1)
+%             pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
+%         end
+%
+%         for ii_shuffled=1:n_shuffle
+%
+%             for ii_train=1:ii_n_training
+%                 y_pred(ii_train).data=[];
+%                 label_pred(ii_train).data=[];
+%             end
+%
+%             parfor ii_train=1:ii_n_training
+%
+%                 this_test_range=zeros(1,no_time_bins);
+%                 ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
+%                 ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
+%                 if ii_train==ii_n_training
+%                     ii_test_range_end=no_time_bins;
+%                 end
+%                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%                 ii_train_sh=ii_train+sh_shift;
+%                 if ii_train_sh>ii_n_training
+%                     ii_train_sh=ii_train_sh-ii_n_training;
+%                 end
+%                 this_test_range_sh=zeros(1,no_time_bins);
+%                 ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train_sh-1));
+%                 ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train_sh);
+%                 if ii_train_sh==ii_n_training
+%                     ii_test_range_end=no_time_bins;
+%                 end
+%                 this_test_range_sh(ii_test_range_start:ii_test_range_end)=1;
+%
+%                 %Make sure that this_test_range_sh is the same size as this_test_range
+%                 if sum(this_test_range_sh)>sum(this_test_range)
+%                     first_ii=find(this_test_range_sh==1,1,'first');
+%                     this_test_range_sh(first_ii:first_ii+sum(this_test_range_sh)-sum(this_test_range)-1)=0;
+%                 end
+%
+%                 if sum(this_test_range_sh)<sum(this_test_range)
+%                     first_ii=find(this_test_range_sh==1,1,'first');
+%                     if first_ii+(sum(this_test_range_sh)-sum(this_test_range))>0
+%                         this_test_range_sh(first_ii+(sum(this_test_range_sh)-sum(this_test_range)):first_ii-1)=1;
+%                     else
+%                         last_ii=find(this_test_range_sh==1,1,'last');
+%                         this_test_range_sh(last_ii+1:last_ii+(sum(this_test_range)-sum(this_test_range_sh)))=1;
+%                     end
+%                 end
+%
+%                 % ii_valid_range=ceil(valid_range*no_time_bins);
+%                 %     ii_test_range=ceil(test_range*no_time_bins);
+%
+%                 XdFFtrain=X_dFF(~logical(this_test_range),:);
+%
+%                 XdFFtest=X_dFF(logical(this_test_range),:);
+%
+%
+%                 XYtrain=pos_binned_reversed(~logical(this_test_range_sh),:);
+%
+%                 %Decode using neural network
+%                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+%                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+%
+%                 label_pred(ii_train).data=predict(MdlY1,XdFFtest);
+%                 y_pred(ii_train).data=predict(MdlY2,XdFFtest);
+%             end
+%
+%             for ii_train=1:ii_n_training
+%                 this_test_range=zeros(1,no_time_bins);
+%                 ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
+%                 ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
+%                 if ii_train==ii_n_training
+%                     ii_test_range_end=no_time_bins;
+%                 end
+%                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%                 label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(ii_train).data;
+%                 y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(ii_train).data;
+%             end
+%
+%         end
+%
+%     case 2
+%Train with trials using a leave one out approach
+
+
+%training_range_template has all the trials
+training_range_template=zeros(1,no_time_bins);
+lane_labels=zeros(1,no_time_bins);
+for trNo=1:trials.odor_trNo
+    y_pred(trNo).data=[];
+    label_pred(trNo).data=[];
+
+    switch align_training_start
+        case 0
+            label_predictedstart=trials.odor_ii_start(trNo)+ii_dt_training_start;
+        case 1
+            label_predictedstart=trials.odor_ii_end(trNo)+ii_dt_training_start;
+    end
+
+    switch align_training_end
+        case 0
+            label_predictedend=trials.odor_ii_start(trNo)+ii_dt_training_end;
+        case 1
+            label_predictedend=trials.odor_ii_end(trNo)+ii_dt_training_end;
+    end
+
+    training_range_template(label_predictedstart:label_predictedend)=1;
+    lane_labels(label_predictedstart:label_predictedend)=trials.lane_identity(trNo);
+end
+
+for trNo=1:trials.odor_trNo
+    % parfor trNo=1:trials.odor_trNo
+
+    this_test_range=zeros(1,no_time_bins);
+    if trNo==1
+        ii_test_range_start=1;
+    else
+        ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+    end
+
+    if trNo==trials.odor_trNo
+        ii_test_range_end=no_time_bins;
+    else
+        ii_test_range_end=trials.odor_ii_end(trNo)+15;
+    end
+
+    this_test_range(ii_test_range_start:ii_test_range_end)=1;
+    this_training_range=logical(training_range_template)&(~logical(this_test_range));
+
+    % ii_valid_range=ceil(valid_range*no_time_bins);
+    %     ii_test_range=ceil(test_range*no_time_bins);
+
+    XdFFtrain=X_dFF(this_training_range,:);
+    % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+    XdFFtest=X_dFF(logical(this_test_range),:);
+
+    XYtrain=pos_binned_trimmed(this_training_range,:);
+    % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
+    %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
+
+    %Decode using neural network
+    tblTrn=[];
+    tblTrn = array2table(XdFFtrain);
+    Y=lane_labels(this_training_range);
+  
+    switch which_ml_algo
+        case 1
+            Mdl = fitcsvm(tblTrn,Y,'Cost',this_cost);
+        case 2
+            Mdl = fitcnet(tblTrn,Y);
         case 3
-        %Train between trials using a leave one out approach
+            Mdl = fitctree(tblTrn,Y);
+        case 4
+            Mdl=fitcnb(tblTrn,Y,'Cost',this_cost);
+        case 5
+            Mdl = fitglm(XdFFtrain,Y','Distribution','binomial');
+        case 6
+            Mdl = fitcdiscr(tblTrn,Y,'Cost',this_cost);
+        case 7
+            opts = struct('ShowPlots', false, ...
+                'Verbose', 0, ...
+                'MaxObjectiveEvaluations', 15,...
+                'UseParallel',true);
+            Mdl = fitcnet(tblTrn,Y,'OptimizeHyperparameters','auto',...
+                'HyperparameterOptimizationOptions', opts);
+    end
+    label_pred(trNo).Mdl=Mdl;
+    %
+    %             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+    %             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
 
-        %training_range_template has all the trials
-        training_range_template=zeros(1,no_time_bins);
-        for trNo=1:trials.odor_trNo
-            y_pred(trNo).data=[];
-            label_pred(trNo).data=[];
+    %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
 
-            if trNo==1
-               last_label_predictedend=1;
-            else
-            last_label_predictedend=trials.odor_ii_end(trNo-1)+15;
-            end
+    %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
+    %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
 
-          
-            this_label_predictedstart=trials.odor_ii_start(trNo)-10;
-          
+    label_pred(trNo).data=predict(Mdl,XdFFtest);
+    %             y_pred(trNo).data=predict(MdlY2,XdFFtest);
 
-            training_range_template(last_label_predictedend:this_label_predictedstart)=1;
-        end
-
-        last_label_predictedend=trials.odor_ii_end(trials.odor_trNo)+15;
-        this_label_predictedstart=no_time_bins;
-        training_range_template(last_label_predictedend:this_label_predictedstart)=1;
-
-        parfor trNo=1:trials.odor_trNo
-
-            this_test_range=zeros(1,no_time_bins);
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-            this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(this_training_range,:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(this_training_range,:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            label_pred(trNo).data=predict(MdlY1,XdFFtest);
-            y_pred(trNo).data=predict(MdlY2,XdFFtest);
-        end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-
-        %Parse out the parfor loop output
-        label_predicted=zeros(no_time_bins,1);
-        y_predicted=zeros(no_time_bins,1);
-        for trNo=1:trials.odor_trNo
-            this_test_range=zeros(1,no_time_bins);
-
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            label_predicted(logical(this_test_range),1)=label_pred(trNo).data;
-            y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
-
-        end
-
-        %Now do predictions for reversed/permuted training periods
-        label_predicted_sh=zeros(no_time_bins,n_shuffle);
-        y_predicted_sh=zeros(no_time_bins,n_shuffle);
-
-
-        %We will do a reversal and a circular permutation
-        sh_shift=0;
-        while sh_shift==0
-            sh_shift=floor(rand*n_shuffle);
-        end
-
-        pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
-        for ii_trl=1:size(pos_binned_trimmed,1)
-            pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
-        end
-
-        for ii_shuffled=1:n_shuffle
-
-            for trNo=1:trials.odor_trNo
-                y_pred(trNo).data=[];
-                label_pred(trNo).data=[];
-            end
-
-            parfor trNo=1:trials.odor_trNo
-
-                this_test_range=zeros(1,no_time_bins);
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(this_training_range,:);
-                % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-                XYtrain=pos_binned_reversed(this_training_range,:);
-
-
-
-                %Decode using neural network
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-                label_pred(trNo).data=predict(MdlY1,XdFFtest);
-                y_pred(trNo).data=predict(MdlY2,XdFFtest);
-            end
-
-            for trNo=1:trials.odor_trNo
-                this_test_range=zeros(1,no_time_bins);
-
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(trNo).data;
-                y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(trNo).data;
-            end
-
-        end
 
 end
+fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+
+%Parse out the parfor loop output
+label_predicted=zeros(no_time_bins,1);
+accuracy=zeros(no_time_bins,1);
+%         y_predicted=zeros(no_time_bins,1);
+for trNo=1:trials.odor_trNo
+    this_test_range=zeros(1,no_time_bins);
+
+    if trNo==1
+        ii_test_range_start=1;
+    else
+        ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+    end
+
+    if trNo==trials.odor_trNo
+        ii_test_range_end=no_time_bins;
+    else
+        ii_test_range_end=trials.odor_ii_end(trNo)+15;
+    end
+
+    this_test_range(ii_test_range_start:ii_test_range_end)=1;
+
+    label_predicted(logical(this_test_range),1)=label_pred(trNo).data;
+    %             y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
+
+    %Compute accuracy
+    this_accuracy=zeros(size(label_pred(trNo).data,1),size(label_pred(trNo).data,2));
+    if trials.lane_identity(trNo)==1
+        these_times=logical(label_pred(trNo).data==1);
+        this_accuracy(these_times)=1;
+        this_accuracy(~these_times)=0;
+    else
+        these_times=logical(label_pred(trNo).data==1);
+        this_accuracy(these_times)=0;
+        this_accuracy(~these_times)=1;
+    end
+    accuracy(logical(this_test_range),1)=this_accuracy;
+end
+
+%Now do shuffled decoding
+label_predicted_sh=zeros(no_time_bins,n_shuffle);
+accuracy_sh=zeros(no_time_bins,n_shuffle);
+
+for ii_shuffled=1:n_shuffle
+
+    for trNo=1:trials.odor_trNo
+        y_pred(trNo).data=[];
+        label_pred(trNo).data=[];
+    end
+
+    %get the lane_labels for this shuffling run
+    sh_lane_labels=zeros(1,no_time_bins);
+    for trNo=1:trials.odor_trNo
+        label_predictedstart=trials.odor_ii_start(trNo)-10;
+        label_predictedend=trials.odor_ii_end(trNo)+15;
+        sh_lane_labels(label_predictedstart:label_predictedend)=trials.shuffled(ii_shuffled).lane_identity(trNo);
+    end
+
+    parfor trNo=1:trials.odor_trNo
+        %            for trNo=1:trials.odor_trNo
+
+
+        this_test_range=zeros(1,no_time_bins);
+        if trNo==1
+            ii_test_range_start=1;
+        else
+            ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+        end
+
+        if trNo==trials.odor_trNo
+            ii_test_range_end=no_time_bins;
+        else
+            ii_test_range_end=trials.odor_ii_end(trNo)+15;
+        end
+
+        this_test_range(ii_test_range_start:ii_test_range_end)=1;
+        this_training_range=logical(training_range_template)&(~logical(this_test_range));
+
+        % ii_valid_range=ceil(valid_range*no_time_bins);
+        %     ii_test_range=ceil(test_range*no_time_bins);
+
+        XdFFtrain=X_dFF(this_training_range,:);
+        % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+        XdFFtest=X_dFF(logical(this_test_range),:);
+
+        XYtrain=pos_binned_trimmed(this_training_range,:);
+        % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
+        %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
+
+        %Decode using neural network
+        tblTrn=[];
+        tblTrn = array2table(XdFFtrain);
+        Y=sh_lane_labels(this_training_range);
+
+        switch which_ml_algo
+            case 1
+                Mdl = fitcsvm(tblTrn,Y,'Cost',this_cost);
+            case 2
+                Mdl = fitcnet(tblTrn,Y);
+            case 3
+                Mdl = fitctree(tblTrn,Y);
+            case 4
+                Mdl=fitcnb(tblTrn,Y,'Cost',this_cost);
+            case 5
+                Mdl = fitglm(XdFFtrain,Y','Distribution','binomial');
+            case 6
+                Mdl = fitcdiscr(tblTrn,Y,'Cost',this_cost);
+            case 7
+                %Note that we do not optimize the shuffled runs
+                Mdl = fitcnet(tblTrn,Y);
+        end
+        %
+        %             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+        %             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+
+        %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
+
+        %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
+        %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
+
+        label_pred(trNo).data=predict(Mdl,XdFFtest);
+        %             y_pred(trNo).data=predict(MdlY2,XdFFtest);
+
+
+        %
+        %                 this_test_range=zeros(1,no_time_bins);
+        %                 if trNo==1
+        %                     ii_test_range_start=1;
+        %                 else
+        %                     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+        %                 end
+        %
+        %                 if trNo==trials.odor_trNo
+        %                     ii_test_range_end=no_time_bins;
+        %                 else
+        %                     ii_test_range_end=trials.odor_ii_end(trNo)+15;
+        %                 end
+        %
+        %                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
+        %                 this_training_range=logical(training_range_template)&(~logical(this_test_range));
+        %
+        %                 % ii_valid_range=ceil(valid_range*no_time_bins);
+        %                 %     ii_test_range=ceil(test_range*no_time_bins);
+        %
+        %                 XdFFtrain=X_dFF(this_training_range,:);
+        %                 % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+        %                 XdFFtest=X_dFF(logical(this_test_range),:);
+        %
+        %                 XYtrain=pos_binned_reversed(this_training_range,:);
+        %
+        %
+        %
+        %                 %Decode using neural network
+        %                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+        %                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+        %
+        %                 label_pred(trNo).data=predict(MdlY1,XdFFtest);
+        %                 y_pred(trNo).data=predict(MdlY2,XdFFtest);
+    end
+
+    for trNo=1:trials.odor_trNo
+        this_test_range=zeros(1,no_time_bins);
+
+        if trNo==1
+            ii_test_range_start=1;
+        else
+            ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+        end
+
+        if trNo==trials.odor_trNo
+            ii_test_range_end=no_time_bins;
+        else
+            ii_test_range_end=trials.odor_ii_end(trNo)+15;
+        end
+
+        this_test_range(ii_test_range_start:ii_test_range_end)=1;
+
+        label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(trNo).data;
+        %Compute accuracy
+        this_accuracy=zeros(size(label_pred(trNo).data,1),size(label_pred(trNo).data,2));
+        if trials.lane_identity(trNo)==1
+            these_times=logical(label_pred(trNo).data==1);
+            this_accuracy(these_times)=1;
+            this_accuracy(~these_times)=0;
+        else
+            these_times=logical(label_pred(trNo).data==1);
+            this_accuracy(these_times)=0;
+            this_accuracy(~these_times)=1;
+        end
+        accuracy_sh(logical(this_test_range),ii_shuffled)=this_accuracy;
+    end
+
+end
+%
+%         case 3
+%         %Train between trials using a leave one out approach
+%
+%         %training_range_template has all the trials
+%         training_range_template=zeros(1,no_time_bins);
+%         for trNo=1:trials.odor_trNo
+%             y_pred(trNo).data=[];
+%             label_pred(trNo).data=[];
+%
+%             if trNo==1
+%                last_label_predictedend=1;
+%             else
+%             last_label_predictedend=trials.odor_ii_end(trNo-1)+15;
+%             end
+%
+%
+%             this_label_predictedstart=trials.odor_ii_start(trNo)-10;
+%
+%
+%             training_range_template(last_label_predictedend:this_label_predictedstart)=1;
+%         end
+%
+%         last_label_predictedend=trials.odor_ii_end(trials.odor_trNo)+15;
+%         this_label_predictedstart=no_time_bins;
+%         training_range_template(last_label_predictedend:this_label_predictedstart)=1;
+%
+%         parfor trNo=1:trials.odor_trNo
+%
+%             this_test_range=zeros(1,no_time_bins);
+%             if trNo==1
+%                 ii_test_range_start=1;
+%             else
+%                 ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+%             end
+%
+%             if trNo==trials.odor_trNo
+%                 ii_test_range_end=no_time_bins;
+%             else
+%                 ii_test_range_end=trials.odor_ii_end(trNo)+15;
+%             end
+%
+%             this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%             this_training_range=logical(training_range_template)&(~logical(this_test_range));
+%
+%             % ii_valid_range=ceil(valid_range*no_time_bins);
+%             %     ii_test_range=ceil(test_range*no_time_bins);
+%
+%             XdFFtrain=X_dFF(this_training_range,:);
+%             % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+%             XdFFtest=X_dFF(logical(this_test_range),:);
+%
+%             XYtrain=pos_binned_trimmed(this_training_range,:);
+%             % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
+%             %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
+%
+%             %Decode using neural network
+%             MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+%             MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+%
+%             %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
+%
+%             %     label_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
+%             %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
+%
+%             label_pred(trNo).data=predict(MdlY1,XdFFtest);
+%             y_pred(trNo).data=predict(MdlY2,XdFFtest);
+%         end
+%         fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+%
+%         %Parse out the parfor loop output
+%         label_predicted=zeros(no_time_bins,1);
+%         y_predicted=zeros(no_time_bins,1);
+%         for trNo=1:trials.odor_trNo
+%             this_test_range=zeros(1,no_time_bins);
+%
+%             if trNo==1
+%                 ii_test_range_start=1;
+%             else
+%                 ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+%             end
+%
+%             if trNo==trials.odor_trNo
+%                 ii_test_range_end=no_time_bins;
+%             else
+%                 ii_test_range_end=trials.odor_ii_end(trNo)+15;
+%             end
+%
+%             this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%             label_predicted(logical(this_test_range),1)=label_pred(trNo).data;
+%             y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
+%
+%         end
+%
+%         %Now do predictions for reversed/permuted training periods
+%         label_predicted_sh=zeros(no_time_bins,n_shuffle);
+%         y_predicted_sh=zeros(no_time_bins,n_shuffle);
+%
+%
+%         %We will do a reversal and a circular permutation
+%         sh_shift=0;
+%         while sh_shift==0
+%             sh_shift=floor(rand*n_shuffle);
+%         end
+%
+%         pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
+%         for ii_trl=1:size(pos_binned_trimmed,1)
+%             pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
+%         end
+%
+%         for ii_shuffled=1:n_shuffle
+%
+%             for trNo=1:trials.odor_trNo
+%                 y_pred(trNo).data=[];
+%                 label_pred(trNo).data=[];
+%             end
+%
+%             parfor trNo=1:trials.odor_trNo
+%
+%                 this_test_range=zeros(1,no_time_bins);
+%                 if trNo==1
+%                     ii_test_range_start=1;
+%                 else
+%                     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+%                 end
+%
+%                 if trNo==trials.odor_trNo
+%                     ii_test_range_end=no_time_bins;
+%                 else
+%                     ii_test_range_end=trials.odor_ii_end(trNo)+15;
+%                 end
+%
+%                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%                 this_training_range=logical(training_range_template)&(~logical(this_test_range));
+%
+%                 % ii_valid_range=ceil(valid_range*no_time_bins);
+%                 %     ii_test_range=ceil(test_range*no_time_bins);
+%
+%                 XdFFtrain=X_dFF(this_training_range,:);
+%                 % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+%                 XdFFtest=X_dFF(logical(this_test_range),:);
+%
+%                 XYtrain=pos_binned_reversed(this_training_range,:);
+%
+%
+%
+%                 %Decode using neural network
+%                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
+%                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+%
+%                 label_pred(trNo).data=predict(MdlY1,XdFFtest);
+%                 y_pred(trNo).data=predict(MdlY2,XdFFtest);
+%             end
+%
+%             for trNo=1:trials.odor_trNo
+%                 this_test_range=zeros(1,no_time_bins);
+%
+%                 if trNo==1
+%                     ii_test_range_start=1;
+%                 else
+%                     ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+%                 end
+%
+%                 if trNo==trials.odor_trNo
+%                     ii_test_range_end=no_time_bins;
+%                 else
+%                     ii_test_range_end=trials.odor_ii_end(trNo)+15;
+%                 end
+%
+%                 this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%
+%                 label_predicted_sh(logical(this_test_range),ii_shuffled)=label_pred(trNo).data;
+%                 y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(trNo).data;
+%             end
+%
+%         end
+%
+% end
 
 fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
 
@@ -1181,7 +1245,7 @@ accuracy_conv=conv(accuracy,conv_win_gauss,'same');
 % label_predicted_conv(label_predicted_conv<minY1)=minY1;
 % maxY1=max(XYtest(:,1));
 % label_predicted_conv(label_predicted_conv>maxY1)=maxY1;
-% 
+%
 % minY2=min(XYtest(:,2));
 % y_predicted_conv(y_predicted_conv<minY2)=minY2;
 % maxY2=max(XYtest(:,2));
@@ -1211,18 +1275,18 @@ R1=corrcoef(XYtest(:,1),label_predicted_conv);
 % R2=corrcoef(XYtest(:,2),y_predicted_conv);
 fprintf(1, 'Correlation coefficient nn conv x, y entire run %d\n\n',R1(1,2));
 
-% 
+%
 % figNo=figNo+1;
 % try
 %     close(figNo)
 % catch
 % end
-% 
+%
 % hFig = figure(figNo);
-% 
+%
 % set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
-% 
-% 
+%
+%
 % hold on
 % plot(label_predicted_conv(label_predictedstart:label_predictedend,1),y_predicted_conv(label_predictedstart:label_predictedend,1),'-k','LineWidth',1.5)
 % plot(XYtest(label_predictedstart:label_predictedend,1),XYtest(label_predictedstart:label_predictedend,2),'-b','LineWidth',1.5)
