@@ -1,4 +1,4 @@
-function handles_out=drgMini_dFFpredictionv2(handles_choices)
+function handles_out=drgMini_MoserAnalysis(handles_choices)
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 
 warning('off')
@@ -9,9 +9,9 @@ if exist('handles_choices')==0
     clear all
     close all
 
-    handles_choices.resume_processing=0; %Make this 1 if you want the program to keep all fits already calculated
+    handles_choices.resume_processing=1; %Make this 1 if you want the program to keep all fits already calculated
 
-    handles_choice.is_sphgpu=1;
+    handles_choice.is_sphgpu=0;
     is_sphgpu=handles_choice.is_sphgpu;
 
     % if gpuDeviceCount>0
@@ -633,19 +633,19 @@ if handles_choices.displayFigures==1
     hold on
 
     if trials.jj_l1>0
-        plot(trials.x_laneodor1,trials.y_laneodor1,'ob')
-        plot(trials.x_lanewater1,trials.y_lanewater1,'xb')
+        plot(trials.x_laneodor1,trials.y_laneodor1,'or')
+        plot(trials.x_lanewater1,trials.y_lanewater1,'xr')
     end
 
     if trials.jj_l4>0
-        plot(trials.x_laneodor4,trials.y_laneodor4,'or')
-        plot(trials.x_lanewater4,trials.y_lanewater4,'xr')
+        plot(trials.x_laneodor4,trials.y_laneodor4,'ob')
+        plot(trials.x_lanewater4,trials.y_lanewater4,'xb')
     end
 
     set(gca, 'YDir', 'reverse');
     xlabel('x (mm)')
     ylabel('y (mm)')
-    title('Trial start (o) and water delivery (x), lane 1 (b), lane 4 (r)')
+    title('Location of trial start (o) and water delivery (x)')
 
 
     %Plot mouse pathway
@@ -847,13 +847,19 @@ for trNo=1:length(trials.ii_odor)
                 trials.hit1=trials.hit1+1;
                 trials.hit1_ii_bin_start(trials.hit1)=ceil(trim_factor*trials.ii_odor(trNo));
                 trials.hit1_ii_bin_end(trials.hit1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
+                trials.hit1_ii_start(trials.hit1)=trials.ii_odor(trNo);
+                trials.hit1_ii_end(trials.hit1)=trials.ii_lanewater1(this_water);
                 trials.lane1=trials.lane1+1;
                 trials.lane1_ii_bin_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
                 trials.lane1_ii_bin_end(trials.lane1)=ceil(trim_factor*trials.ii_lanewater1(this_water));
+                trials.lane1_ii_start(trials.lane1)=trials.ii_odor(trNo);
+                trials.lane1_ii_end(trials.lane1)=trials.ii_lanewater1(this_water);
                 dii_bin_trial=[dii_bin_trial trials.hit1_ii_bin_end(trials.hit1)-trials.hit1_ii_bin_start(trials.hit1)];
                 dii_trial=[dii_trial trials.hit1_ii_end(trials.hit1)-trials.hit1_ii_start(trials.hit1)];
                 trials.odor_trNo=trials.odor_trNo+1;
                 trials.odor_ii_bin_start(trials.odor_trNo)=trials.hit1_ii_bin_start(trials.hit1);
+                trials.odor_ii_bin_end(trials.odor_trNo)=trials.hit1_ii_bin_end(trials.hit1);
+                trials.odor_ii_start(trials.odor_trNo)=trials.hit1_ii_start(trials.hit1);
                 trials.odor_ii_bin_end(trials.odor_trNo)=trials.hit1_ii_bin_end(trials.hit1);
                 trials.odor_trial_type(trials.odor_trNo)=1;
                 trials.odor_lane(trials.odor_trNo)=1;
@@ -861,11 +867,14 @@ for trNo=1:length(trials.ii_odor)
             else
                 trials.miss1=trials.miss1+1;
                 trials.miss1_ii_bin_start(trials.miss1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.miss1_ii_start(trials.miss1)=trials.ii_odor(trNo);
                 trials.lane1=trials.lane1+1;
                 trials.lane1_ii_bin_start(trials.lane1)=ceil(trim_factor*trials.ii_odor(trNo));
+                trials.lane1_ii_start(trials.lane1)=trials.ii_odor(trNo);
                 trials.lane1_ii_bin_end(trials.lane1)=-1;
                 trials.odor_trNo=trials.odor_trNo+1;
                 trials.odor_ii_bin_start(trials.odor_trNo)=trials.miss1_ii_bin_start(trials.miss1);
+                trials.odor_ii_start(trials.odor_trNo)=trials.miss1_ii_start(trials.miss1);
                 trials.odor_trial_type(trials.odor_trNo)=2;
                 trials.odor_lane(trials.odor_trNo)=1;
                 pfft=1;
@@ -1092,308 +1101,308 @@ pffft=1;
 %         ii_n=ii_n+no_neurons;
 %     end
 % end
-
-%Now do the neural networks
-tic
-
-
-%Train with per trial data using a leave one out approach
-if resume_processing==0
-    per_ROI=[];
-    for this_ROI=handles_choices.process_these_ROIs
-        per_ROI(this_ROI).results=[];
-    end
-else
-    per_ROI=handles_out.per_ROI;
-
-end
- 
-if resume_processing==0
-    per_ROI_sh=[];
-    for this_ROI=handles_choices.process_these_ROIs
-        per_ROI_sh(this_ROI).repeats=[];
-    end
-else
-    per_ROI_sh=handles_out.per_ROI_sh;
-end
-
+% 
+% %Now do the neural networks
+% tic
+% 
+% 
+% %Train with per trial data using a leave one out approach
+% if resume_processing==0
+%     per_ROI=[];
+%     for this_ROI=handles_choices.process_these_ROIs
+%         per_ROI(this_ROI).results=[];
+%     end
+% else
+%     per_ROI=handles_out.per_ROI;
+% 
+% end
+% 
+% if resume_processing==0
+%     per_ROI_sh=[];
+%     for this_ROI=handles_choices.process_these_ROIs
+%         per_ROI_sh(this_ROI).repeats=[];
+%     end
+% else
+%     per_ROI_sh=handles_out.per_ROI_sh;
+% end
+% 
 for this_ROI=handles_choices.process_these_ROIs
-    %We have this while try catch loop here because we were getting this error:
-    %         This parallel pool has been shut down.
-    %
-    % Caused by:
-    %     The parallel pool shut down because the client lost connection to worker 6. Check the network
-    %     connection or restart the parallel pool with 'parpool'.
-    % if resume_processing==0
-    %     per_ROI(this_ROI).results=[];
-    % end
-    if isempty(per_ROI(this_ROI).results)
-        thisROI_done=0;
-        while thisROI_done==0
-            try
-
-                %training_range_template has all the trials
-                training_range_template=zeros(1,no_time_bins);
-                lane_template=zeros(1,no_time_bins);
-                odor_plume_template=zeros(1,no_time_bins);
+%     %We have this while try catch loop here because we were getting this error:
+%     %         This parallel pool has been shut down.
+%     %
+%     % Caused by:
+%     %     The parallel pool shut down because the client lost connection to worker 6. Check the network
+%     %     connection or restart the parallel pool with 'parpool'.
+%     % if resume_processing==0
+%     %     per_ROI(this_ROI).results=[];
+%     % end
+%     if isempty(per_ROI(this_ROI).results)
+%         thisROI_done=0;
+%         while thisROI_done==0
+%             try
+% 
+%                 %training_range_template has all the trials
+%                 training_range_template=zeros(1,no_time_bins);
+%                 lane_template=zeros(1,no_time_bins);
+%                 odor_plume_template=zeros(1,no_time_bins);
+%                 for trNo=1:trials.odor_trNo
+%                     dFF_pred(trNo).dFFpred_xy=[];
+%                     % dFF_pred(trNo).dFFpred_xyl=[];
+%                     % dFF_pred(trNo).dFFpred_xyop=[];
+%                     dFF_pred(trNo).dFFpred_op=[];
+%                     dFF_pred(trNo).dFF=[];
+%                     dFF_pred(trNo).dFFpred_xyop=[];
+% 
+%                     % x_pred(trNo).data=[];
+% 
+%                     x_predictedstart=trials.odor_ii_bin_start(trNo);
+%                     x_predictedend=trials.odor_ii_bin_end(trNo);
+%                     training_range_template(x_predictedstart:x_predictedend)=1;
+%                     if trials.odor_lane(trNo)==1
+%                         lane_template(x_predictedstart:x_predictedend)=1;
+%                         for x_ii=x_predictedstart:x_predictedend
+%                             this_x=pos_binned(x_ii,1);
+%                             this_y=pos_binned(x_ii,2);
+%                             [minabx,ii_minax]=min(abs(x_for_plume-this_x));
+%                             [minaby,ii_minay]=min(abs(y_for_plume-this_y));
+%                             this_ca=mean_plume_l1(ii_minay,ii_minax);
+%                             odor_plume_template(x_ii)=this_ca;
+%                         end
+%                     else
+%                         lane_template(x_predictedstart:x_predictedend)=4;
+%                         for x_ii=x_predictedstart:x_predictedend
+%                             this_x=pos_binned(x_ii,1);
+%                             this_y=pos_binned(x_ii,2);
+%                             [minabx,ii_minax]=min(abs(x_for_plume-this_x));
+%                             [minaby,ii_minay]=min(abs(y_for_plume-this_y));
+%                             this_ca=mean_plume_l4(ii_minay,ii_minax);
+%                             odor_plume_template(x_ii)=this_ca;
+%                         end
+%                     end
+%                 end
+% 
+%                 start_toc=toc;
+%                 % Create the parallel pool once before the main loop
+%                 % if isempty(gcp('nocreate'))
+%                 % parpool;  % This will use the default number of workers
+%                 % end
+%                 % parfor trNo=1:trials.odor_trNo
                 for trNo=1:trials.odor_trNo
-                    dFF_pred(trNo).dFFpred_xy=[];
-                    % dFF_pred(trNo).dFFpred_xyl=[];
-                    % dFF_pred(trNo).dFFpred_xyop=[];
-                    dFF_pred(trNo).dFFpred_op=[];
-                    dFF_pred(trNo).dFF=[];
-                    dFF_pred(trNo).dFFpred_xyop=[];
-
-                    % x_pred(trNo).data=[];
-
-                    x_predictedstart=trials.odor_ii_bin_start(trNo);
-                    x_predictedend=trials.odor_ii_bin_end(trNo);
-                    training_range_template(x_predictedstart:x_predictedend)=1;
-                    if trials.odor_lane(trNo)==1
-                        lane_template(x_predictedstart:x_predictedend)=1;
-                        for x_ii=x_predictedstart:x_predictedend
-                            this_x=pos_binned(x_ii,1);
-                            this_y=pos_binned(x_ii,2);
-                            [minabx,ii_minax]=min(abs(x_for_plume-this_x));
-                            [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                            this_ca=mean_plume_l1(ii_minay,ii_minax);
-                            odor_plume_template(x_ii)=this_ca;
-                        end
-                    else
-                        lane_template(x_predictedstart:x_predictedend)=4;
-                        for x_ii=x_predictedstart:x_predictedend
-                            this_x=pos_binned(x_ii,1);
-                            this_y=pos_binned(x_ii,2);
-                            [minabx,ii_minax]=min(abs(x_for_plume-this_x));
-                            [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                            this_ca=mean_plume_l4(ii_minay,ii_minax);
-                            odor_plume_template(x_ii)=this_ca;
-                        end
-                    end
-                end
-
-                start_toc=toc;
-                % Create the parallel pool once before the main loop
-                % if isempty(gcp('nocreate'))
-                % parpool;  % This will use the default number of workers
-                % end
-                % parfor trNo=1:trials.odor_trNo
-                for trNo=1:trials.odor_trNo
-
+% 
                     this_test_range=zeros(1,no_time_bins);
-                    % if trNo==1
-                    %     ii_test_range_start=1;
-                    % else
-                    %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
-                    % end
-
+%                     % if trNo==1
+%                     %     ii_test_range_start=1;
+%                     % else
+%                     %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
+%                     % end
+% 
                     ii_test_range_start=trials.odor_ii_bin_start(trNo);
                     ii_test_range_end=trials.odor_ii_bin_end(trNo);
-
-                    % if trNo==trials.odor_trNo
-                    %     ii_test_range_end=no_time_bins;
-                    % else
-                    %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
-                    % end
-
+% 
+%                     % if trNo==trials.odor_trNo
+%                     %     ii_test_range_end=no_time_bins;
+%                     % else
+%                     %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
+%                     % end
+% 
                     this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                    this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                    % ii_valid_range=ceil(valid_range*no_time_bins);
-                    %     ii_test_range=ceil(test_range*no_time_bins);
-                    this_dFFtrain=zeros(sum(this_training_range),1);
-                    this_dFFtrain=neural_data(this_training_range,this_ROI);
-                    % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+%                     this_training_range=logical(training_range_template)&(~logical(this_test_range));
+% 
+%                     % ii_valid_range=ceil(valid_range*no_time_bins);
+%                     %     ii_test_range=ceil(test_range*no_time_bins);
+%                     this_dFFtrain=zeros(sum(this_training_range),1);
+%                     this_dFFtrain=neural_data(this_training_range,this_ROI);
+%                     % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
                     this_dFFtest=zeros(sum(this_test_range),1);
                     this_dFFtest(:,1)=neural_data(logical(this_test_range),this_ROI);
                     dFF_pred(trNo).dFF=this_dFFtest;
-
-                    no_dec_time_bins_xy=ceil(handles_choices.dt_decoding_xy/dt);
-                    XYtrain=zeros(sum(this_training_range),size(pos_binned,2)*no_dec_time_bins_xy);
-                    XYtest=zeros(sum(logical(this_test_range)),size(pos_binned,2)*no_dec_time_bins_xy);
-
-
-                    for ii_shift=0:no_dec_time_bins_xy-1
-                        shifted_this_training_range=zeros(1,length(this_training_range));
-                        shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
-
-                        shifted_this_test_range=zeros(1,length(this_test_range));
-                        shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
-
-                        XYtrain(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_training_range),:);
-                        XYtest(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_test_range),:);
-                    end
-
+% 
+%                     no_dec_time_bins_xy=ceil(handles_choices.dt_decoding_xy/dt);
+%                     XYtrain=zeros(sum(this_training_range),size(pos_binned,2)*no_dec_time_bins_xy);
+%                     XYtest=zeros(sum(logical(this_test_range)),size(pos_binned,2)*no_dec_time_bins_xy);
+% 
+% 
+%                     for ii_shift=0:no_dec_time_bins_xy-1
+%                         shifted_this_training_range=zeros(1,length(this_training_range));
+%                         shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
+% 
+%                         shifted_this_test_range=zeros(1,length(this_test_range));
+%                         shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
+% 
+%                         XYtrain(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_training_range),:);
+%                         XYtest(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_test_range),:);
+%                     end
+% 
                     dFF_pred(trNo).this_XY=pos_binned(logical(this_test_range),:);
-
-                    no_dec_time_bins_op=ceil(handles_choices.dt_decoding_op/dt);
-                    odor_plume_train=zeros(sum(this_training_range),no_dec_time_bins_op);
-                    odor_plume_test=zeros(sum(logical(this_test_range)),no_dec_time_bins_op);
-
-                    for ii_shift=0:no_dec_time_bins_op-1
-                        shifted_this_training_range=zeros(1,length(this_training_range));
-                        shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
-
-                        shifted_this_test_range=zeros(1,length(this_test_range));
-                        shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
-
-                        odor_plume_train(:,ii_shift+1)=odor_plume_template(logical(shifted_this_training_range));
-                        odor_plume_test(:,ii_shift+1)=odor_plume_template(logical(shifted_this_test_range));
-                    end
-
-                    %Decode using neural network
-
-                    %Decode using x and y only
-                    % opts = struct('UseParallel', true);
-                    switch handles_choices.algo
-                        case 1
-                            Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'Standardize',true);
-                        case 2
-                            Mdl_dFFxy = fitglm(XYtrain,this_dFFtrain);
-                        case 3
-                            Mdl_dFFxy = fitrtree(XYtrain,this_dFFtrain);
-                        case 4
-                            Mdl_dFFxy = fitrsvm(XYtrain,this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
-                        case 5
-                            Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain);
-                        case 6
-                            Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
-                        case 7
-                            opts = struct('ShowPlots', false, ...
-                                'Verbose', 0, ...
-                                'MaxObjectiveEvaluations', 15,...
-                                'UseParallel',true);
-                            Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'OptimizeHyperparameters', 'auto',...
-                                'HyperparameterOptimizationOptions', opts);
-                    end
-                    dFF_pred(trNo).dFFpred_xy=predict(Mdl_dFFxy,XYtest);
-                    dFF_pred(trNo).Mdl_dFFxy=Mdl_dFFxy;
-
-                    %Decode using odor plume only
-                    switch handles_choices.algo
-                        case 1
-                            Mdl_dFFop = fitrnet(odor_plume_train,this_dFFtrain,'Standardize',true);
-                        case 2
-                            Mdl_dFFop = fitglm(odor_plume_train,this_dFFtrain);
-                        case 3
-                            Mdl_dFFop = fitrtree(odor_plume_train,this_dFFtrain);
-                        case 4
-                            Mdl_dFFop = fitrsvm(odor_plume_train,this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
-                        case 5
-                            Mdl_dFFop = fitrgp(odor_plume_train,this_dFFtrain);
-                        case 6
-                            Mdl_dFFop = fitrgp(odor_plume_train,this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
-                        case 7
-                            opts = struct('ShowPlots', false, ...
-                                'Verbose', 0, ...
-                                'MaxObjectiveEvaluations', 15,...
-                                'UseParallel',true);
-                            Mdl_dFFop = fitrnet(odor_plume_train,this_dFFtrain,'OptimizeHyperparameters', 'auto',...
-                                'HyperparameterOptimizationOptions', opts);
-                    end
-                    dFF_pred(trNo).dFFpred_op=predict(Mdl_dFFop,odor_plume_test);
-                    dFF_pred(trNo).Mdl_dFFop=Mdl_dFFop;
-
-                    %Decode using both xy and odor plume only
-                    switch handles_choices.algo
-                        case 1
-                            Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'Standardize',true);
-                        case 2
-                            Mdl_dFFxyop = fitglm([XYtrain odor_plume_train],this_dFFtrain);
-                        case 3
-                            Mdl_dFFxyop = fitrtree([XYtrain odor_plume_train],this_dFFtrain);
-                        case 4
-                            Mdl_dFFxyop = fitrsvm([XYtrain odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
-                        case 5
-                            Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain);
-                        case 6
-                            Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
-                        case 7
-                            opts = struct('ShowPlots', false, ...
-                                'Verbose', 0, ...
-                                'MaxObjectiveEvaluations', 15,...
-                                'UseParallel',true);
-                            Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'OptimizeHyperparameters', 'auto',...
-                                'HyperparameterOptimizationOptions', opts);
-                    end
-                    dFF_pred(trNo).dFFpred_xyop=predict(Mdl_dFFxyop,[XYtest odor_plume_test]);
-                    dFF_pred(trNo).Mdl_dFFxyop=Mdl_dFFxyop;
-
-                    pffft=1;
-                    % y_pred(trNo).data=predict(MdlY2,XdFFtest);
+% 
+%                     no_dec_time_bins_op=ceil(handles_choices.dt_decoding_op/dt);
+%                     odor_plume_train=zeros(sum(this_training_range),no_dec_time_bins_op);
+%                     odor_plume_test=zeros(sum(logical(this_test_range)),no_dec_time_bins_op);
+% 
+%                     for ii_shift=0:no_dec_time_bins_op-1
+%                         shifted_this_training_range=zeros(1,length(this_training_range));
+%                         shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
+% 
+%                         shifted_this_test_range=zeros(1,length(this_test_range));
+%                         shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
+% 
+%                         odor_plume_train(:,ii_shift+1)=odor_plume_template(logical(shifted_this_training_range));
+%                         odor_plume_test(:,ii_shift+1)=odor_plume_template(logical(shifted_this_test_range));
+%                     end
+% 
+%                     %Decode using neural network
+% 
+%                     %Decode using x and y only
+%                     % opts = struct('UseParallel', true);
+%                     switch handles_choices.algo
+%                         case 1
+%                             Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'Standardize',true);
+%                         case 2
+%                             Mdl_dFFxy = fitglm(XYtrain,this_dFFtrain);
+%                         case 3
+%                             Mdl_dFFxy = fitrtree(XYtrain,this_dFFtrain);
+%                         case 4
+%                             Mdl_dFFxy = fitrsvm(XYtrain,this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
+%                         case 5
+%                             Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain);
+%                         case 6
+%                             Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
+%                         case 7
+%                             opts = struct('ShowPlots', false, ...
+%                                 'Verbose', 0, ...
+%                                 'MaxObjectiveEvaluations', 15,...
+%                                 'UseParallel',true);
+%                             Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'OptimizeHyperparameters', 'auto',...
+%                                 'HyperparameterOptimizationOptions', opts);
+%                     end
+%                     dFF_pred(trNo).dFFpred_xy=predict(Mdl_dFFxy,XYtest);
+%                     dFF_pred(trNo).Mdl_dFFxy=Mdl_dFFxy;
+% 
+%                     %Decode using odor plume only
+%                     switch handles_choices.algo
+%                         case 1
+%                             Mdl_dFFop = fitrnet(odor_plume_train,this_dFFtrain,'Standardize',true);
+%                         case 2
+%                             Mdl_dFFop = fitglm(odor_plume_train,this_dFFtrain);
+%                         case 3
+%                             Mdl_dFFop = fitrtree(odor_plume_train,this_dFFtrain);
+%                         case 4
+%                             Mdl_dFFop = fitrsvm(odor_plume_train,this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
+%                         case 5
+%                             Mdl_dFFop = fitrgp(odor_plume_train,this_dFFtrain);
+%                         case 6
+%                             Mdl_dFFop = fitrgp(odor_plume_train,this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
+%                         case 7
+%                             opts = struct('ShowPlots', false, ...
+%                                 'Verbose', 0, ...
+%                                 'MaxObjectiveEvaluations', 15,...
+%                                 'UseParallel',true);
+%                             Mdl_dFFop = fitrnet(odor_plume_train,this_dFFtrain,'OptimizeHyperparameters', 'auto',...
+%                                 'HyperparameterOptimizationOptions', opts);
+%                     end
+%                     dFF_pred(trNo).dFFpred_op=predict(Mdl_dFFop,odor_plume_test);
+%                     dFF_pred(trNo).Mdl_dFFop=Mdl_dFFop;
+% 
+%                     %Decode using both xy and odor plume only
+%                     switch handles_choices.algo
+%                         case 1
+%                             Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'Standardize',true);
+%                         case 2
+%                             Mdl_dFFxyop = fitglm([XYtrain odor_plume_train],this_dFFtrain);
+%                         case 3
+%                             Mdl_dFFxyop = fitrtree([XYtrain odor_plume_train],this_dFFtrain);
+%                         case 4
+%                             Mdl_dFFxyop = fitrsvm([XYtrain odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
+%                         case 5
+%                             Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain);
+%                         case 6
+%                             Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
+%                         case 7
+%                             opts = struct('ShowPlots', false, ...
+%                                 'Verbose', 0, ...
+%                                 'MaxObjectiveEvaluations', 15,...
+%                                 'UseParallel',true);
+%                             Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'OptimizeHyperparameters', 'auto',...
+%                                 'HyperparameterOptimizationOptions', opts);
+%                     end
+%                     dFF_pred(trNo).dFFpred_xyop=predict(Mdl_dFFxyop,[XYtest odor_plume_test]);
+%                     dFF_pred(trNo).Mdl_dFFxyop=Mdl_dFFxyop;
+% 
+%                     pffft=1;
+%                     % y_pred(trNo).data=predict(MdlY2,XdFFtest);
                 end
-                % delete(gcp('nocreate'));
-
-
-                %Parse out the parfor loop output
-                all_dFFpred_xy=[];
-                all_dFFpred_xyop=[];
-                all_dFFpred_op=[];
+%                 % delete(gcp('nocreate'));
+% 
+% 
+%                 %Parse out the parfor loop output
+%                 all_dFFpred_xy=[];
+%                 all_dFFpred_xyop=[];
+%                 all_dFFpred_op=[];
                 all_dFF=[];
                 all_lanes=[];
                 all_XY=[];
-
-                all_dFFpredl1_xy=[];
-                all_dFFpredl1_xyop=[];
-                all_dFFpredl1_op=[];
+% 
+%                 all_dFFpredl1_xy=[];
+%                 all_dFFpredl1_xyop=[];
+%                 all_dFFpredl1_op=[];
                 all_dFFl1=[];
-
-                all_dFFpredl4_xy=[];
-                all_dFFpredl4_xyop=[];
-                all_dFFpredl4_op=[];
+% 
+%                 all_dFFpredl4_xy=[];
+%                 all_dFFpredl4_xyop=[];
+%                 all_dFFpredl4_op=[];
                 all_dFFl4=[];
-
+% 
                 all_XYl1=[];
                 all_XYl4=[];
-
+% 
                 all_tr=[];
                 all_trl1=[];
                 all_trl4=[];
-
+% 
                 ii_trl1=0;
                 ii_trl4=0;
-
+% 
                 for trNo=1:trials.odor_trNo
-                    per_ROI(this_ROI).results.trial(trNo).dFFpred_xy=dFF_pred(trNo).dFFpred_xy;
-                    per_ROI(this_ROI).results.trial(trNo).dFFpred_xyop=dFF_pred(trNo).dFFpred_xyop;
-                    per_ROI(this_ROI).results.trial(trNo).dFFpred_op=dFF_pred(trNo).dFFpred_op;
-                    per_ROI(this_ROI).results.trial(trNo).dFF=dFF_pred(trNo).dFF;
-
-                    % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFxy=dFF_pred(trNo).Mdl_dFFxy;
-                    % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFxyop=dFF_pred(trNo).Mdl_dFFxyop;
-                    % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFop=dFF_pred(trNo).Mdl_dFFop;
-
-                    all_dFFpred_xy=[all_dFFpred_xy dFF_pred(trNo).dFFpred_xy'];
-                    all_dFFpred_xyop=[all_dFFpred_xyop dFF_pred(trNo).dFFpred_xyop'];
-                    all_dFFpred_op=[all_dFFpred_op dFF_pred(trNo).dFFpred_op'];
+%                     per_ROI(this_ROI).results.trial(trNo).dFFpred_xy=dFF_pred(trNo).dFFpred_xy;
+%                     per_ROI(this_ROI).results.trial(trNo).dFFpred_xyop=dFF_pred(trNo).dFFpred_xyop;
+%                     per_ROI(this_ROI).results.trial(trNo).dFFpred_op=dFF_pred(trNo).dFFpred_op;
+%                     per_ROI(this_ROI).results.trial(trNo).dFF=dFF_pred(trNo).dFF;
+% 
+%                     % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFxy=dFF_pred(trNo).Mdl_dFFxy;
+%                     % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFxyop=dFF_pred(trNo).Mdl_dFFxyop;
+%                     % per_ROI(this_ROI).results.trial(trNo).Mdl_dFFop=dFF_pred(trNo).Mdl_dFFop;
+% 
+%                     all_dFFpred_xy=[all_dFFpred_xy dFF_pred(trNo).dFFpred_xy'];
+%                     all_dFFpred_xyop=[all_dFFpred_xyop dFF_pred(trNo).dFFpred_xyop'];
+%                     all_dFFpred_op=[all_dFFpred_op dFF_pred(trNo).dFFpred_op'];
                     all_dFF=[all_dFF dFF_pred(trNo).dFF'];
                     all_tr(trNo)=size(all_XY,1)+1;
                     all_XY=[all_XY; dFF_pred(trNo).this_XY];
-
-
+% 
+% 
                     if trials.odor_lane(trNo)==1
                         ii_trl1=ii_trl1+1;
                         all_trl1(ii_trl1)=size(all_XYl1,1)+1;
                         all_XYl1=[all_XYl1; dFF_pred(trNo).this_XY];
-                        all_dFFpredl1_xy=[all_dFFpredl1_xy dFF_pred(trNo).dFFpred_xy'];
-                        all_dFFpredl1_xyop=[all_dFFpredl1_xyop dFF_pred(trNo).dFFpred_xyop'];
-                        all_dFFpredl1_op=[all_dFFpredl1_op dFF_pred(trNo).dFFpred_op'];
+                        % all_dFFpredl1_xy=[all_dFFpredl1_xy dFF_pred(trNo).dFFpred_xy'];
+                        % all_dFFpredl1_xyop=[all_dFFpredl1_xyop dFF_pred(trNo).dFFpred_xyop'];
+                        % all_dFFpredl1_op=[all_dFFpredl1_op dFF_pred(trNo).dFFpred_op'];
                         all_dFFl1=[all_dFFl1 dFF_pred(trNo).dFF'];
                         all_lanes=[all_lanes ones(1,length(dFF_pred(trNo).dFF))];
                     else
                         ii_trl4=ii_trl4+1;
                         all_trl4(ii_trl4)=size(all_XYl4,1)+1;
                         all_XYl4=[all_XYl4; dFF_pred(trNo).this_XY];
-                        all_dFFpredl4_xy=[all_dFFpredl4_xy dFF_pred(trNo).dFFpred_xy'];
-                        all_dFFpredl4_xyop=[all_dFFpredl4_xyop dFF_pred(trNo).dFFpred_xyop'];
-                        all_dFFpredl4_op=[all_dFFpredl4_op dFF_pred(trNo).dFFpred_op'];
+                        % all_dFFpredl4_xy=[all_dFFpredl4_xy dFF_pred(trNo).dFFpred_xy'];
+                        % all_dFFpredl4_xyop=[all_dFFpredl4_xyop dFF_pred(trNo).dFFpred_xyop'];
+                        % all_dFFpredl4_op=[all_dFFpredl4_op dFF_pred(trNo).dFFpred_op'];
                         all_dFFl4=[all_dFFl4 dFF_pred(trNo).dFF'];
                         all_lanes=[all_lanes 4*ones(1,length(dFF_pred(trNo).dFF))];
                     end
                 end
-
+% 
                 per_ROI(this_ROI).results.all_lanes=all_lanes;
-
+% 
                 per_ROI(this_ROI).results.all_XY=all_XY;
                 per_ROI(this_ROI).results.all_XYl1=all_XYl1;
                 per_ROI(this_ROI).results.all_XYl4=all_XYl4;
@@ -1401,485 +1410,485 @@ for this_ROI=handles_choices.process_these_ROIs
                 per_ROI(this_ROI).results.all_tr=all_tr;
                 per_ROI(this_ROI).results.all_trl1=all_trl1;
                 per_ROI(this_ROI).results.all_trl4=all_trl4;
-
+% 
                 per_ROI(this_ROI).results.all_dFF=all_dFF;
-                per_ROI(this_ROI).results.all_dFFpred_xy=all_dFFpred_xy;
-                per_ROI(this_ROI).results.all_dFFpred_xyop=all_dFFpred_xyop;
-                per_ROI(this_ROI).results.all_dFFpred_op=all_dFFpred_op;
-
+%                 per_ROI(this_ROI).results.all_dFFpred_xy=all_dFFpred_xy;
+%                 per_ROI(this_ROI).results.all_dFFpred_xyop=all_dFFpred_xyop;
+%                 per_ROI(this_ROI).results.all_dFFpred_op=all_dFFpred_op;
+% 
                 per_ROI(this_ROI).results.all_dFFl1=all_dFFl1;
-                per_ROI(this_ROI).results.all_dFFpredl1_xy=all_dFFpredl1_xy;
-                per_ROI(this_ROI).results.all_dFFpredl1_xyop=all_dFFpredl1_xyop;
-                per_ROI(this_ROI).results.all_dFFpredl1_op=all_dFFpredl1_op;
-
+%                 per_ROI(this_ROI).results.all_dFFpredl1_xy=all_dFFpredl1_xy;
+%                 per_ROI(this_ROI).results.all_dFFpredl1_xyop=all_dFFpredl1_xyop;
+%                 per_ROI(this_ROI).results.all_dFFpredl1_op=all_dFFpredl1_op;
+% 
                 per_ROI(this_ROI).results.all_dFFl4=all_dFFl4;
-                per_ROI(this_ROI).results.all_dFFpredl4_xy=all_dFFpredl4_xy;
-                per_ROI(this_ROI).results.all_dFFpredl4_xyop=all_dFFpredl4_xyop;
-                per_ROI(this_ROI).results.all_dFFpredl4_op=all_dFFpredl4_op;
-
-                thisRxy=corrcoef([all_dFF' all_dFFpred_xy']);
-                per_ROI(this_ROI).results.Rxy=thisRxy(1,2);
-
-                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xy))
-                    thisRxyl1=corrcoef([all_dFFl1' all_dFFpredl1_xy']);
-                    per_ROI(this_ROI).results.Rxyl1=thisRxyl1(1,2);
-                else
-                    per_ROI(this_ROI).results.Rxyl1=NaN;
-                end
-                
-                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xy))
-                    thisRxyl4=corrcoef([all_dFFl4' all_dFFpredl4_xy']);
-                    per_ROI(this_ROI).results.Rxyl4=thisRxyl4(1,2);
-                else
-                    per_ROI(this_ROI).results.Rxyl4=NaN;
-                end
-
-                thisRxyop=corrcoef([all_dFF' all_dFFpred_xyop']);
-                per_ROI(this_ROI).results.Rxyop=thisRxyop(1,2);
-
-                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xyop))
-                    thisRxyopl1=corrcoef([all_dFFl1' all_dFFpredl1_xyop']);
-                    per_ROI(this_ROI).results.Rxyopl1=thisRxyopl1(1,2);
-                else
-                    per_ROI(this_ROI).results.Rxyopl1=NaN;
-                end
-
-                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xyop))
-                    thisRxyopl4=corrcoef([all_dFFl4' all_dFFpredl4_xyop']);
-                    per_ROI(this_ROI).results.Rxyopl4=thisRxyopl4(1,2);
-                else
-                    per_ROI(this_ROI).results.Rxyopl4=NaN;
-                end
-
-
-                thisRop=corrcoef([all_dFF' all_dFFpred_op']);
-                per_ROI(this_ROI).results.Rop=thisRop(1,2);
-
-                if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_op))
-                    thisRopl1=corrcoef([all_dFFl1' all_dFFpredl1_op']);
-                    per_ROI(this_ROI).results.Ropl1=thisRopl1(1,2);
-                else
-                    per_ROI(this_ROI).results.Ropl1=NaN;
-                end
-
-                if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_op))
-                    thisRopl4=corrcoef([all_dFFl4' all_dFFpredl4_op']);
-                    per_ROI(this_ROI).results.Ropl4=thisRop(1,2);
-                else
-                    per_ROI(this_ROI).results.Ropl4=NaN;
-                end
-
-                fprintf(1, 'ROI No %d, rho for prediction dFFxy, dFFop dFFxyop %d %d %d\n'...
-                    ,this_ROI, per_ROI(this_ROI).results.Rxy,per_ROI(this_ROI).results.Rop...
-                    ,per_ROI(this_ROI).results.Rxyop);
-
-                thisROI_done=1;
-                fprintf(1,['Elapsed time ' num2str((toc-start_toc)/(60)) ' mins \n\n'])
-            catch
-                delete(gcp('nocreate'));
-            end
-        end
-        handles_out.per_ROI=per_ROI;
-        % save([this_path arena_file(1:end-4) '_' handles_choices.save_tag '_' num2str(handles_choices.algo) ...
-        %     num2str(handles_choices.weber_fechner) num2str(handles_choices.alpha) num2str(handles_choices.which_odor_plume)...
-        %     num2str(no_dec_time_bins_op) num2str(no_dec_time_bins_xy) '.mat'],'handles_out','handles_choices','trials','-v7.3')
-
-
-
-
-        %Train with per trial with shuffled data using a leave one out approach
-
-        % per_ROI_sh=[];
-        for ii_repeat=1:handles_choices.sh_repeats
-
-
-            % if skip_this_ii==0
-            %training_range_template has all the trials
-            training_range_template=zeros(1,no_time_bins);
-            lane_template=zeros(1,no_time_bins);
-            odor_plume_template=zeros(1,no_time_bins);
-
-
-            for trNo=1:trials.odor_trNo
-                dFF_pred(trNo).dFFpred_xy=[];
-                % dFF_pred(trNo).dFFpred_xyl=[];
-                dFF_pred(trNo).dFF=[];
-                % x_pred(trNo).data=[];
-
-                Mdl_dFFxy_pars(trNo).pars=[];
-                Mdl_dFFop_pars(trNo).pars=[];
-                Mdl_dFFxyop_pars(trNo).pars=[];
-
-                x_predictedstart=trials.odor_ii_bin_start(trNo);
-                x_predictedend=trials.odor_ii_bin_end(trNo);
-                training_range_template(x_predictedstart:x_predictedend)=1;
-                if trials.odor_lane(trNo)==1
-                    lane_template(x_predictedstart:x_predictedend)=1;
-                    for x_ii=x_predictedstart:x_predictedend
-                        this_x=pos_binned(x_ii,1);
-                        this_y=pos_binned(x_ii,2);
-                        [minabx,ii_minax]=min(abs(x_for_plume-this_x));
-                        [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                        this_ca=mean_plume_l1(ii_minay,ii_minax);
-                        odor_plume_template(x_ii)=this_ca;
-                    end
-                else
-                    lane_template(x_predictedstart:x_predictedend)=4;
-                    for x_ii=x_predictedstart:x_predictedend
-                        this_x=pos_binned(x_ii,1);
-                        this_y=pos_binned(x_ii,2);
-                        [minabx,ii_minax]=min(abs(x_for_plume-this_x));
-                        [minaby,ii_minay]=min(abs(y_for_plume-this_y));
-                        this_ca=mean_plume_l4(ii_minay,ii_minax);
-                        odor_plume_template(x_ii)=this_ca;
-                    end
-                end
-            end
-
-
-            start_toc=toc;
-
-            % Create the parallel pool once before the main loop
-            parfor_is_done=0;
-            % if isempty(gcp('nocreate'))
-            %     parpool;  % This will use the default number of workers
-            % end
-            while parfor_is_done==0
-                try
-                    if isempty(gcp('nocreate'))
-                        parpool;  % This will use the default number of workers
-                    end
-                    parfor trNo=1:trials.odor_trNo
-                        % for trNo=1:trials.odor_trNo
-
-                        this_test_range=zeros(1,no_time_bins);
-                        % if trNo==1
-                        %     ii_test_range_start=1;
-                        % else
-                        %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
-                        % end
-                        %
-                        % if trNo==trials.odor_trNo
-                        %     ii_test_range_end=no_time_bins;
-                        % else
-                        %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
-                        % end
-
-                        ii_test_range_start=trials.odor_ii_bin_start(trNo);
-                        ii_test_range_end=trials.odor_ii_bin_end(trNo);
-
-                        this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                        this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                        % ii_valid_range=ceil(valid_range*no_time_bins);
-                        %     ii_test_range=ceil(test_range*no_time_bins);
-                        this_dFFtrain=zeros(sum(this_training_range),1);
-                        this_dFFtrain=neural_data(this_training_range,this_ROI);
-                        % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                        this_dFFtest=zeros(sum(this_test_range),1);
-                        this_dFFtest(:,1)=neural_data(logical(this_test_range),this_ROI);
-                        dFF_pred(trNo).dFF=this_dFFtest;
-
-                        %Setup the pre variables
-                        no_dec_time_bins_xy=ceil(handles_choices.dt_decoding_xy/dt);
-                        XYtrain_pre=zeros(sum(this_training_range),size(pos_binned,2)*no_dec_time_bins_xy);
-                        XYtest=zeros(sum(logical(this_test_range)),size(pos_binned,2)*no_dec_time_bins_xy);
-
-                        for ii_shift=0:no_dec_time_bins_xy-1
-                            shifted_this_training_range=zeros(1,length(this_training_range));
-                            shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
-
-                            shifted_this_test_range=zeros(1,length(this_test_range));
-                            shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
-
-                            XYtrain_pre(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_training_range),:);
-                            XYtest(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_test_range),:);
-
-                        end
-
-                        no_dec_time_bins_op=ceil(handles_choices.dt_decoding_op/dt);
-                        odor_plume_train_pre=zeros(sum(this_training_range),no_dec_time_bins_op);
-                        odor_plume_test=zeros(sum(logical(this_test_range)),no_dec_time_bins_op);
-
-                        for ii_shift=0:no_dec_time_bins_op-1
-                            shifted_this_training_range=zeros(1,length(this_training_range));
-                            shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
-
-                            shifted_this_test_range=zeros(1,length(this_test_range));
-                            shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
-
-                            odor_plume_train_pre(:,ii_shift+1)=odor_plume_template(logical(shifted_this_training_range));
-                            odor_plume_test(:,ii_shift+1)=odor_plume_template(logical(shifted_this_test_range));
-                        end
-
-                        %Now shuffle
-                        % XYtrain_pre=pos_binned(this_training_range,:);
-                        shuffle_length=floor(size(XYtrain_pre,1)/(trials.odor_trNo*2));
-
-                        this_overlap=10;
-                        while this_overlap>max_overlap
-                            perm_indices=randperm(trials.odor_trNo*2);
-                            this_overlap=0;
-                            for ii_p=1:trials.odor_trNo*2
-                                if perm_indices(ii_p)==ii_p
-                                    this_overlap=this_overlap+1;
-                                end
-                            end
-                        end
-
-                        % % Yvalid=pos_binned(ii_valid_range(1):ii_valid_range(2),:);
-                        % XYtest=pos_binned(logical(this_test_range),:);
-                        %
-                        % lane_train_pre=lane_template(this_training_range);
-                        % lane_train_pre=lane_train_pre';
-                        % lane_test=lane_template(logical(this_test_range));
-                        %
-                        % odor_plume_train_pre=odor_plume_template(this_training_range);
-                        % odor_plume_train_pre=odor_plume_train_pre';
-                        % odor_plume_test=odor_plume_template(logical(this_test_range));
-
-
-
-
-                        %Now shuffle
-                        shuffle_length=floor(size(XYtrain_pre,1)/(trials.odor_trNo*2));
-
-                        this_overlap=10;
-                        while this_overlap>max_overlap
-                            perm_indices=randperm(trials.odor_trNo*2);
-                            this_overlap=0;
-                            for ii_p=1:trials.odor_trNo*2
-                                if perm_indices(ii_p)==ii_p
-                                    this_overlap=this_overlap+1;
-                                end
-                            end
-                        end
-
-                        XYtrain=zeros(size(XYtrain_pre,1),size(XYtrain_pre,2));
-                        % lane_train=zeros(size(XYtrain_pre,1),1);
-                        odor_plume_train=zeros(size(odor_plume_train_pre,1),size(odor_plume_train_pre,2));
-                        for sh_ii=1:trials.odor_trNo*2
-                            XYtrain((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
-                                XYtrain_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
-                            % lane_train((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
-                            %     lane_train_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
-                            odor_plume_train((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
-                                odor_plume_train_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
-                        end
-
-                        %Make the last few equal to the first few
-                        if trials.odor_trNo*2*shuffle_length<size(XYtrain,1)
-                            delta_ii=size(XYtrain,1)-trials.odor_trNo*2*shuffle_length;
-                            XYtrain(trials.odor_trNo*2*shuffle_length+1:end,:)=...
-                                XYtrain_pre(1:delta_ii,:);
-                            % lane_train(trials.odor_trNo*2*shuffle_length+1:end,:)=...
-                            %     lane_train_pre(1:delta_ii,:);
-                            odor_plume_train(trials.odor_trNo*2*shuffle_length+1:end,:)=...
-                                odor_plume_train_pre(1:delta_ii,:);
-                        end
-
-
-                        %Decode using neural network
-
-                        % opts = struct('UseParallel', true);
-
-                        %Decode using x and y only
-                        switch handles_choices.algo
-                            case 1
-                                Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain','Standardize',true);
-                            case 2
-                                Mdl_dFFxy = fitglm(XYtrain,this_dFFtrain');
-                            case 3
-                                Mdl_dFFxy = fitrtree(XYtrain,this_dFFtrain');
-                            case 4
-                                Mdl_dFFxy = fitrsvm(XYtrain,this_dFFtrain', 'KernelFunction','rbf','Standardize', true);
-                            case 5
-                                Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain');
-                            case 6
-                                Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain','KernelFunction', 'squaredexponential', 'Standardize', true);
-                            case 7
-                                % opts = struct('ShowPlots', false, ...
-                                %     'Verbose', 0, ...
-                                %     'MaxObjectiveEvaluations', 15);
-                                % Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain','OptimizeHyperparameters', 'auto',...
-                                %     'HyperparameterOptimizationOptions', opts);
-
-                                bestHyperparameters = dFF_pred(trNo).Mdl_dFFxy.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                                activationsCell = cellstr(bestHyperparameters.Activations);
-                                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                                layer_sizes=bestHyperparameters.Layer_1_Size;
-                                if ~isnan(bestHyperparameters.Layer_2_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                                end
-                                if ~isnan(bestHyperparameters.Layer_3_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                                end
-                                Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'LayerSizes', layer_sizes, ...
-                                    'Activations', activationsCell{1}, ...
-                                    'Lambda', bestHyperparameters.Lambda, ...
-                                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                                Mdl_dFFxy_pars(trNo).pars.activations=activationsCell{1};
-                                Mdl_dFFxy_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                                Mdl_dFFxy_pars(trNo).pars.Standardize=standardizeCell{1};
-
-                        end
-                        dFF_pred(trNo).dFFpred_xy=predict(Mdl_dFFxy,XYtest);
-
-
-
-                        %Decode using odor plume
-                        switch handles_choices.algo
-                            case 1
-                                Mdl_dFFop = fitrnet([odor_plume_train],this_dFFtrain,'Standardize',true);
-                            case 2
-                                Mdl_dFFop = fitglm([odor_plume_train],this_dFFtrain);
-                            case 3
-                                Mdl_dFFop = fitrtree([odor_plume_train],this_dFFtrain);
-                            case 4
-                                Mdl_dFFop = fitrsvm([odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
-                            case 5
-                                Mdl_dFFop = fitrgp([odor_plume_train],this_dFFtrain);
-                            case 6
-                                Mdl_dFFop = fitrgp([odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
-                            case 7
-                                bestHyperparameters = dFF_pred(trNo).Mdl_dFFop.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                                activationsCell = cellstr(bestHyperparameters.Activations);
-                                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                                layer_sizes=bestHyperparameters.Layer_1_Size;
-                                if ~isnan(bestHyperparameters.Layer_2_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                                end
-                                if ~isnan(bestHyperparameters.Layer_3_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                                end
-                                Mdl_dFFop = fitrnet([odor_plume_train],this_dFFtrain,'LayerSizes', layer_sizes, ...
-                                    'Activations', activationsCell{1}, ...
-                                    'Lambda', bestHyperparameters.Lambda, ...
-                                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                                Mdl_dFFop_pars(trNo).pars.activations=activationsCell{1};
-                                Mdl_dFFop_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                                Mdl_dFFop_pars(trNo).pars.Standardize=standardizeCell{1};
-                        end
-                        dFF_pred(trNo).dFFpred_op=predict(Mdl_dFFop,odor_plume_test);
-
-                        %Decode using xy and odor plume
-                        switch handles_choices.algo
-                            case 1
-                                Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'Standardize',true);
-                            case 2
-                                Mdl_dFFxyop = fitglm([XYtrain odor_plume_train],this_dFFtrain);
-                            case 3
-                                Mdl_dFFxyop = fitrtree([XYtrain odor_plume_train],this_dFFtrain);
-                            case 4
-                                Mdl_dFFxyop = fitrsvm([XYtrain odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
-                            case 5
-                                Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain);
-                            case 6
-                                Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
-                            case 7
-                                % opts = struct('ShowPlots', false, ...
-                                %     'Verbose', 0, ...
-                                %     'MaxObjectiveEvaluations', 15);
-                                % Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'OptimizeHyperparameters', 'auto',...
-                                %     'HyperparameterOptimizationOptions', opts);
-
-                                bestHyperparameters = dFF_pred(trNo).Mdl_dFFxy.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                                activationsCell = cellstr(bestHyperparameters.Activations);
-                                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                                layer_sizes=bestHyperparameters.Layer_1_Size;
-                                if ~isnan(bestHyperparameters.Layer_2_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                                end
-                                if ~isnan(bestHyperparameters.Layer_3_Size)
-                                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                                end
-                                Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'LayerSizes', layer_sizes, ...
-                                    'Activations', activationsCell{1}, ...
-                                    'Lambda', bestHyperparameters.Lambda, ...
-                                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                                Mdl_dFFxyop_pars(trNo).pars.activations=activationsCell{1};
-                                Mdl_dFFxyop_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                                Mdl_dFFxyop_pars(trNo).pars.Standardize=standardizeCell{1};
-                        end
-                        dFF_pred(trNo).dFFpred_xyop=predict(Mdl_dFFxyop,[XYtest odor_plume_test]);
-
-
-
-                        pffft=1;
-                        % y_pred(trNo).data=predict(MdlY2,XdFFtest);
-                    end
-                    parfor_is_done=1;
-                catch
-                end
-            end
-            delete(gcp('nocreate'));
-
-
-
-            %Parse out the parfor loop output
-            all_dFFpred_xy=[];
-            all_dFFpred_xyl=[];
-            all_dFFpred_xyop=[];
-            all_dFFpred_op=[];
-            all_dFF=[];
-            for trNo=1:trials.odor_trNo
-                per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFFpred_xy=dFF_pred(trNo).dFFpred_xy;
-                all_dFFpred_xy=[all_dFFpred_xy dFF_pred(trNo).dFFpred_xy'];
-                % per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFFpred_xyl=dFF_pred(trNo).dFFpred_xyl;
-                % all_dFFpred_xyl=[all_dFFpred_xyl dFF_pred(trNo).dFFpred_xyl'];
-                all_dFFpred_xyop=[all_dFFpred_xyop dFF_pred(trNo).dFFpred_xyop'];
-                all_dFFpred_op=[all_dFFpred_op dFF_pred(trNo).dFFpred_op'];
-                per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFF=dFF_pred(trNo).dFF;
-                all_dFF=[all_dFF dFF_pred(trNo).dFF'];
-            end
-
-            per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFF=all_dFF;
-            per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xy=all_dFFpred_xy;
-            % per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xyl=all_dFFpred_xyl;
-            per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xyop=all_dFFpred_xyop;
-            per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_op=all_dFFpred_op;
-
-            thisRxy=corrcoef([all_dFF' all_dFFpred_xy']);
-            per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy=thisRxy(1,2);
-            % thisRxyl=corrcoef([all_dFF' all_dFFpred_xyl']);
-            % per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyl=thisRxyl(1,2);
-            thisRxyop=corrcoef([all_dFF' all_dFFpred_xyop']);
-            per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop=thisRxyop(1,2);
-            thisRop=corrcoef([all_dFF' all_dFFpred_op']);
-            per_ROI_sh(this_ROI).repeats(ii_repeat).Rop=thisRop(1,2);
-
-            per_ROI(this_ROI).results.Mdl_dFFxy_pars=Mdl_dFFxy_pars;
-            per_ROI(this_ROI).results.Mdl_dFFop_pars=Mdl_dFFop_pars;
-            per_ROI(this_ROI).results.Mdl_dFFxyop_pars=Mdl_dFFxyop_pars;
-
-
-            % fprintf(1, 'Repeat %d ROI No %d, rho for shuffled prediction dFFxy, dFFxyl dFFxyop, dFFop %d %d %d %d\n\n',ii_repeat,...
-            %     this_ROI,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyl,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop,per_ROI_sh(this_ROI).repeats(ii_repeat).Rop);
-            fprintf(1, 'Repeat %d ROI No %d, rho for shuffled prediction dFFxy, dFFop, dFFxyop %d %d %d\n',ii_repeat,...
-                this_ROI,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy,per_ROI_sh(this_ROI).repeats(ii_repeat).Rop...
-                ,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop);
-            fprintf(1,['Elapsed time ' num2str((toc-start_toc)/(60)) ' mins shuffled\n\n'])
-            %         thisROI_done=1;
-            %     catch
-            %         delete(gcp('nocreate'));
-            %     end
-            % end
-
-        end
-        handles_out.per_ROI_sh=per_ROI_sh;
-        save([this_path arena_file(1:end-4) '_' handles_choices.save_tag '_' num2str(handles_choices.algo) ...
-            num2str(handles_choices.weber_fechner) num2str(handles_choices.alpha)...
-            num2str(no_dec_time_bins_op) num2str(no_dec_time_bins_xy) '.mat'],'handles_out','handles_choices','trials','-v7.3')
-    end
+%                 per_ROI(this_ROI).results.all_dFFpredl4_xy=all_dFFpredl4_xy;
+%                 per_ROI(this_ROI).results.all_dFFpredl4_xyop=all_dFFpredl4_xyop;
+%                 per_ROI(this_ROI).results.all_dFFpredl4_op=all_dFFpredl4_op;
+% 
+%                 thisRxy=corrcoef([all_dFF' all_dFFpred_xy']);
+%                 per_ROI(this_ROI).results.Rxy=thisRxy(1,2);
+% 
+%                 if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xy))
+%                     thisRxyl1=corrcoef([all_dFFl1' all_dFFpredl1_xy']);
+%                     per_ROI(this_ROI).results.Rxyl1=thisRxyl1(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Rxyl1=NaN;
+%                 end
+% 
+%                 if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xy))
+%                     thisRxyl4=corrcoef([all_dFFl4' all_dFFpredl4_xy']);
+%                     per_ROI(this_ROI).results.Rxyl4=thisRxyl4(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Rxyl4=NaN;
+%                 end
+% 
+%                 thisRxyop=corrcoef([all_dFF' all_dFFpred_xyop']);
+%                 per_ROI(this_ROI).results.Rxyop=thisRxyop(1,2);
+% 
+%                 if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_xyop))
+%                     thisRxyopl1=corrcoef([all_dFFl1' all_dFFpredl1_xyop']);
+%                     per_ROI(this_ROI).results.Rxyopl1=thisRxyopl1(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Rxyopl1=NaN;
+%                 end
+% 
+%                 if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_xyop))
+%                     thisRxyopl4=corrcoef([all_dFFl4' all_dFFpredl4_xyop']);
+%                     per_ROI(this_ROI).results.Rxyopl4=thisRxyopl4(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Rxyopl4=NaN;
+%                 end
+% 
+% 
+%                 thisRop=corrcoef([all_dFF' all_dFFpred_op']);
+%                 per_ROI(this_ROI).results.Rop=thisRop(1,2);
+% 
+%                 if (~isempty(all_dFFl1))&(~isempty(all_dFFpredl1_op))
+%                     thisRopl1=corrcoef([all_dFFl1' all_dFFpredl1_op']);
+%                     per_ROI(this_ROI).results.Ropl1=thisRopl1(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Ropl1=NaN;
+%                 end
+% 
+%                 if (~isempty(all_dFFl4))&(~isempty(all_dFFpredl4_op))
+%                     thisRopl4=corrcoef([all_dFFl4' all_dFFpredl4_op']);
+%                     per_ROI(this_ROI).results.Ropl4=thisRop(1,2);
+%                 else
+%                     per_ROI(this_ROI).results.Ropl4=NaN;
+%                 end
+% 
+%                 fprintf(1, 'ROI No %d, rho for prediction dFFxy, dFFop dFFxyop %d %d %d\n'...
+%                     ,this_ROI, per_ROI(this_ROI).results.Rxy,per_ROI(this_ROI).results.Rop...
+%                     ,per_ROI(this_ROI).results.Rxyop);
+% 
+%                 thisROI_done=1;
+%                 fprintf(1,['Elapsed time ' num2str((toc-start_toc)/(60)) ' mins \n\n'])
+%             catch
+%                 delete(gcp('nocreate'));
+%             end
+%         end
+%         handles_out.per_ROI=per_ROI;
+%         % save([this_path arena_file(1:end-4) '_' handles_choices.save_tag '_' num2str(handles_choices.algo) ...
+%         %     num2str(handles_choices.weber_fechner) num2str(handles_choices.alpha) num2str(handles_choices.which_odor_plume)...
+%         %     num2str(no_dec_time_bins_op) num2str(no_dec_time_bins_xy) '.mat'],'handles_out','handles_choices','trials','-v7.3')
+% 
+% 
+% 
+% 
+%         %Train with per trial with shuffled data using a leave one out approach
+% 
+%         % per_ROI_sh=[];
+%         for ii_repeat=1:handles_choices.sh_repeats
+% 
+% 
+%             % if skip_this_ii==0
+%             %training_range_template has all the trials
+%             training_range_template=zeros(1,no_time_bins);
+%             lane_template=zeros(1,no_time_bins);
+%             odor_plume_template=zeros(1,no_time_bins);
+% 
+% 
+%             for trNo=1:trials.odor_trNo
+%                 dFF_pred(trNo).dFFpred_xy=[];
+%                 % dFF_pred(trNo).dFFpred_xyl=[];
+%                 dFF_pred(trNo).dFF=[];
+%                 % x_pred(trNo).data=[];
+% 
+%                 Mdl_dFFxy_pars(trNo).pars=[];
+%                 Mdl_dFFop_pars(trNo).pars=[];
+%                 Mdl_dFFxyop_pars(trNo).pars=[];
+% 
+%                 x_predictedstart=trials.odor_ii_bin_start(trNo);
+%                 x_predictedend=trials.odor_ii_bin_end(trNo);
+%                 training_range_template(x_predictedstart:x_predictedend)=1;
+%                 if trials.odor_lane(trNo)==1
+%                     lane_template(x_predictedstart:x_predictedend)=1;
+%                     for x_ii=x_predictedstart:x_predictedend
+%                         this_x=pos_binned(x_ii,1);
+%                         this_y=pos_binned(x_ii,2);
+%                         [minabx,ii_minax]=min(abs(x_for_plume-this_x));
+%                         [minaby,ii_minay]=min(abs(y_for_plume-this_y));
+%                         this_ca=mean_plume_l1(ii_minay,ii_minax);
+%                         odor_plume_template(x_ii)=this_ca;
+%                     end
+%                 else
+%                     lane_template(x_predictedstart:x_predictedend)=4;
+%                     for x_ii=x_predictedstart:x_predictedend
+%                         this_x=pos_binned(x_ii,1);
+%                         this_y=pos_binned(x_ii,2);
+%                         [minabx,ii_minax]=min(abs(x_for_plume-this_x));
+%                         [minaby,ii_minay]=min(abs(y_for_plume-this_y));
+%                         this_ca=mean_plume_l4(ii_minay,ii_minax);
+%                         odor_plume_template(x_ii)=this_ca;
+%                     end
+%                 end
+%             end
+% 
+% 
+%             start_toc=toc;
+% 
+%             % Create the parallel pool once before the main loop
+%             parfor_is_done=0;
+%             % if isempty(gcp('nocreate'))
+%             %     parpool;  % This will use the default number of workers
+%             % end
+%             while parfor_is_done==0
+%                 try
+%                     if isempty(gcp('nocreate'))
+%                         parpool;  % This will use the default number of workers
+%                     end
+%                     parfor trNo=1:trials.odor_trNo
+%                         % for trNo=1:trials.odor_trNo
+% 
+%                         this_test_range=zeros(1,no_time_bins);
+%                         % if trNo==1
+%                         %     ii_test_range_start=1;
+%                         % else
+%                         %     ii_test_range_start=trials.odor_ii_bin_end(trNo-1)+15;
+%                         % end
+%                         %
+%                         % if trNo==trials.odor_trNo
+%                         %     ii_test_range_end=no_time_bins;
+%                         % else
+%                         %     ii_test_range_end=trials.odor_ii_bin_end(trNo)+15;
+%                         % end
+% 
+%                         ii_test_range_start=trials.odor_ii_bin_start(trNo);
+%                         ii_test_range_end=trials.odor_ii_bin_end(trNo);
+% 
+%                         this_test_range(ii_test_range_start:ii_test_range_end)=1;
+%                         this_training_range=logical(training_range_template)&(~logical(this_test_range));
+% 
+%                         % ii_valid_range=ceil(valid_range*no_time_bins);
+%                         %     ii_test_range=ceil(test_range*no_time_bins);
+%                         this_dFFtrain=zeros(sum(this_training_range),1);
+%                         this_dFFtrain=neural_data(this_training_range,this_ROI);
+%                         % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+%                         this_dFFtest=zeros(sum(this_test_range),1);
+%                         this_dFFtest(:,1)=neural_data(logical(this_test_range),this_ROI);
+%                         dFF_pred(trNo).dFF=this_dFFtest;
+% 
+%                         %Setup the pre variables
+%                         no_dec_time_bins_xy=ceil(handles_choices.dt_decoding_xy/dt);
+%                         XYtrain_pre=zeros(sum(this_training_range),size(pos_binned,2)*no_dec_time_bins_xy);
+%                         XYtest=zeros(sum(logical(this_test_range)),size(pos_binned,2)*no_dec_time_bins_xy);
+% 
+%                         for ii_shift=0:no_dec_time_bins_xy-1
+%                             shifted_this_training_range=zeros(1,length(this_training_range));
+%                             shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
+% 
+%                             shifted_this_test_range=zeros(1,length(this_test_range));
+%                             shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
+% 
+%                             XYtrain_pre(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_training_range),:);
+%                             XYtest(:,size(pos_binned,2)*ii_shift+1:size(pos_binned,2)*(ii_shift+1))=pos_binned(logical(shifted_this_test_range),:);
+% 
+%                         end
+% 
+%                         no_dec_time_bins_op=ceil(handles_choices.dt_decoding_op/dt);
+%                         odor_plume_train_pre=zeros(sum(this_training_range),no_dec_time_bins_op);
+%                         odor_plume_test=zeros(sum(logical(this_test_range)),no_dec_time_bins_op);
+% 
+%                         for ii_shift=0:no_dec_time_bins_op-1
+%                             shifted_this_training_range=zeros(1,length(this_training_range));
+%                             shifted_this_training_range(1+ii_shift:end)=this_training_range(1:end-ii_shift);
+% 
+%                             shifted_this_test_range=zeros(1,length(this_test_range));
+%                             shifted_this_test_range(1+ii_shift:end)=this_test_range(1:end-ii_shift);
+% 
+%                             odor_plume_train_pre(:,ii_shift+1)=odor_plume_template(logical(shifted_this_training_range));
+%                             odor_plume_test(:,ii_shift+1)=odor_plume_template(logical(shifted_this_test_range));
+%                         end
+% 
+%                         %Now shuffle
+%                         % XYtrain_pre=pos_binned(this_training_range,:);
+%                         shuffle_length=floor(size(XYtrain_pre,1)/(trials.odor_trNo*2));
+% 
+%                         this_overlap=10;
+%                         while this_overlap>max_overlap
+%                             perm_indices=randperm(trials.odor_trNo*2);
+%                             this_overlap=0;
+%                             for ii_p=1:trials.odor_trNo*2
+%                                 if perm_indices(ii_p)==ii_p
+%                                     this_overlap=this_overlap+1;
+%                                 end
+%                             end
+%                         end
+% 
+%                         % % Yvalid=pos_binned(ii_valid_range(1):ii_valid_range(2),:);
+%                         % XYtest=pos_binned(logical(this_test_range),:);
+%                         %
+%                         % lane_train_pre=lane_template(this_training_range);
+%                         % lane_train_pre=lane_train_pre';
+%                         % lane_test=lane_template(logical(this_test_range));
+%                         %
+%                         % odor_plume_train_pre=odor_plume_template(this_training_range);
+%                         % odor_plume_train_pre=odor_plume_train_pre';
+%                         % odor_plume_test=odor_plume_template(logical(this_test_range));
+% 
+% 
+% 
+% 
+%                         %Now shuffle
+%                         shuffle_length=floor(size(XYtrain_pre,1)/(trials.odor_trNo*2));
+% 
+%                         this_overlap=10;
+%                         while this_overlap>max_overlap
+%                             perm_indices=randperm(trials.odor_trNo*2);
+%                             this_overlap=0;
+%                             for ii_p=1:trials.odor_trNo*2
+%                                 if perm_indices(ii_p)==ii_p
+%                                     this_overlap=this_overlap+1;
+%                                 end
+%                             end
+%                         end
+% 
+%                         XYtrain=zeros(size(XYtrain_pre,1),size(XYtrain_pre,2));
+%                         % lane_train=zeros(size(XYtrain_pre,1),1);
+%                         odor_plume_train=zeros(size(odor_plume_train_pre,1),size(odor_plume_train_pre,2));
+%                         for sh_ii=1:trials.odor_trNo*2
+%                             XYtrain((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
+%                                 XYtrain_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
+%                             % lane_train((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
+%                             %     lane_train_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
+%                             odor_plume_train((sh_ii-1)*shuffle_length+1:sh_ii*shuffle_length,:)=...
+%                                 odor_plume_train_pre((perm_indices(sh_ii)-1)*shuffle_length+1:perm_indices(sh_ii)*shuffle_length,:);
+%                         end
+% 
+%                         %Make the last few equal to the first few
+%                         if trials.odor_trNo*2*shuffle_length<size(XYtrain,1)
+%                             delta_ii=size(XYtrain,1)-trials.odor_trNo*2*shuffle_length;
+%                             XYtrain(trials.odor_trNo*2*shuffle_length+1:end,:)=...
+%                                 XYtrain_pre(1:delta_ii,:);
+%                             % lane_train(trials.odor_trNo*2*shuffle_length+1:end,:)=...
+%                             %     lane_train_pre(1:delta_ii,:);
+%                             odor_plume_train(trials.odor_trNo*2*shuffle_length+1:end,:)=...
+%                                 odor_plume_train_pre(1:delta_ii,:);
+%                         end
+% 
+% 
+%                         %Decode using neural network
+% 
+%                         % opts = struct('UseParallel', true);
+% 
+%                         %Decode using x and y only
+%                         switch handles_choices.algo
+%                             case 1
+%                                 Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain','Standardize',true);
+%                             case 2
+%                                 Mdl_dFFxy = fitglm(XYtrain,this_dFFtrain');
+%                             case 3
+%                                 Mdl_dFFxy = fitrtree(XYtrain,this_dFFtrain');
+%                             case 4
+%                                 Mdl_dFFxy = fitrsvm(XYtrain,this_dFFtrain', 'KernelFunction','rbf','Standardize', true);
+%                             case 5
+%                                 Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain');
+%                             case 6
+%                                 Mdl_dFFxy = fitrgp(XYtrain,this_dFFtrain','KernelFunction', 'squaredexponential', 'Standardize', true);
+%                             case 7
+%                                 % opts = struct('ShowPlots', false, ...
+%                                 %     'Verbose', 0, ...
+%                                 %     'MaxObjectiveEvaluations', 15);
+%                                 % Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain','OptimizeHyperparameters', 'auto',...
+%                                 %     'HyperparameterOptimizationOptions', opts);
+% 
+%                                 bestHyperparameters = dFF_pred(trNo).Mdl_dFFxy.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+%                                 activationsCell = cellstr(bestHyperparameters.Activations);
+%                                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+%                                 layer_sizes=bestHyperparameters.Layer_1_Size;
+%                                 if ~isnan(bestHyperparameters.Layer_2_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+%                                 end
+%                                 if ~isnan(bestHyperparameters.Layer_3_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+%                                 end
+%                                 Mdl_dFFxy = fitrnet(XYtrain,this_dFFtrain,'LayerSizes', layer_sizes, ...
+%                                     'Activations', activationsCell{1}, ...
+%                                     'Lambda', bestHyperparameters.Lambda, ...
+%                                     'Standardize', strcmpi(standardizeCell{1},'true'));
+% 
+%                                 Mdl_dFFxy_pars(trNo).pars.activations=activationsCell{1};
+%                                 Mdl_dFFxy_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+%                                 Mdl_dFFxy_pars(trNo).pars.Standardize=standardizeCell{1};
+% 
+%                         end
+%                         dFF_pred(trNo).dFFpred_xy=predict(Mdl_dFFxy,XYtest);
+% 
+% 
+% 
+%                         %Decode using odor plume
+%                         switch handles_choices.algo
+%                             case 1
+%                                 Mdl_dFFop = fitrnet([odor_plume_train],this_dFFtrain,'Standardize',true);
+%                             case 2
+%                                 Mdl_dFFop = fitglm([odor_plume_train],this_dFFtrain);
+%                             case 3
+%                                 Mdl_dFFop = fitrtree([odor_plume_train],this_dFFtrain);
+%                             case 4
+%                                 Mdl_dFFop = fitrsvm([odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
+%                             case 5
+%                                 Mdl_dFFop = fitrgp([odor_plume_train],this_dFFtrain);
+%                             case 6
+%                                 Mdl_dFFop = fitrgp([odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
+%                             case 7
+%                                 bestHyperparameters = dFF_pred(trNo).Mdl_dFFop.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+%                                 activationsCell = cellstr(bestHyperparameters.Activations);
+%                                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+%                                 layer_sizes=bestHyperparameters.Layer_1_Size;
+%                                 if ~isnan(bestHyperparameters.Layer_2_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+%                                 end
+%                                 if ~isnan(bestHyperparameters.Layer_3_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+%                                 end
+%                                 Mdl_dFFop = fitrnet([odor_plume_train],this_dFFtrain,'LayerSizes', layer_sizes, ...
+%                                     'Activations', activationsCell{1}, ...
+%                                     'Lambda', bestHyperparameters.Lambda, ...
+%                                     'Standardize', strcmpi(standardizeCell{1},'true'));
+% 
+%                                 Mdl_dFFop_pars(trNo).pars.activations=activationsCell{1};
+%                                 Mdl_dFFop_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+%                                 Mdl_dFFop_pars(trNo).pars.Standardize=standardizeCell{1};
+%                         end
+%                         dFF_pred(trNo).dFFpred_op=predict(Mdl_dFFop,odor_plume_test);
+% 
+%                         %Decode using xy and odor plume
+%                         switch handles_choices.algo
+%                             case 1
+%                                 Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'Standardize',true);
+%                             case 2
+%                                 Mdl_dFFxyop = fitglm([XYtrain odor_plume_train],this_dFFtrain);
+%                             case 3
+%                                 Mdl_dFFxyop = fitrtree([XYtrain odor_plume_train],this_dFFtrain);
+%                             case 4
+%                                 Mdl_dFFxyop = fitrsvm([XYtrain odor_plume_train],this_dFFtrain, 'KernelFunction','rbf','Standardize', true);
+%                             case 5
+%                                 Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain);
+%                             case 6
+%                                 Mdl_dFFxyop = fitrgp([XYtrain odor_plume_train],this_dFFtrain,'KernelFunction', 'squaredexponential', 'Standardize', true);
+%                             case 7
+%                                 % opts = struct('ShowPlots', false, ...
+%                                 %     'Verbose', 0, ...
+%                                 %     'MaxObjectiveEvaluations', 15);
+%                                 % Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'OptimizeHyperparameters', 'auto',...
+%                                 %     'HyperparameterOptimizationOptions', opts);
+% 
+%                                 bestHyperparameters = dFF_pred(trNo).Mdl_dFFxy.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+%                                 activationsCell = cellstr(bestHyperparameters.Activations);
+%                                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+%                                 layer_sizes=bestHyperparameters.Layer_1_Size;
+%                                 if ~isnan(bestHyperparameters.Layer_2_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+%                                 end
+%                                 if ~isnan(bestHyperparameters.Layer_3_Size)
+%                                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+%                                 end
+%                                 Mdl_dFFxyop = fitrnet([XYtrain odor_plume_train],this_dFFtrain,'LayerSizes', layer_sizes, ...
+%                                     'Activations', activationsCell{1}, ...
+%                                     'Lambda', bestHyperparameters.Lambda, ...
+%                                     'Standardize', strcmpi(standardizeCell{1},'true'));
+% 
+%                                 Mdl_dFFxyop_pars(trNo).pars.activations=activationsCell{1};
+%                                 Mdl_dFFxyop_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+%                                 Mdl_dFFxyop_pars(trNo).pars.Standardize=standardizeCell{1};
+%                         end
+%                         dFF_pred(trNo).dFFpred_xyop=predict(Mdl_dFFxyop,[XYtest odor_plume_test]);
+% 
+% 
+% 
+%                         pffft=1;
+%                         % y_pred(trNo).data=predict(MdlY2,XdFFtest);
+%                     end
+%                     parfor_is_done=1;
+%                 catch
+%                 end
+%             end
+%             delete(gcp('nocreate'));
+% 
+% 
+% 
+%             %Parse out the parfor loop output
+%             all_dFFpred_xy=[];
+%             all_dFFpred_xyl=[];
+%             all_dFFpred_xyop=[];
+%             all_dFFpred_op=[];
+%             all_dFF=[];
+%             for trNo=1:trials.odor_trNo
+%                 per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFFpred_xy=dFF_pred(trNo).dFFpred_xy;
+%                 all_dFFpred_xy=[all_dFFpred_xy dFF_pred(trNo).dFFpred_xy'];
+%                 % per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFFpred_xyl=dFF_pred(trNo).dFFpred_xyl;
+%                 % all_dFFpred_xyl=[all_dFFpred_xyl dFF_pred(trNo).dFFpred_xyl'];
+%                 all_dFFpred_xyop=[all_dFFpred_xyop dFF_pred(trNo).dFFpred_xyop'];
+%                 all_dFFpred_op=[all_dFFpred_op dFF_pred(trNo).dFFpred_op'];
+%                 per_ROI_sh(this_ROI).repeats(ii_repeat).trial(trNo).dFF=dFF_pred(trNo).dFF;
+%                 all_dFF=[all_dFF dFF_pred(trNo).dFF'];
+%             end
+% 
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFF=all_dFF;
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xy=all_dFFpred_xy;
+%             % per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xyl=all_dFFpred_xyl;
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_xyop=all_dFFpred_xyop;
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).all_dFFpred_op=all_dFFpred_op;
+% 
+%             thisRxy=corrcoef([all_dFF' all_dFFpred_xy']);
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy=thisRxy(1,2);
+%             % thisRxyl=corrcoef([all_dFF' all_dFFpred_xyl']);
+%             % per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyl=thisRxyl(1,2);
+%             thisRxyop=corrcoef([all_dFF' all_dFFpred_xyop']);
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop=thisRxyop(1,2);
+%             thisRop=corrcoef([all_dFF' all_dFFpred_op']);
+%             per_ROI_sh(this_ROI).repeats(ii_repeat).Rop=thisRop(1,2);
+% 
+%             per_ROI(this_ROI).results.Mdl_dFFxy_pars=Mdl_dFFxy_pars;
+%             per_ROI(this_ROI).results.Mdl_dFFop_pars=Mdl_dFFop_pars;
+%             per_ROI(this_ROI).results.Mdl_dFFxyop_pars=Mdl_dFFxyop_pars;
+% 
+% 
+%             % fprintf(1, 'Repeat %d ROI No %d, rho for shuffled prediction dFFxy, dFFxyl dFFxyop, dFFop %d %d %d %d\n\n',ii_repeat,...
+%             %     this_ROI,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyl,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop,per_ROI_sh(this_ROI).repeats(ii_repeat).Rop);
+%             fprintf(1, 'Repeat %d ROI No %d, rho for shuffled prediction dFFxy, dFFop, dFFxyop %d %d %d\n',ii_repeat,...
+%                 this_ROI,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxy,per_ROI_sh(this_ROI).repeats(ii_repeat).Rop...
+%                 ,per_ROI_sh(this_ROI).repeats(ii_repeat).Rxyop);
+%             fprintf(1,['Elapsed time ' num2str((toc-start_toc)/(60)) ' mins shuffled\n\n'])
+%             %         thisROI_done=1;
+%             %     catch
+%             %         delete(gcp('nocreate'));
+%             %     end
+%             % end
+% 
+%         end
+%         handles_out.per_ROI_sh=per_ROI_sh;
+%         save([this_path arena_file(1:end-4) '_' handles_choices.save_tag '_' num2str(handles_choices.algo) ...
+%             num2str(handles_choices.weber_fechner) num2str(handles_choices.alpha)...
+%             num2str(no_dec_time_bins_op) num2str(no_dec_time_bins_xy) '.mat'],'handles_out','handles_choices','trials','-v7.3')
+%     end
 end
-
-fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-
-handles_out.per_ROI=per_ROI;
-handles_out.per_ROI_sh=per_ROI_sh;
+% 
+% fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+% 
+% handles_out.per_ROI=per_ROI;
+% handles_out.per_ROI_sh=per_ROI_sh;
 handles_out.trials=trials;
 
 
@@ -1896,357 +1905,357 @@ handles_out.trials=trials;
 % else
 %     noshRepeats=length(handles_out.per_ROI(1).repeats);
 % end
-
-noshRepeats=handles_choices.sh_repeats;
-
-shRops=[];
-shRxys=[];
-shRxyops=[];
-for ii_ROI=handles_choices.process_these_ROIs
-    for ii_sh_repeats=1:noshRepeats
-        shRops=[shRops handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rop];
-        shRxys=[shRxys handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rxy];
-        shRxyops=[shRxyops handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rxyop];
-    end
-end
-
-% Bootstrap resampling op
-try
-    bootstrap_samples_op = bootstrp(1000, @prctile, shRops, 95);
-catch
-    pffft=1;
-end
-
-% Compute the 95th percentile of the bootstrap samples
-Ropsh_bootstrap_95th_percentile = prctile(bootstrap_samples_op, 95);
-
-% Bootstrap resampling xy
-bootstrap_samples_xy = bootstrp(1000, @prctile, shRxys, 95);
-
-% Compute the 95th percentile of the bootstrap samples
-Rxysh_bootstrap_95th_percentile = prctile(bootstrap_samples_xy, 95);
-
-% Bootstrap resampling xyop
-bootstrap_samples_xyop = bootstrp(1000, @prctile, shRxyops, 95);
-
-% Compute the 95th percentile of the bootstrap samples
-Rxyopsh_bootstrap_95th_percentile = prctile(bootstrap_samples_xyop, 95);
-
-
-%Find the Rops that are above 95th percentile
-
-
-Rops=[];
-Rxys=[];
-Rxyops=[];
-iiROI_Rops=[];
-iiROI_Rxys=[];
-iiROI_Rxyops=[];
-Rops_above_95=[];
-Rxys_above_95=[];
-Rxyops_above_95=[];
-Rops_for_Rxys_above_95=[];
-Roxyl1s_for_Rxys_above_95=[];
-Roxyl4s_for_Rxys_above_95=[];
-Rxys_for_Rops_above_95=[];
-Ropl1s_for_Rops_above_95=[];
-Ropl4s_for_Rops_above_95=[];
-Rxys_for_Rxyops_above_95=[];
-Rxyopl1s_for_Rxyops_above_95=[];
-Rxyopl4s_for_Rxyops_above_95=[];
-Rxyops_for_Rxys_above_95=[];
-
-for ii_ROI=handles_choices.process_these_ROIs
- 
-    Rops=[Rops handles_out.per_ROI(ii_ROI).results.Rop];
-    Rxys=[Rxys handles_out.per_ROI(ii_ROI).results.Rxy];
-    Rxyops=[Rxyops handles_out.per_ROI(ii_ROI).results.Rxyop];
-
-    if handles_out.per_ROI(ii_ROI).results.Rop>Ropsh_bootstrap_95th_percentile
-        iiROI_Rops=[iiROI_Rops ii_ROI];
-        % fileNo_Rops=[fileNo_Rops fileNo];
-        Rops_above_95=[Rops_above_95 handles_out.per_ROI(ii_ROI).results.Rop];
-        Rxys_for_Rops_above_95=[Rxys_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
-        Ropl1s_for_Rops_above_95=[Ropl1s_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Ropl1];
-        Ropl4s_for_Rops_above_95=[Ropl4s_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Ropl4];
-    end
-    if handles_out.per_ROI(ii_ROI).results.Rxy>Rxysh_bootstrap_95th_percentile
-        iiROI_Rxys=[iiROI_Rxys ii_ROI];
-        % fileNo_Rxys=[fileNo_Rxys fileNo];
-        Rxys_above_95=[Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
-        Rops_for_Rxys_above_95=[Rops_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rop];
-        Rxyops_for_Rxys_above_95=[Rxyops_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyop];
-        Roxyl1s_for_Rxys_above_95=[Roxyl1s_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyl1];
-        Roxyl4s_for_Rxys_above_95=[Roxyl4s_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyl4];
-    end
-    if handles_out.per_ROI(ii_ROI).results.Rxyop>Rxyopsh_bootstrap_95th_percentile
-        iiROI_Rxyops=[iiROI_Rxyops ii_ROI];
-        % fileNo_Rxys=[fileNo_Rxys fileNo];
-        Rxyops_above_95=[Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyop];
-        Rxys_for_Rxyops_above_95=[Rxys_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
-        Rxyopl1s_for_Rxyops_above_95=[Rxyopl1s_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyopl1];
-        Rxyopl4s_for_Rxyops_above_95=[Rxyopl4s_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyopl4];
-    end
-
-end
-if handles_choices.displayFigures==1
-    %Display Rho op vs Rho xy figure for this ii_wf and fileNo
-    figNo=figNo+1;
-    try
-        close(figNo)
-    catch
-    end
-
-    hFig = figure(figNo);
-
-    set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
-
-
-    hold on
-
-    %Plot Rops above 95
-    for ii_rho1=1:length(Rops_above_95)
-        match_found=0;
-        for ii_rho2=1:length(Rxys_above_95)
-            if (iiROI_Rxys(ii_rho2)==iiROI_Rops(ii_rho1))
-                match_found=1;
-            end
-        end
-        if match_found==1
-            plot(Rxys_for_Rops_above_95(ii_rho1),Rops_above_95(ii_rho1),'ok')
-        else
-            plot(Rxys_for_Rops_above_95(ii_rho1),Rops_above_95(ii_rho1),'ob')
-        end
-    end
-
-    %Plot Rxys above 95
-    for ii_rho1=1:length(Rxys_above_95)
-        match_found=0;
-        for ii_rho2=1:length(Rops_above_95)
-            if (iiROI_Rops(ii_rho2)==iiROI_Rxys(ii_rho1))
-                match_found=1;
-            end
-        end
-        if match_found==1
-            plot(Rxys_above_95(ii_rho1),Rops_for_Rxys_above_95(ii_rho1),'ok')
-        else
-            plot(Rxys_above_95(ii_rho1),Rops_for_Rxys_above_95(ii_rho1),'or')
-        end
-    end
-
-    this_xlim=xlim;
-    this_ylim=ylim;
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.15*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rop>95%','Color',[0 0 1])
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.10*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy>95%','Color',[1 0 0])
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.05*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy and Rop>95%','Color',[0 0 0])
-
-
-    plot([this_xlim(1) this_xlim(2)],[this_xlim(1) this_xlim(2)],'-k')
-
-    xlabel('Rho xy')
-    ylabel('Rho op')
-    title(['Rho op vs. Rho xy log10= ' num2str(handles_choices.weber_fechner) ' alpha= ' num2str(handles_choices.alpha)])
-
-    %Display Rho xyop vs Rho xy figure for this ii_wf and fileNo
-    figNo=figNo+1;
-    try
-        close(figNo)
-    catch
-    end
-
-    hFig = figure(figNo);
-
-    set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
-
-
-    hold on
-
-    %Plot Rxyops above 95
-    for ii_rho1=1:length(Rxyops_above_95)
-        match_found=0;
-        for ii_rho2=1:length(Rxys_above_95)
-            if (iiROI_Rxys(ii_rho2)==iiROI_Rxyops(ii_rho1))
-                match_found=1;
-            end
-        end
-        if match_found==1
-            plot(Rxys_for_Rxyops_above_95(ii_rho1),Rxyops_above_95(ii_rho1),'ok')
-        else
-            plot(Rxys_for_Rxyops_above_95(ii_rho1),Rxyops_above_95(ii_rho1),'ob')
-        end
-    end
-
-    %Plot Rxys above 95
-    for ii_rho1=1:length(Rxys_above_95)
-        match_found=0;
-        for ii_rho2=1:length(Rxyops_above_95)
-            if (iiROI_Rxyops(ii_rho2)==iiROI_Rxys(ii_rho1))
-                match_found=1;
-            end
-        end
-        if match_found==1
-            plot(Rxys_above_95(ii_rho1),Rxyops_for_Rxys_above_95(ii_rho1),'ok')
-        else
-            plot(Rxys_above_95(ii_rho1),Rxyops_for_Rxys_above_95(ii_rho1),'or')
-        end
-    end
-
-    this_xlim=xlim;
-    this_ylim=ylim;
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.15*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxyop>95%','Color',[0 0 1])
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.10*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy>95%','Color',[1 0 0])
-    text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.05*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy and Rxyop>95%','Color',[0 0 0])
-
-    plot([this_xlim(1) this_xlim(2)],[this_xlim(1) this_xlim(2)],'-k')
-
-    xlabel('Rho xy')
-    ylabel('Rho xyop')
-    title(['Rho xyop vs. Rho xy log10= ' num2str(handles_choices.weber_fechner) ' alpha= ' num2str(handles_choices.alpha) ])
-
-
-end
-
-
-
-%Plot the traces and predicted traces
-%Rxys above 95 percentile
-iiROI_Rxys_to_plot=[];
-if ~isempty(iiROI_Rxys)
-    to_sort=[Rxys_above_95' iiROI_Rxys'];
-    sorted_rows=sortrows(to_sort,1);
-    iiROI_Rxys_to_plot=zeros(1,length(iiROI_Rxys));
-    iiROI_Rxys_to_plot(1,:)=sorted_rows(:,2);
-
-    these_alldFF=[];
-    
-    for ii=1:length(iiROI_Rxys)
-        these_alldFF=[these_alldFF per_ROI(iiROI_Rxys(ii)).results.all_dFF];
-    end
-
-    figNo=figNo+1;
-    try
-        close(figNo)
-    catch
-    end
-
-    hFig = figure(figNo);
-
-    set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
-    hold on
-
-    % Determine the y spacing of the traces
-    y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
-
-
-    for iiROI=1:length(iiROI_Rxys)
-        this_ROI=iiROI_Rxys_to_plot(iiROI);
-        no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
-        no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xy+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xy+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-    end
-
-    %Show the last few
-    ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
-
-    xlabel('time(sec)')
-    title(['All dFF timecourses for ROIs with xy predictions above 95 percentile'])
-end
-
-
-%Show the fits for xyrops
-iiROI_Rxyops_to_plot=[];
-if ~isempty(iiROI_Rxyops)
-    to_sort=[Rxyops_above_95' iiROI_Rxyops'];
-    sorted_rows=sortrows(to_sort,1);
-    iiROI_Rxyops_to_plot=zeros(1,length(iiROI_Rxyops));
-    iiROI_Rxyops_to_plot(1,:)=sorted_rows(:,2);
-
-    
-
-    figNo=figNo+1;
-    try
-        close(figNo)
-    catch
-    end
-
-    hFig = figure(figNo);
-
-    set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
-    hold on
-
-    % Determine the y spacing of the traces
-    y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
-
-
-    for iiROI=1:length(iiROI_Rxyops_to_plot)
-        this_ROI=iiROI_Rxyops_to_plot(iiROI);
-        no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
-        no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xyop+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xyop+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-    end
-
-    %Show the last few
-    ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
-
-    xlabel('time(sec)')
-    title(['All dFF timecourses for ROIs with xyop predictions above 95 percentile'])
-end
-
-
-
-%Show the fits for ops
-iiROI_Rops_to_plot=[];
-if ~isempty(iiROI_Rops)
-    to_sort=[Rops_above_95' iiROI_Rops'];
-    sorted_rows=sortrows(to_sort,1);
-    iiROI_Rops_to_plot=zeros(1,length(iiROI_Rops));
-    iiROI_Rops_to_plot(1,:)=sorted_rows(:,2);
-
-
-    figNo=figNo+1;
-    try
-        close(figNo)
-    catch
-    end
-
-    hFig = figure(figNo);
-
-    set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
-    hold on
-
-    % Determine the y spacing of the traces
-    y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
-
-
-    for iiROI=1:length(iiROI_Rops_to_plot)
-        this_ROI=iiROI_Rops_to_plot(iiROI);
-        no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
-        no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
-
-        plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_op+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-        plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_op+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
-    end
-
-    %Show the last few
-    ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
-
-    xlabel('time(sec)')
-    title(['All dFF timecourses for ROIs with op predictions above 95 percentile'])
-end
-
+% 
+% noshRepeats=handles_choices.sh_repeats;
+% 
+% shRops=[];
+% shRxys=[];
+% shRxyops=[];
+% for ii_ROI=handles_choices.process_these_ROIs
+%     for ii_sh_repeats=1:noshRepeats
+%         shRops=[shRops handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rop];
+%         shRxys=[shRxys handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rxy];
+%         shRxyops=[shRxyops handles_out.per_ROI_sh(ii_ROI).repeats(ii_sh_repeats).Rxyop];
+%     end
+% end
+% 
+% % Bootstrap resampling op
+% try
+%     bootstrap_samples_op = bootstrp(1000, @prctile, shRops, 95);
+% catch
+%     pffft=1;
+% end
+% 
+% % Compute the 95th percentile of the bootstrap samples
+% Ropsh_bootstrap_95th_percentile = prctile(bootstrap_samples_op, 95);
+% 
+% % Bootstrap resampling xy
+% bootstrap_samples_xy = bootstrp(1000, @prctile, shRxys, 95);
+% 
+% % Compute the 95th percentile of the bootstrap samples
+% Rxysh_bootstrap_95th_percentile = prctile(bootstrap_samples_xy, 95);
+% 
+% % Bootstrap resampling xyop
+% bootstrap_samples_xyop = bootstrp(1000, @prctile, shRxyops, 95);
+% 
+% % Compute the 95th percentile of the bootstrap samples
+% Rxyopsh_bootstrap_95th_percentile = prctile(bootstrap_samples_xyop, 95);
+% 
+% 
+% %Find the Rops that are above 95th percentile
+% 
+% 
+% Rops=[];
+% Rxys=[];
+% Rxyops=[];
+% iiROI_Rops=[];
+% iiROI_Rxys=[];
+% iiROI_Rxyops=[];
+% Rops_above_95=[];
+% Rxys_above_95=[];
+% Rxyops_above_95=[];
+% Rops_for_Rxys_above_95=[];
+% Roxyl1s_for_Rxys_above_95=[];
+% Roxyl4s_for_Rxys_above_95=[];
+% Rxys_for_Rops_above_95=[];
+% Ropl1s_for_Rops_above_95=[];
+% Ropl4s_for_Rops_above_95=[];
+% Rxys_for_Rxyops_above_95=[];
+% Rxyopl1s_for_Rxyops_above_95=[];
+% Rxyopl4s_for_Rxyops_above_95=[];
+% Rxyops_for_Rxys_above_95=[];
+% 
+% for ii_ROI=handles_choices.process_these_ROIs
+% 
+%     Rops=[Rops handles_out.per_ROI(ii_ROI).results.Rop];
+%     Rxys=[Rxys handles_out.per_ROI(ii_ROI).results.Rxy];
+%     Rxyops=[Rxyops handles_out.per_ROI(ii_ROI).results.Rxyop];
+% 
+%     if handles_out.per_ROI(ii_ROI).results.Rop>Ropsh_bootstrap_95th_percentile
+%         iiROI_Rops=[iiROI_Rops ii_ROI];
+%         % fileNo_Rops=[fileNo_Rops fileNo];
+%         Rops_above_95=[Rops_above_95 handles_out.per_ROI(ii_ROI).results.Rop];
+%         Rxys_for_Rops_above_95=[Rxys_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
+%         Ropl1s_for_Rops_above_95=[Ropl1s_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Ropl1];
+%         Ropl4s_for_Rops_above_95=[Ropl4s_for_Rops_above_95 handles_out.per_ROI(ii_ROI).results.Ropl4];
+%     end
+%     if handles_out.per_ROI(ii_ROI).results.Rxy>Rxysh_bootstrap_95th_percentile
+%         iiROI_Rxys=[iiROI_Rxys ii_ROI];
+%         % fileNo_Rxys=[fileNo_Rxys fileNo];
+%         Rxys_above_95=[Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
+%         Rops_for_Rxys_above_95=[Rops_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rop];
+%         Rxyops_for_Rxys_above_95=[Rxyops_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyop];
+%         Roxyl1s_for_Rxys_above_95=[Roxyl1s_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyl1];
+%         Roxyl4s_for_Rxys_above_95=[Roxyl4s_for_Rxys_above_95 handles_out.per_ROI(ii_ROI).results.Rxyl4];
+%     end
+%     if handles_out.per_ROI(ii_ROI).results.Rxyop>Rxyopsh_bootstrap_95th_percentile
+%         iiROI_Rxyops=[iiROI_Rxyops ii_ROI];
+%         % fileNo_Rxys=[fileNo_Rxys fileNo];
+%         Rxyops_above_95=[Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyop];
+%         Rxys_for_Rxyops_above_95=[Rxys_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxy];
+%         Rxyopl1s_for_Rxyops_above_95=[Rxyopl1s_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyopl1];
+%         Rxyopl4s_for_Rxyops_above_95=[Rxyopl4s_for_Rxyops_above_95 handles_out.per_ROI(ii_ROI).results.Rxyopl4];
+%     end
+% 
+% end
+% if handles_choices.displayFigures==1
+%     %Display Rho op vs Rho xy figure for this ii_wf and fileNo
+%     figNo=figNo+1;
+%     try
+%         close(figNo)
+%     catch
+%     end
+% 
+%     hFig = figure(figNo);
+% 
+%     set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+% 
+% 
+%     hold on
+% 
+%     %Plot Rops above 95
+%     for ii_rho1=1:length(Rops_above_95)
+%         match_found=0;
+%         for ii_rho2=1:length(Rxys_above_95)
+%             if (iiROI_Rxys(ii_rho2)==iiROI_Rops(ii_rho1))
+%                 match_found=1;
+%             end
+%         end
+%         if match_found==1
+%             plot(Rxys_for_Rops_above_95(ii_rho1),Rops_above_95(ii_rho1),'ok')
+%         else
+%             plot(Rxys_for_Rops_above_95(ii_rho1),Rops_above_95(ii_rho1),'ob')
+%         end
+%     end
+% 
+%     %Plot Rxys above 95
+%     for ii_rho1=1:length(Rxys_above_95)
+%         match_found=0;
+%         for ii_rho2=1:length(Rops_above_95)
+%             if (iiROI_Rops(ii_rho2)==iiROI_Rxys(ii_rho1))
+%                 match_found=1;
+%             end
+%         end
+%         if match_found==1
+%             plot(Rxys_above_95(ii_rho1),Rops_for_Rxys_above_95(ii_rho1),'ok')
+%         else
+%             plot(Rxys_above_95(ii_rho1),Rops_for_Rxys_above_95(ii_rho1),'or')
+%         end
+%     end
+% 
+%     this_xlim=xlim;
+%     this_ylim=ylim;
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.15*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rop>95%','Color',[0 0 1])
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.10*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy>95%','Color',[1 0 0])
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.05*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy and Rop>95%','Color',[0 0 0])
+% 
+% 
+%     plot([this_xlim(1) this_xlim(2)],[this_xlim(1) this_xlim(2)],'-k')
+% 
+%     xlabel('Rho xy')
+%     ylabel('Rho op')
+%     title(['Rho op vs. Rho xy log10= ' num2str(handles_choices.weber_fechner) ' alpha= ' num2str(handles_choices.alpha)])
+% 
+%     %Display Rho xyop vs Rho xy figure for this ii_wf and fileNo
+%     figNo=figNo+1;
+%     try
+%         close(figNo)
+%     catch
+%     end
+% 
+%     hFig = figure(figNo);
+% 
+%     set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+% 
+% 
+%     hold on
+% 
+%     %Plot Rxyops above 95
+%     for ii_rho1=1:length(Rxyops_above_95)
+%         match_found=0;
+%         for ii_rho2=1:length(Rxys_above_95)
+%             if (iiROI_Rxys(ii_rho2)==iiROI_Rxyops(ii_rho1))
+%                 match_found=1;
+%             end
+%         end
+%         if match_found==1
+%             plot(Rxys_for_Rxyops_above_95(ii_rho1),Rxyops_above_95(ii_rho1),'ok')
+%         else
+%             plot(Rxys_for_Rxyops_above_95(ii_rho1),Rxyops_above_95(ii_rho1),'ob')
+%         end
+%     end
+% 
+%     %Plot Rxys above 95
+%     for ii_rho1=1:length(Rxys_above_95)
+%         match_found=0;
+%         for ii_rho2=1:length(Rxyops_above_95)
+%             if (iiROI_Rxyops(ii_rho2)==iiROI_Rxys(ii_rho1))
+%                 match_found=1;
+%             end
+%         end
+%         if match_found==1
+%             plot(Rxys_above_95(ii_rho1),Rxyops_for_Rxys_above_95(ii_rho1),'ok')
+%         else
+%             plot(Rxys_above_95(ii_rho1),Rxyops_for_Rxys_above_95(ii_rho1),'or')
+%         end
+%     end
+% 
+%     this_xlim=xlim;
+%     this_ylim=ylim;
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.15*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxyop>95%','Color',[0 0 1])
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.10*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy>95%','Color',[1 0 0])
+%     text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1)), 0.05*(this_ylim(2)-this_ylim(1))+this_ylim(1),'Rxy and Rxyop>95%','Color',[0 0 0])
+% 
+%     plot([this_xlim(1) this_xlim(2)],[this_xlim(1) this_xlim(2)],'-k')
+% 
+%     xlabel('Rho xy')
+%     ylabel('Rho xyop')
+%     title(['Rho xyop vs. Rho xy log10= ' num2str(handles_choices.weber_fechner) ' alpha= ' num2str(handles_choices.alpha) ])
+% 
+% 
+% end
+% 
+% 
+% 
+% %Plot the traces and predicted traces
+% %Rxys above 95 percentile
+% iiROI_Rxys_to_plot=[];
+% if ~isempty(iiROI_Rxys)
+%     to_sort=[Rxys_above_95' iiROI_Rxys'];
+%     sorted_rows=sortrows(to_sort,1);
+%     iiROI_Rxys_to_plot=zeros(1,length(iiROI_Rxys));
+%     iiROI_Rxys_to_plot(1,:)=sorted_rows(:,2);
+% 
+%     these_alldFF=[];
+% 
+%     for ii=1:length(iiROI_Rxys)
+%         these_alldFF=[these_alldFF per_ROI(iiROI_Rxys(ii)).results.all_dFF];
+%     end
+% 
+%     figNo=figNo+1;
+%     try
+%         close(figNo)
+%     catch
+%     end
+% 
+%     hFig = figure(figNo);
+% 
+%     set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
+%     hold on
+% 
+%     % Determine the y spacing of the traces
+%     y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
+% 
+% 
+%     for iiROI=1:length(iiROI_Rxys)
+%         this_ROI=iiROI_Rxys_to_plot(iiROI);
+%         no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
+%         no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xy+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xy+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%     end
+% 
+%     %Show the last few
+%     ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
+% 
+%     xlabel('time(sec)')
+%     title(['All dFF timecourses for ROIs with xy predictions above 95 percentile'])
+% end
+% 
+% 
+% %Show the fits for xyrops
+% iiROI_Rxyops_to_plot=[];
+% if ~isempty(iiROI_Rxyops)
+%     to_sort=[Rxyops_above_95' iiROI_Rxyops'];
+%     sorted_rows=sortrows(to_sort,1);
+%     iiROI_Rxyops_to_plot=zeros(1,length(iiROI_Rxyops));
+%     iiROI_Rxyops_to_plot(1,:)=sorted_rows(:,2);
+% 
+% 
+% 
+%     figNo=figNo+1;
+%     try
+%         close(figNo)
+%     catch
+%     end
+% 
+%     hFig = figure(figNo);
+% 
+%     set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
+%     hold on
+% 
+%     % Determine the y spacing of the traces
+%     y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
+% 
+% 
+%     for iiROI=1:length(iiROI_Rxyops_to_plot)
+%         this_ROI=iiROI_Rxyops_to_plot(iiROI);
+%         no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
+%         no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xyop+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xyop+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%     end
+% 
+%     %Show the last few
+%     ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
+% 
+%     xlabel('time(sec)')
+%     title(['All dFF timecourses for ROIs with xyop predictions above 95 percentile'])
+% end
+% 
+% 
+% 
+% %Show the fits for ops
+% iiROI_Rops_to_plot=[];
+% if ~isempty(iiROI_Rops)
+%     to_sort=[Rops_above_95' iiROI_Rops'];
+%     sorted_rows=sortrows(to_sort,1);
+%     iiROI_Rops_to_plot=zeros(1,length(iiROI_Rops));
+%     iiROI_Rops_to_plot(1,:)=sorted_rows(:,2);
+% 
+% 
+%     figNo=figNo+1;
+%     try
+%         close(figNo)
+%     catch
+%     end
+% 
+%     hFig = figure(figNo);
+% 
+%     set(hFig, 'units','normalized','position',[.05 .1 .85 .8])
+%     hold on
+% 
+%     % Determine the y spacing of the traces
+%     y_shift=6*(prctile(these_alldFF(:),95)-prctile(these_alldFF(:),5));
+% 
+% 
+%     for iiROI=1:length(iiROI_Rops_to_plot)
+%         this_ROI=iiROI_Rops_to_plot(iiROI);
+%         no_time_bins1=length(per_ROI(this_ROI).results.all_dFFl1);
+%         no_time_bins4=length(per_ROI(this_ROI).results.all_dFFl4);
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*iiROI,'-k','LineWidth',1.5)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*iiROI,'-k','LineWidth',1.5)
+% 
+%         plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_op+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%         plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_op+y_shift*iiROI-0.3*y_shift,'-r','LineWidth',1)
+%     end
+% 
+%     %Show the last few
+%     ylim([y_shift*(iiROI-10) y_shift*(iiROI+2)])
+% 
+%     xlabel('time(sec)')
+%     title(['All dFF timecourses for ROIs with op predictions above 95 percentile'])
+% end
+% 
 
 %Now do space activity maps and calculate information content
 %Now show the pseudocolor activity plots
@@ -2262,11 +2271,11 @@ for ii_x=1:10
     end
 end
 
-%Keep track of all iiROIs
-all_iiROIs_above_95=unique([iiROI_Rxyops_to_plot iiROI_Rxys_to_plot iiROI_Rops_to_plot]);
-all_Rs_above_95=zeros(1,length(all_iiROIs_above_95));
-ii_all_iiROIs=0;
-groups_all_iiROIs_above_95=zeros(length(all_iiROIs_above_95),3); %First column op, second xy, third xyop
+% %Keep track of all iiROIs
+% all_iiROIs_above_95=unique([iiROI_Rxyops_to_plot iiROI_Rxys_to_plot iiROI_Rops_to_plot]);
+% all_Rs_above_95=zeros(1,length(all_iiROIs_above_95));
+% ii_all_iiROIs=0;
+% groups_all_iiROIs_above_95=zeros(length(all_iiROIs_above_95),3); %First column op, second xy, third xyop
 
 
 
@@ -2494,62 +2503,62 @@ for this_ROI=handles_choices.process_these_ROIs
     plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*ii_plot,'-k','LineWidth',1.5)
     plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*ii_plot,'-k','LineWidth',1.5)
 
-    plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_op+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
-    plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_op+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_op+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_op+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
 
-    ii_plot=1;
-    plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*ii_plot,'-k','LineWidth',1.5)
-    plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*ii_plot,'-k','LineWidth',1.5)
+    % ii_plot=1;
+    % plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*ii_plot,'-k','LineWidth',1.5)
+    % plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*ii_plot,'-k','LineWidth',1.5)
+    % 
+    % % plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xy+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % % plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xy+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % 
+    % ii_plot=2;
+    % plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*ii_plot,'-k','LineWidth',1.5)
+    % plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*ii_plot,'-k','LineWidth',1.5)
 
-    plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xy+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
-    plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xy+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
-
-    ii_plot=2;
-    plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFl1+y_shift*ii_plot,'-k','LineWidth',1.5)
-    plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFl4+y_shift*ii_plot,'-k','LineWidth',1.5)
-
-    plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xyop+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
-    plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xyop+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % plot([1:no_time_bins1], per_ROI(this_ROI).results.all_dFFpredl1_xyop+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
+    % plot([no_time_bins1+100:no_time_bins1+99+no_time_bins4], per_ROI(this_ROI).results.all_dFFpredl4_xyop+y_shift*ii_plot-0.3*y_shift,'-r','LineWidth',1)
 
     %Lane 1
     for ii_tr=1:length(per_ROI(this_ROI).results.all_trl1)
         this_x=per_ROI(this_ROI).results.all_trl1(ii_tr);
-        plot([this_x this_x], [-y_shift y_shift*(ii_plot+1)],'-','Color',[0.6 0.6 0.6])
+        plot([this_x this_x], [-0.2*y_shift y_shift*(ii_plot+1)],'-','Color',[0.6 0.6 0.6])
     end
 
     %Lane 4
     for ii_tr=1:length(per_ROI(this_ROI).results.all_trl4)
         this_x=no_time_bins1+100+per_ROI(this_ROI).results.all_trl4(ii_tr);
-        plot([this_x this_x], [-y_shift y_shift*(ii_plot+1)],'-','Color',[0.6 0.6 0.6])
+        plot([this_x this_x], [-0.2*y_shift y_shift*(ii_plot+1)],'-','Color',[0.6 0.6 0.6])
     end
 
 
-    ylim([-y_shift y_shift*(ii_plot+1)])
+    ylim([-0.2*y_shift 1.2*y_shift*(ii_plot+1)])
 
 
-
-    %Show Rhos
-
-    %Rop
-    if sum(this_ROI==iiROI_Rops_to_plot)==1
-        text(no_time_bins1+10,0,['op ' num2str(per_ROI(this_ROI).results.Rop)], 'Color','k')
-    else
-        text(no_time_bins1+10,0,['op ' num2str(per_ROI(this_ROI).results.Rop)], 'Color',[0.6 0.6 0.6])
-    end
-
-    %Rxy
-    if sum(this_ROI==iiROI_Rxys_to_plot)==1
-        text(no_time_bins1+10,y_shift,['xy ' num2str(per_ROI(this_ROI).results.Rxy)], 'Color','k')
-    else
-        text(no_time_bins1+10,y_shift,['xy ' num2str(per_ROI(this_ROI).results.Rxy)], 'Color',[0.6 0.6 0.6])
-    end
-
-    %Rxyop
-    if sum(this_ROI==iiROI_Rxyops_to_plot)==1
-        text(no_time_bins1+10,2*y_shift,['xyop ' num2str(per_ROI(this_ROI).results.Rxyop)], 'Color','k')
-    else
-        text(no_time_bins1+10,2*y_shift,['xyop ' num2str(per_ROI(this_ROI).results.Rxyop)], 'Color',[0.6 0.6 0.6])
-    end
+    % 
+    % %Show Rhos
+    % 
+    % %Rop
+    % if sum(this_ROI==iiROI_Rops_to_plot)==1
+    %     text(no_time_bins1+10,0,['op ' num2str(per_ROI(this_ROI).results.Rop)], 'Color','k')
+    % else
+    %     text(no_time_bins1+10,0,['op ' num2str(per_ROI(this_ROI).results.Rop)], 'Color',[0.6 0.6 0.6])
+    % end
+    % 
+    % %Rxy
+    % if sum(this_ROI==iiROI_Rxys_to_plot)==1
+    %     text(no_time_bins1+10,y_shift,['xy ' num2str(per_ROI(this_ROI).results.Rxy)], 'Color','k')
+    % else
+    %     text(no_time_bins1+10,y_shift,['xy ' num2str(per_ROI(this_ROI).results.Rxy)], 'Color',[0.6 0.6 0.6])
+    % end
+    % 
+    % %Rxyop
+    % if sum(this_ROI==iiROI_Rxyops_to_plot)==1
+    %     text(no_time_bins1+10,2*y_shift,['xyop ' num2str(per_ROI(this_ROI).results.Rxyop)], 'Color','k')
+    % else
+    %     text(no_time_bins1+10,2*y_shift,['xyop ' num2str(per_ROI(this_ROI).results.Rxyop)], 'Color',[0.6 0.6 0.6])
+    % end
 
     %Entire arena
     subplot(2,3,4)
@@ -3006,25 +3015,25 @@ for this_ROI=handles_choices.process_these_ROIs
     pffft=1;
 end
 
-handles_out.Rops=Rops;
-handles_out.Rxys=Rxys;
-handles_out.Rxyops=Rxyops;
-handles_out.iiROI_Rops=iiROI_Rops;
-handles_out.iiROI_Rxys=iiROI_Rxys;
-handles_out.iiROI_Rxyops=iiROI_Rxyops;
-handles_out.Rops_above_95=Rops_above_95;
-handles_out.Rxys_above_95=Rxys_above_95;
-handles_out.Rxyops_above_95=Rxyops_above_95;
-handles_out.Rops_for_Rxys_above_95=Rops_for_Rxys_above_95;
-handles_out.Roxyl1s_for_Rxys_above_95=Roxyl1s_for_Rxys_above_95;
-handles_out.Roxyl4s_for_Rxys_above_95=Roxyl4s_for_Rxys_above_95;
-handles_out.Rxys_for_Rops_above_95=Rxys_for_Rops_above_95;
-handles_out.Ropl1s_for_Rops_above_95=Ropl1s_for_Rops_above_95;
-handles_out.Ropl4s_for_Rops_above_95=Ropl4s_for_Rops_above_95;
-handles_out.Rxys_for_Rxyops_above_95=Rxys_for_Rxyops_above_95;
-handles_out.Rxyopl1s_for_Rxyops_above_95=Rxyopl1s_for_Rxyops_above_95;
-handles_out.Rxyopl4s_for_Rxyops_above_95=Rxyopl4s_for_Rxyops_above_95;
-handles_out.Rxyops_for_Rxys_above_95=Rxyops_for_Rxys_above_95;
+% handles_out.Rops=Rops;
+% handles_out.Rxys=Rxys;
+% handles_out.Rxyops=Rxyops;
+% handles_out.iiROI_Rops=iiROI_Rops;
+% handles_out.iiROI_Rxys=iiROI_Rxys;
+% handles_out.iiROI_Rxyops=iiROI_Rxyops;
+% handles_out.Rops_above_95=Rops_above_95;
+% handles_out.Rxys_above_95=Rxys_above_95;
+% handles_out.Rxyops_above_95=Rxyops_above_95;
+% handles_out.Rops_for_Rxys_above_95=Rops_for_Rxys_above_95;
+% handles_out.Roxyl1s_for_Rxys_above_95=Roxyl1s_for_Rxys_above_95;
+% handles_out.Roxyl4s_for_Rxys_above_95=Roxyl4s_for_Rxys_above_95;
+% handles_out.Rxys_for_Rops_above_95=Rxys_for_Rops_above_95;
+% handles_out.Ropl1s_for_Rops_above_95=Ropl1s_for_Rops_above_95;
+% handles_out.Ropl4s_for_Rops_above_95=Ropl4s_for_Rops_above_95;
+% handles_out.Rxys_for_Rxyops_above_95=Rxys_for_Rxyops_above_95;
+% handles_out.Rxyopl1s_for_Rxyops_above_95=Rxyopl1s_for_Rxyops_above_95;
+% handles_out.Rxyopl4s_for_Rxyops_above_95=Rxyopl4s_for_Rxyops_above_95;
+% handles_out.Rxyops_for_Rxys_above_95=Rxyops_for_Rxys_above_95;
 
 
 handles_out.information_content=information_content;

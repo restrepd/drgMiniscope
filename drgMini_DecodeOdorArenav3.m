@@ -1,6 +1,8 @@
-function handles_out=drgMini_DecodeOdorArenav2(handles_choices)
+function handles_out=drgMini_DecodeOdorArenav3(handles_choices)
+%Does decoding of the navigation path for a mouse undergoing odor plume navigation 
+%following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 
-%Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
+
 close all
 
 if exist('handles_choices')==0
@@ -11,22 +13,31 @@ if exist('handles_choices')==0
     % dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
     % arena_file='20220729_FCM22withodor_odorarena_L4_sync.mat';
 
-    % 
+    %
     % %First troubleshooting files
-    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
-    dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-    arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
+    % this_path='/data/SFTP/PreProcessedDR/20220804_FCM22/';
+    % dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+
+
     % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
 
-%     %Second troubleshooting files
-%     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
-%     dFF_file='20220713_FCM6_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-%     arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn.mat';
+    %     %Second troubleshooting files
+    %     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
+    %     dFF_file='20220713_FCM6_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    %     arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn.mat';
+
+
+    this_path='/data/SFTP/PreProcessedDR/20220713_FCM6/';
+    dFF_file='20220713_FCM6_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn_mm.mat';
+
 
     %No odor troubleshooting files
-%     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
-%     dFF_file='20220824_FCM6_withoutodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-%     arena_file='20220824_FCM6withoutodor_odorarena_L1andL4_sync.mat';
+    %     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
+    %     dFF_file='20220824_FCM6_withoutodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    %     arena_file='20220824_FCM6withoutodor_odorarena_L1andL4_sync.mat';
 
 
     handles_choices.this_path=this_path;
@@ -43,9 +54,9 @@ if exist('handles_choices')==0
     training_fraction=0.9;
     handles_choices.training_fraction=training_fraction;
 
-%     training_range=[0, 0.5];
+    %     training_range=[0, 0.5];
     %     valid_range=[0.5,0.65];
-%     test_range=[0.5, 1];
+    %     test_range=[0.5, 1];
 
     %The user can define what time period to use spikes from (with respect to the output).
     bins_before=10; %How many bins of neural data prior to the output are used for decoding, 4
@@ -66,14 +77,14 @@ if exist('handles_choices')==0
     handles_choices.dt_miniscope=dt_miniscope;
     handles_choices.n_shuffle=n_shuffle;
 
-    which_training_algorithm=2; 
+    which_training_algorithm=2;
     handles_choices.which_training_algorithm=which_training_algorithm;
     %1=entire session is used for training
     %2=only per trial is used for training
     %3=trained with data between trials
 
 else
-    
+
     this_path=handles_choices.this_path;
     dFF_file=handles_choices.dFF_file;
     arena_file=handles_choices.arena_file;
@@ -86,6 +97,13 @@ else
     n_shuffle=handles_choices.n_shuffle;
     which_training_algorithm=handles_choices.which_training_algorithm;
 end
+
+try
+    delete(gcp('nocreate'));
+catch
+end
+
+setenv('MW_PCT_TRANSPORT_HEARTBEAT_INTERVAL', '700')
 
 switch which_training_algorithm
     case 1
@@ -101,7 +119,7 @@ figNo=0;
 %Restart random seeds
 rng('shuffle');
 
-gcp;
+% gcp;
 
 dFF=[];
 if strcmp(dFF_file(end-3:end),'.mat')
@@ -161,7 +179,7 @@ while at_end==0
         trials.ii_odor(jj)=ii+next_ii;
         trials.x_odor(jj)=arena.xsync(ii+next_ii);
         trials.y_odor(jj)=arena.ysync(ii+next_ii);
-      
+
         ii=ii+next_ii;
         ii_mini=arena.index_flirsynctominiscope(ii);
 
@@ -191,7 +209,7 @@ while at_end==0
         at_end=1;
     end
 end
-% 
+%
 % %Extract odor on using the camera sync
 % at_end=0;
 % ii=0;
@@ -214,7 +232,7 @@ end
 %          at_end=1;
 %     end
 % end
-% 
+%
 % %Extract lane1
 % at_end=0;
 % ii_flir=0;
@@ -238,7 +256,7 @@ end
 %          at_end=1;
 %     end
 % end
-% 
+%
 % %Extract lane4
 % at_end=0;
 % ii_flir=0;
@@ -276,14 +294,14 @@ while at_end==0
         trials.x_lanewater1(jj)=arena.xsync(next_ii);
         trials.y_lanewater1(jj)=arena.ysync(next_ii);
         next_ii_flir2=find(arena.lanewater1(ii_flir+next_ii_flir+1:end)==0,1,'first');
-%         next_ii=find(arena.index_flirsynctominiscope<=next_ii_flir,1,'last');
+        %         next_ii=find(arena.index_flirsynctominiscope<=next_ii_flir,1,'last');
         if ~isempty(next_ii_flir2)
             ii_flir=ii_flir+next_ii_flir+next_ii_flir2;
         else
             at_end=1;
         end
     else
-         at_end=1;
+        at_end=1;
     end
 end
 
@@ -301,14 +319,14 @@ while at_end==0
         trials.x_lanewater4(jj)=arena.xsync(next_ii);
         trials.y_lanewater4(jj)=arena.ysync(next_ii);
         next_ii_flir2=find(arena.lanewater4(ii_flir+next_ii_flir+1:end)==0,1,'first');
-%         next_ii=find(arena.index_flirsynctominiscope<=next_ii_flir,1,'last');
+        %         next_ii=find(arena.index_flirsynctominiscope<=next_ii_flir,1,'last');
         if ~isempty(next_ii_flir2)
             ii_flir=ii_flir+next_ii_flir+next_ii_flir2;
         else
             at_end=1;
         end
     else
-         at_end=1;
+        at_end=1;
     end
 end
 
@@ -327,14 +345,15 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 plot(trials.x_laneodor1,trials.y_laneodor1,'or')
 plot(trials.x_laneodor4,trials.y_laneodor4,'ob')
-plot([95 95],[200 250],'-r')
-plot([95 95],[0 50],'-b')
+plot([10 10],[385 435],'-r')
+plot([10 10],[25 75],'-b')
 
 plot(trials.x_lanewater1,trials.y_lanewater1,'xr')
 plot(trials.x_lanewater4,trials.y_lanewater4,'xb')
 xlabel('x')
 ylabel('y')
-title('Location of trial start (o) and water delivery (x)')
+set(gca, 'YDir', 'reverse');
+title('Trial start (o) and water delivery (x), red lane 1, blue lane 4')
 
 
 %Bin positions into dt time bins
@@ -492,6 +511,7 @@ end
 tic
 %Set what part of data should be part of the training/testing/validation sets
 %Note that there was a long period of no movement after about 80% of recording, so I did not use this data.
+
 switch which_training_algorithm
     case 1
         %Train with entire session
@@ -502,7 +522,9 @@ switch which_training_algorithm
             x_pred(ii_train).data=[];
         end
 
-        parfor ii_train=1:ii_n_training
+        % parfor ii_train=1:ii_n_training
+        for ii_train=1:ii_n_training
+            start_toc=toc;
             this_test_range=zeros(1,no_time_bins);
             ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
             ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
@@ -540,8 +562,9 @@ switch which_training_algorithm
 
             x_pred(ii_train).data=predict(MdlY1,XdFFtest);
             y_pred(ii_train).data=predict(MdlY2,XdFFtest);
+            fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
         end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+        
 
         %Parse out the parfor loop output
         x_predicted=zeros(no_time_bins,1);
@@ -672,8 +695,10 @@ switch which_training_algorithm
             training_range_template(x_predictedstart:x_predictedend)=1;
         end
 
-        parfor trNo=1:trials.odor_trNo
-
+        % parfor trNo=1:trials.odor_trNo
+        for trNo=1:trials.odor_trNo
+            start_toc=toc;
+           
             this_test_range=zeros(1,no_time_bins);
             if trNo==1
                 ii_test_range_start=1;
@@ -702,8 +727,27 @@ switch which_training_algorithm
             %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
 
             %Decode using neural network
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+            opts = struct('ShowPlots', false, ...
+                'Verbose', 0, ...
+                'MaxObjectiveEvaluations', 15,...
+                'UseParallel',true);
+
+            try
+                delete(gcp('nocreate'));
+            catch
+            end
+            parpool;
+
+            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'OptimizeHyperparameters','auto',...
+                'HyperparameterOptimizationOptions', opts);
+
+            try
+                delete(gcp('nocreate'));
+            catch
+            end
+            parpool;
+            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'OptimizeHyperparameters','auto',...
+                'HyperparameterOptimizationOptions', opts);
 
             %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
 
@@ -712,8 +756,13 @@ switch which_training_algorithm
 
             x_pred(trNo).data=predict(MdlY1,XdFFtest);
             y_pred(trNo).data=predict(MdlY2,XdFFtest);
+
+            x_pred(trNo).MdlY1=MdlY1;
+            y_pred(trNo).MdlY2=MdlY2;
+            
+            fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' \n\n'])
         end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
+        
 
         %Parse out the parfor loop output
         x_predicted=zeros(no_time_bins,1);
@@ -761,6 +810,8 @@ switch which_training_algorithm
             for trNo=1:trials.odor_trNo
                 y_pred(trNo).data=[];
                 x_pred(trNo).data=[];
+                MdlY1_pars(trNo).pars=[];
+                MdlY2_pars(trNo).pars=[];
             end
 
             parfor trNo=1:trials.odor_trNo
@@ -790,13 +841,51 @@ switch which_training_algorithm
 
                 XYtrain=pos_binned_reversed(this_training_range,:);
 
-
+                % x_pred(trNo).MdlY1=MdlY1;
+                % y_pred(trNo).MdlY2=MdlY2;
 
                 %Decode using neural network
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
+                bestHyperparameters = x_pred(trNo).MdlY1.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+                activationsCell = cellstr(bestHyperparameters.Activations);
+                standardizeCell = cellstr(bestHyperparameters.Standardize);
+                layer_sizes=bestHyperparameters.Layer_1_Size;
+                if ~isnan(bestHyperparameters.Layer_2_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+                end
+                if ~isnan(bestHyperparameters.Layer_3_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+                end
+                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'LayerSizes', layer_sizes, ...
+                    'Activations', activationsCell{1}, ...
+                    'Lambda', bestHyperparameters.Lambda, ...
+                    'Standardize', strcmpi(standardizeCell{1},'true'));
+
+                MdlY1_pars(trNo).pars.activations=activationsCell{1};
+                MdlY1_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+                MdlY1_pars(trNo).pars.Standardize=standardizeCell{1};
 
                 x_pred(trNo).data=predict(MdlY1,XdFFtest);
+
+                bestHyperparameters = y_pred(trNo).MdlY2.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+                activationsCell = cellstr(bestHyperparameters.Activations);
+                standardizeCell = cellstr(bestHyperparameters.Standardize);
+                layer_sizes=bestHyperparameters.Layer_1_Size;
+                if ~isnan(bestHyperparameters.Layer_2_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+                end
+                if ~isnan(bestHyperparameters.Layer_3_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+                end
+                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'LayerSizes', layer_sizes, ...
+                                    'Activations', activationsCell{1}, ...
+                                    'Lambda', bestHyperparameters.Lambda, ...
+                                    'Standardize', strcmpi(standardizeCell{1},'true'));
+
+                MdlY2_pars(trNo).pars.activations=activationsCell{1};
+                MdlY2_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+                MdlY2_pars(trNo).pars.Standardize=standardizeCell{1};
+
+                
                 y_pred(trNo).data=predict(MdlY2,XdFFtest);
             end
 
@@ -823,7 +912,7 @@ switch which_training_algorithm
 
         end
 
-        case 3
+    case 3
         %Train between trials using a leave one out approach
 
         %training_range_template has all the trials
@@ -833,14 +922,14 @@ switch which_training_algorithm
             x_pred(trNo).data=[];
 
             if trNo==1
-               last_x_predictedend=1;
+                last_x_predictedend=1;
             else
-            last_x_predictedend=trials.odor_ii_end(trNo-1)+15;
+                last_x_predictedend=trials.odor_ii_end(trNo-1)+15;
             end
 
-          
+
             this_x_predictedstart=trials.odor_ii_start(trNo)-10;
-          
+
 
             training_range_template(last_x_predictedend:this_x_predictedstart)=1;
         end
@@ -1015,6 +1104,8 @@ handles_out.x_predicted=x_predicted;
 handles_out.y_predicted=y_predicted;
 handles_out.XYtest=XYtest;
 handles_out.trials=trials;
+handles_out.MdlY2_pars=MdlY2_pars;
+handles_out.MdlY1_pars=MdlY1_pars;
 
 save([this_path arena_file(1:end-4) 'decxy' num2str(which_training_algorithm) '.mat'],'handles_out','handles_choices','-v7.3')
 
@@ -1255,7 +1346,7 @@ hold on
 ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
-    
+
     x_predictedstart=trials.odor_ii_start(trNo)-10;
     x_predictedend=trials.odor_ii_end(trNo)+15;
 
@@ -1281,25 +1372,25 @@ for trNo=1:trials.odor_trNo
         case 1
             %Lane 1 hits
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[1 0.6 0.6],'LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-c','LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0.4 0.4 1],'LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
-           %Lane 4 hit
+            %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
     end
@@ -1334,7 +1425,7 @@ hold on
 ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
-    
+
     x_predictedstart=trials.odor_ii_start(trNo)-10;
     x_predictedend=trials.odor_ii_end(trNo)+15;
 
@@ -1368,7 +1459,7 @@ for trNo=1:trials.odor_trNo
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
-           %Lane 4 miss
+            %Lane 4 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
@@ -1405,7 +1496,7 @@ ii_start=0;
 
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
-    
+
     x_predictedstart=trials.odor_ii_start(trNo)-10;
     x_predictedend=trials.odor_ii_end(trNo)+15;
 
@@ -1415,7 +1506,7 @@ for trNo=1:trials.odor_trNo
     x_between_trials=[x_between_trials; XYtest(last_x_predictedend:x_predictedstart,1)];
     x_decod_between_trials=[x_decod_between_trials; x_predicted_conv(last_x_predictedend:x_predictedstart,1)];
     last_x_predictedend=x_predictedend;
-    
+
     ii_end=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))-1;
 
     switch trials.odor_trial_type(trNo)
@@ -1433,12 +1524,12 @@ for trNo=1:trials.odor_trNo
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[1 0.6 0.6],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0.6 0.6 1],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 4
-           %Lane 4 miss
+            %Lane 4 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
@@ -1472,7 +1563,7 @@ hold on
 ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
-    
+
     x_predictedstart=trials.odor_ii_start(trNo)-10;
     x_predictedend=trials.odor_ii_end(trNo)+15;
 
@@ -1482,7 +1573,7 @@ for trNo=1:trials.odor_trNo
     x_between_trials_sh=[x_between_trials_sh; XYtest(last_x_predictedend:x_predictedstart,1)];
     x_decod_between_trials_sh=[x_decod_between_trials_sh; x_predicted_sh_conv(last_x_predictedend:x_predictedstart,1)];
     last_x_predictedend=x_predictedend;
-    
+
     ii_end=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))-1;
 
     %Plot accuracy per trial for permuted training control
@@ -1498,25 +1589,25 @@ for trNo=1:trials.odor_trNo
         case 1
             %Lane 1 hits
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[1 0.6 0.6],'LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 2
             %Lane 1 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-c','LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 3
             %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0.4 0.4 1],'LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 4
-           %Lane 4 hit
+            %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
-%             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
+            %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
     end

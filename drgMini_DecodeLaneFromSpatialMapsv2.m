@@ -1,4 +1,4 @@
-function handles_out=drgMini_DecodeLaneFromSpatialMaps(handles_choices)
+function handles_out=drgMini_DecodeLaneFromSpatialMapsv2(handles_choices)
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 close all
 
@@ -476,7 +476,6 @@ for trNo1=1:trials.odor_trNo
                     end
                 end
             end
-    
             SpActrain=[SpActrain; this_row];
         end
     end
@@ -553,15 +552,13 @@ sh_accuracy_lane1=[];
 sh_accuracy_lane4=[];
 odor_lanes=[];
 %         y_predicted=zeros(no_time_bins,1);
-perm_trials=randperm(trials.odor_trNo);
+% perm_trials=randperm(trials.odor_trNo);
 for trNo=1:trials.odor_trNo
     label_predicted(trNo)=label_pred(trNo).data;
     %             y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
 
     %Compute accuracy
     this_accuracy=0;
-    this_lane1_accuracy=0;
-
     odor_lanes=[odor_lanes trials.odor_lane(trNo)];
     if (trials.odor_lane(trNo)==1)
         if (label_predicted(trNo)==0)
@@ -582,29 +579,29 @@ for trNo=1:trials.odor_trNo
     end
     accuracy(trNo)=this_accuracy;
 
-     %Compute shifted accuracy
-    this_accuracy=0;
-    this_lane1_accuracy=0;
-
-    odor_lanes=[odor_lanes trials.odor_lane(perm_trials(trNo))];
-    if (trials.odor_lane(perm_trials(trNo))==1)
-        if (label_predicted(perm_trials(trNo))==0)
-            this_accuracy=1;
-            sh_accuracy_lane1=[sh_accuracy_lane1 1];
-        else
-            sh_accuracy_lane1=[sh_accuracy_lane1 0];
-        end
-    else
-        if (trials.odor_lane(perm_trials(trNo))==4)
-            if (label_predicted(perm_trials(trNo))==1)
-                this_accuracy=1;
-                sh_accuracy_lane4=[sh_accuracy_lane4 1];
-            else
-                sh_accuracy_lane4=[sh_accuracy_lane4 0];
-            end
-        end
-    end
-    sh_accuracy(perm_trials(trNo))=this_accuracy;
+    %  %Compute shifted accuracy
+    % this_accuracy=0;
+    % this_lane1_accuracy=0;
+    % 
+    % odor_lanes=[odor_lanes trials.odor_lane(perm_trials(trNo))];
+    % if (trials.odor_lane(perm_trials(trNo))==1)
+    %     if (label_predicted(perm_trials(trNo))==0)
+    %         this_accuracy=1;
+    %         sh_accuracy_lane1=[sh_accuracy_lane1 1];
+    %     else
+    %         sh_accuracy_lane1=[sh_accuracy_lane1 0];
+    %     end
+    % else
+    %     if (trials.odor_lane(perm_trials(trNo))==4)
+    %         if (label_predicted(perm_trials(trNo))==1)
+    %             this_accuracy=1;
+    %             sh_accuracy_lane4=[sh_accuracy_lane4 1];
+    %         else
+    %             sh_accuracy_lane4=[sh_accuracy_lane4 0];
+    %         end
+    %     end
+    % end
+    % sh_accuracy(perm_trials(trNo))=this_accuracy;
 end
 
 handles_out.decode.repeat(1).label_predicted=label_predicted;
@@ -612,9 +609,9 @@ handles_out.decode.repeat(1).accuracy=accuracy;
 handles_out.decode.repeat(1).accuracy_lane1=accuracy_lane1;
 handles_out.decode.repeat(1).accuracy_lane4=accuracy_lane4;
 
-handles_out.decode.repeat(1).sh_accuracy=accuracy;
-handles_out.decode.repeat(1).sh_accuracy_lane1=accuracy_lane1;
-handles_out.decode.repeat(1).sh_accuracy_lane4=accuracy_lane4;
+% handles_out.decode.repeat(1).sh_accuracy=accuracy;
+% handles_out.decode.repeat(1).sh_accuracy_lane1=accuracy_lane1;
+% handles_out.decode.repeat(1).sh_accuracy_lane4=accuracy_lane4;
 
 %Now decode for the rest of the repeats
 for ii_repeat=2:no_repeats
@@ -645,7 +642,6 @@ for ii_repeat=2:no_repeats
                         end
                     end
                 end
-
                 SpActrain=[SpActrain; this_row];
             end
         end
@@ -722,7 +718,6 @@ for ii_repeat=2:no_repeats
             end
         end
         label_pred(trNo1).data=predict(Mdl,this_row);
-
     end
 
     %Parse out the parfor loop output
@@ -760,29 +755,29 @@ for ii_repeat=2:no_repeats
         end
         accuracy(trNo)=this_accuracy;
 
-        %Compute shifted accuracy
-        this_accuracy=0;
-        this_lane1_accuracy=0;
-
-        odor_lanes=[odor_lanes trials.odor_lane(perm_trials(trNo))];
-        if (trials.odor_lane(perm_trials(trNo))==1)
-            if (label_predicted(perm_trials(trNo))==0)
-                this_accuracy=1;
-                sh_accuracy_lane1=[sh_accuracy_lane1 1];
-            else
-                sh_accuracy_lane1=[sh_accuracy_lane1 0];
-            end
-        else
-            if (trials.odor_lane(perm_trials(trNo))==4)
-                if (label_predicted(perm_trials(trNo))==1)
-                    this_accuracy=1;
-                    sh_accuracy_lane4=[sh_accuracy_lane4 1];
-                else
-                    sh_accuracy_lane4=[sh_accuracy_lane4 0];
-                end
-            end
-        end
-        sh_accuracy(perm_trials(trNo))=this_accuracy;
+    %     %Compute shifted accuracy
+    %     this_accuracy=0;
+    %     this_lane1_accuracy=0;
+    % 
+    %     odor_lanes=[odor_lanes trials.odor_lane(perm_trials(trNo))];
+    %     if (trials.odor_lane(perm_trials(trNo))==1)
+    %         if (label_predicted(perm_trials(trNo))==0)
+    %             this_accuracy=1;
+    %             sh_accuracy_lane1=[sh_accuracy_lane1 1];
+    %         else
+    %             sh_accuracy_lane1=[sh_accuracy_lane1 0];
+    %         end
+    %     else
+    %         if (trials.odor_lane(perm_trials(trNo))==4)
+    %             if (label_predicted(perm_trials(trNo))==1)
+    %                 this_accuracy=1;
+    %                 sh_accuracy_lane4=[sh_accuracy_lane4 1];
+    %             else
+    %                 sh_accuracy_lane4=[sh_accuracy_lane4 0];
+    %             end
+    %         end
+    %     end
+    %     sh_accuracy(perm_trials(trNo))=this_accuracy;
     end
 
     handles_out.decode.repeat(ii_repeat).label_predicted=label_predicted;
@@ -790,10 +785,185 @@ for ii_repeat=2:no_repeats
     handles_out.decode.repeat(ii_repeat).accuracy_lane1=accuracy_lane1;
     handles_out.decode.repeat(ii_repeat).accuracy_lane4=accuracy_lane4;
 
-    handles_out.decode.repeat(ii_repeat).sh_accuracy=sh_accuracy;
-    handles_out.decode.repeat(ii_repeat).sh_accuracy_lane1=sh_accuracy_lane1;
-    handles_out.decode.repeat(ii_repeat).sh_accuracy_lane4=sh_accuracy_lane4;
+    % handles_out.decode.repeat(ii_repeat).sh_accuracy=sh_accuracy;
+    % handles_out.decode.repeat(ii_repeat).sh_accuracy_lane1=sh_accuracy_lane1;
+    % handles_out.decode.repeat(ii_repeat).sh_accuracy_lane4=sh_accuracy_lane4;
 
+end
+
+%Now do shuffled decoding
+for sh_ii_repeat=1:no_repeats
+    sh_ii_repeat
+    label_pred=[];
+    for trNo1=1:trials.odor_trNo
+        % parfor trNo=1:trials.odor_trNo
+
+        %Setup the training data set
+        SpActrain=[];
+
+        these_trNos=[];
+        for trNo2=1:trials.odor_trNo
+            if trNo2~=trNo1
+                these_trNos=[these_trNos trNo2];
+                this_row=[];
+                for this_ROI=1:no_neurons
+                    for x_ii=1:no_steps
+                        for y_ii=1:no_steps
+                            if ~isnan(activity_maps.ROI(this_ROI).all_trial_map(x_ii,y_ii))
+                                pffft=1;
+                                if ~isnan(activity_maps.ROI(this_ROI).trial(trNo2).this_trial_map(x_ii,y_ii))
+                                    this_row=[this_row activity_maps.ROI(this_ROI).trial(trNo2).this_trial_map(x_ii,y_ii)];
+                                else
+                                    this_row=[this_row activity_maps.ROI(this_ROI).all_trial_map(x_ii,y_ii)];
+                                end
+                            end
+                        end
+                    end
+                end
+                SpActrain=[SpActrain; this_row];
+            end
+        end
+
+        this_trNo=0;
+        Y=[];
+        for trNo3=these_trNos
+            this_trNo=this_trNo+1;
+            if trials.odor_lane(trNo3)==1
+                Y(this_trNo)=0;
+            else
+                Y(this_trNo)=1;
+            end
+        end
+
+         perm_trials=randperm(length(these_trNos));
+    Y=Y(perm_trials);
+
+        %Decode using neural network
+        tblTrn=[];
+        tblTrn = array2table(SpActrain);
+
+
+        switch which_ml_algo
+            case 1
+                Mdl = fitcsvm(tblTrn,Y,'Cost',this_cost);
+            case 2
+                Mdl = fitcnet(tblTrn,Y);
+            case 3
+                Mdl = fitctree(tblTrn,Y);
+            case 4
+                Mdl=fitcnb(tblTrn,Y,'Cost',this_cost);
+            case 5
+                Mdl = fitglm(tblTrn,Y','Distribution','binomial');
+            case 6
+                Mdl = fitcdiscr(tblTrn,Y,'Cost',this_cost);
+            case 7
+
+                bestHyperparameters = Mdl_pred(trNo1).Mdl.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+                activationsCell = cellstr(bestHyperparameters.Activations);
+                standardizeCell = cellstr(bestHyperparameters.Standardize);
+                layer_sizes=bestHyperparameters.Layer_1_Size;
+                if ~isnan(bestHyperparameters.Layer_2_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+                end
+                if ~isnan(bestHyperparameters.Layer_3_Size)
+                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+                end
+                Mdl = fitcnet(tblTrn,Y,'LayerSizes', layer_sizes, ...
+                    'Activations', activationsCell{1}, ...
+                    'Lambda', bestHyperparameters.Lambda, ...
+                    'Standardize', strcmpi(standardizeCell{1},'true'),...
+                    'ClassNames', unique(Y),...
+                    'Prior', 'uniform');
+                % 
+                % handles_out.decode.Mdl_pars(trNo1).pars.activations=activationsCell{1};
+                % handles_out.decode.Mdl_pars(trNo1).pars.Lambda=bestHyperparameters.Lambda;
+                % handles_out.decode.Mdl_pars(trNo1).pars.Standardize=standardizeCell{1};
+
+        end
+
+
+        %Calculate the prediction
+        this_row=[];
+        for this_ROI=1:no_neurons
+            for x_ii=1:no_steps
+                for y_ii=1:no_steps
+                    if ~isnan(activity_maps.ROI(this_ROI).all_trial_map(x_ii,y_ii))
+                        pffft=1;
+                        if ~isnan(activity_maps.ROI(this_ROI).trial(trNo1).this_trial_map(x_ii,y_ii))
+                            this_row=[this_row activity_maps.ROI(this_ROI).trial(trNo1).this_trial_map(x_ii,y_ii)];
+                        else
+                            this_row=[this_row activity_maps.ROI(this_ROI).all_trial_map(x_ii,y_ii)];
+                        end
+                    end
+                end
+            end
+        end
+        label_pred(trNo1).sh_data=predict(Mdl,this_row);
+    end
+
+    %Parse out the parfor loop output
+    sh_label_predicted=zeros(trials.odor_trNo,1);
+    sh_accuracy=zeros(trials.odor_trNo,1);
+    sh_accuracy_lane1=[];
+    sh_accuracy_lane4=[];
+    % odor_lanes=[];
+    %         y_predicted=zeros(no_time_bins,1);
+    for trNo=1:trials.odor_trNo
+        sh_label_predicted(trNo)=label_pred(trNo).sh_data;
+        %             y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
+
+        %Compute accuracy
+        this_accuracy=0;
+
+       
+        if (trials.odor_lane(trNo)==1)
+            if (label_predicted(trNo)==0)
+                this_accuracy=1;
+                sh_accuracy_lane1=[sh_accuracy_lane1 1];
+            else
+                sh_accuracy_lane1=[sh_accuracy_lane1 0];
+            end
+        else
+            if (trials.odor_lane(trNo)==4)
+                if (label_predicted(trNo)==1)
+                    this_accuracy=1;
+                    sh_accuracy_lane4=[sh_accuracy_lane4 1];
+                else
+                    sh_accuracy_lane4=[sh_accuracy_lane4 0];
+                end
+            end
+        end
+        sh_accuracy(trNo)=this_accuracy;
+
+    %     %Compute shifted accuracy
+    %     this_accuracy=0;
+    %     this_lane1_accuracy=0;
+    % 
+    %     odor_lanes=[odor_lanes trials.odor_lane(perm_trials(trNo))];
+    %     if (trials.odor_lane(perm_trials(trNo))==1)
+    %         if (label_predicted(perm_trials(trNo))==0)
+    %             this_accuracy=1;
+    %             sh_accuracy_lane1=[sh_accuracy_lane1 1];
+    %         else
+    %             sh_accuracy_lane1=[sh_accuracy_lane1 0];
+    %         end
+    %     else
+    %         if (trials.odor_lane(perm_trials(trNo))==4)
+    %             if (label_predicted(perm_trials(trNo))==1)
+    %                 this_accuracy=1;
+    %                 sh_accuracy_lane4=[sh_accuracy_lane4 1];
+    %             else
+    %                 sh_accuracy_lane4=[sh_accuracy_lane4 0];
+    %             end
+    %         end
+    %     end
+    %     sh_accuracy(perm_trials(trNo))=this_accuracy;
+    end
+
+    handles_out.decode.repeat(sh_ii_repeat).sh_label_predicted=sh_label_predicted;
+    handles_out.decode.repeat(sh_ii_repeat).sh_accuracy=sh_accuracy;
+    handles_out.decode.repeat(sh_ii_repeat).sh_accuracy_lane1=sh_accuracy_lane1;
+    handles_out.decode.repeat(sh_ii_repeat).sh_accuracy_lane4=sh_accuracy_lane4;
 end
 
 
