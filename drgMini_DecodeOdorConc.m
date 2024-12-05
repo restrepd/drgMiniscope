@@ -28,15 +28,20 @@ if exist('handles_choices')==0
     %     dFF_file='20220713_FCM6_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
     %     arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn.mat';
 
-    %First troubleshooting file
+    %First troubleshooting file odor in lanes 1 and 4
     % this_path='/data/SFTP/PreProcessedDR/20220713_FCM6/';
     % dFF_file='20220713_FCM6_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
     % arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn_mm.mat';
 
-    % Second troubleshooting files
+    % % Second troubleshooting files odor in lanes 1 and 4
     this_path='/data/SFTP/PreProcessedDR/20220804_FCM22/';
     dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
     arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+
+    %Third troubleshooting odor in lane 4 only ISO1
+    % this_path='/data/SFTP/PreProcessedDR/20220526_FCM6_withodor_lane4/'
+    % dFF_file='20220526_FCM6_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
+    % arena_file='20220526_FCM6withodor_odorarena_L4_sync_mm.mat';
 
 
     handles_choices.group=1;
@@ -50,12 +55,14 @@ if exist('handles_choices')==0
     %     dFF_file='20220824_FCM6_withoutodor_miniscope_sync_L1andL4_ncorre_ext.mat';
     %     arena_file='20220824_FCM6withoutodor_odorarena_L1andL4_sync.mat';
 
-    handles_choice.is_sphgpu=1;
-    is_sphgpu=handles_choice.is_sphgpu;
+    handles_choices.is_sphgpu=1;
+    is_sphgpu=handles_choices.is_sphgpu;
 
     handles_choices.this_path=this_path;
     handles_choices.dFF_file=dFF_file;
     handles_choices.arena_file=arena_file;
+
+    handles_choices.save_path='/data/SFTP/DecodeOdorConc/';
 
     %     isKording=0;
 
@@ -64,8 +71,8 @@ if exist('handles_choices')==0
     %     dt=0.2;
 
     %Define the different ranges (training, valid and testing)
-    training_fraction=0.9;
-    handles_choices.training_fraction=training_fraction;
+    % training_fraction=0.9;
+    % handles_choices.training_fraction=training_fraction;
 
     %     training_range=[0, 0.5];
     %     valid_range=[0.5,0.65];
@@ -121,7 +128,7 @@ if exist('handles_choices')==0
 
     %Hill transform
     handles_choices.hill=0; %0=no Hill transform, 1=Hill transform
-    handles_choices.k_half=010^-8;; %Hill equation K1/2
+    handles_choices.k_half=10^-8; %Hill equation K1/2
     % handles_choices.actual_maxC=(handles_choices.k_half^handles_choices.n_hill); %Measured from the simulated data 0.0043
     
     handles_choices.maxC=10^-6.5;%maxC=0.0043 maximum of simulated odor plume
@@ -133,14 +140,16 @@ if exist('handles_choices')==0
     handles_choices.trial_start_offset=-15; %This was -10
     handles_choices.trial_end_offset=15;
 
+    % handles_choices.save_tag='OdorConc';
 
 
 else
 
+    is_sphgpu=handles_choices.is_sphgpu;
     this_path=handles_choices.this_path;
     dFF_file=handles_choices.dFF_file;
     arena_file=handles_choices.arena_file;
-    training_fraction=handles_choices.training_fraction;
+    % training_fraction=handles_choices.training_fraction;
     bins_before=handles_choices.bins_before;
     bins_current=handles_choices.bins_current;
     bins_after=handles_choices.bins_after;
@@ -155,6 +164,10 @@ if is_sphgpu==1
     addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
     addpath('/home/restrepd/Documents/MATLAB/drgMaster')
     addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
+end
+
+if ~exist(handles_choices.save_path(1:end-1),'dir')
+    mkdir(handles_choices.save_path(1:end-1))
 end
 
 try
@@ -193,8 +206,9 @@ end
 %Group 4 is rewarded, with no odor in lane 1 and lane 4
 
 switch handles_choices.group
-    case 1
-        %Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4
+    case {1,5}
+        %Groups 1 and 5 are rewarded, odor ISO1 in both lane 1 and lane 4
+        %They differe in cm from floor
         handles_choices.lane1_odor_on=1;
         handles_choices.lane4_odor_on=1;
     case 2
@@ -207,8 +221,10 @@ switch handles_choices.group
         handles_choices.lane4_odor_on=0;
     case 4
         %Group 4 is rewarded, with no odor in lane 1 and lane 4
-        handles_choices.lane1_odor_on=0;
-        handles_choices.lane4_odor_on=0;
+        %Note that we are testing whether we can "predict" the odor when
+        %there is no odor applied
+        handles_choices.lane1_odor_on=1;
+        handles_choices.lane4_odor_on=1;
 end
 
 %Calculate mean for lane 4
@@ -277,6 +293,9 @@ if minC<handles_choices.lowest_conc
     minC=handles_choices.lowest_conc;
 end
 maxC=max([max(mean_plume_l4(:)) max(mean_plume_l1(:))]);
+if minC==maxC
+    maxC=minC+0.1;
+end
 
 if handles_choices.displayFigures==1
     figNo=figNo+1;
@@ -394,6 +413,9 @@ mean_plume_l1=mean14_plume_l1;
 %number of points with very low min
 minC=prctile([mean14_plume_l4(:); mean14_plume_l1(:)],0.5);
 maxC=min([max(mean14_plume_l4(:)) max(mean14_plume_l1(:))]);
+if maxC==minC
+    maxC=minC+0.1;
+end
 
 mean_plume_l4(mean_plume_l4<minC)=minC;
 mean_plume_l1(mean_plume_l1<minC)=minC;
@@ -733,6 +755,9 @@ for ii_odor=1:trials.odor_trNo
     end
 end
 
+if trials.odor_ii_end(trials.odor_trNo)+handles_choices.trial_end_offset>size(pos_binned,1)
+    trials.odor_ii_end(trials.odor_trNo)=size(pos_binned,1)-handles_choices.trial_end_offset;
+end
 percent_correct=100*(trials.hit4+trials.hit1)/(trials.hit4+trials.hit1+trials.miss4+trials.miss1);
 percent_correct1=100*(trials.hit1)/(trials.hit1+trials.miss1);
 percent_correct4=100*(trials.hit4)/(trials.hit4+trials.miss4);
@@ -793,6 +818,7 @@ for trNo=1:trials.odor_trNo
 
     op_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
     op_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+
     training_range_template(op_predictedstart:op_predictedend)=1;
     %Now calculate the odor plume concentration
     these_x=[];
@@ -1180,7 +1206,6 @@ handles_out.odor_plume_template=odor_plume_template;
 handles_out.trials=trials;
 handles_out.MdlY1_pars=MdlY1_pars;
 
-save([this_path arena_file(1:end-4) 'decop' num2str(which_training_algorithm) '.mat'],'handles_out','handles_choices','-v7.3')
 
 no_conv_points=11;
 % conv_win=ones(1,no_conv_points)/no_conv_points;
@@ -1230,8 +1255,8 @@ end
 R1=corrcoef(odor_plume_template,op_predicted_conv);
 fprintf(1, 'Correlation coefficient nn conv odor concentration entire run %d\n\n',R1(1,2));
 
-percentExplained_op = drgMini_calculateVarianceExplained(odor_plume_template', op_predicted_conv);
-fprintf(1, 'Percent variance predicted nn conv odor concentration entire run %d\n\n',percentExplained_op);
+fractionExplained_op = drgMini_calculateVarianceExplained(odor_plume_template', op_predicted_conv);
+fprintf(1, 'Fraction of variance  predicted nn conv odor concentration entire run %d\n\n',fractionExplained_op);
 fprintf(1, '\n\n');
 
 figNo=figNo+1;
@@ -1263,7 +1288,7 @@ end
 
 
 
-title('Odor concentration for nn, b:original, k:predicted (trained per trial)')
+title('Odor concentration, b:original, k:predicted (trained per trial)')
 
 
 figNo=figNo+1;
@@ -1289,20 +1314,20 @@ title('Odor concentration for nn (trained per trial)')
 
 %Keep track of the per trial decoding
 op_all_trials=[];
-
 op_decod_all_trials=[];
-
 op_all_trials_sh=[];
-
+op_all_hits=[];
+op_decod_all_hits=[];
+op_all_hits_sh=[];
+op_decod_all_hits_sh=[];
+op_all_miss=[];
+op_decod_all_miss=[];
+op_all_miss_sh=[];
+op_decod_all_miss_sh=[];
 op_decod_all_trials_sh=[];
-
-
 op_between_trials=[];
-
 op_decod_between_trials=[];
-
 op_between_trials_sh=[];
-
 op_decod_between_trials_sh=[];
 
 
@@ -1345,39 +1370,48 @@ for trNo=1:trials.odor_trNo
 
    
 
-
+    %Okabe_Ito colors
     switch trials.odor_trial_type(trNo)
         case 1
-            %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[1 0.4 0.4],'LineWidth',3)
+            %Lane 1 hits vermillion
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[213/255 94/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
         case 2
-            %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'-c','LineWidth',3)
+            %Lane 1 miss orange
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[230/255 159/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
+
         case 3
-            %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[0.6 0.6 1],'LineWidth',3)
+            %Lane 4 hit blue
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[0 114/255 178/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
         case 4
-            %Lane 4 miss
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','-m','LineWidth',3)
+            %Lane 4 miss sky blue
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[86/255 180/255 233/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
     end
     ii_start=ii_start+length(odor_plume_template(op_predictedstart:op_predictedend))+20;
 end
 
 ylim([min(op_all_trials)-0.1*(max(op_all_trials)-min(op_all_trials)) max(op_all_trials)+0.1*(max(op_all_trials)-min(op_all_trials))])
 
-title('Odor concentration for nn per trial, r:hit1, c:mis1, b:hit4, m:miss4 k:predicted')
+title('Odor concentration per trial, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
 
 
 %Plot the per trial results for x with nn trained with permuted input
@@ -1421,59 +1455,108 @@ for trNo=1:trials.odor_trNo
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[1 0.6 0.6],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[213/255 94/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_hits_sh=[op_all_hits_sh; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_hits_sh=[op_decod_all_hits_sh; op_predicted_sh_conv(op_predictedstart:op_predictedend,1)];
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[230/255 159/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_miss_sh=[op_all_miss_sh; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_miss_sh=[op_decod_all_miss_sh; op_predicted_sh_conv(op_predictedstart:op_predictedend,1)];
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[0.4 0.4 1],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[0 114/255 178/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
+            op_all_hits_sh=[op_all_hits_sh; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_hits_sh=[op_decod_all_hits_sh; op_predicted_sh_conv(op_predictedstart:op_predictedend,1)];
         case 4
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[86/255 180/255 233/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
             plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
-    
+            op_all_miss_sh=[op_all_miss_sh; odor_plume_template(op_predictedstart:op_predictedend)'];
+            op_decod_all_miss_sh=[op_decod_all_miss_sh; op_predicted_sh_conv(op_predictedstart:op_predictedend,1)];
     end
     ii_start=ii_start+length(XYtest(op_predictedstart:op_predictedend,2))+20;
 end
 
-title('Odor concentraiton for nn per trial permuted, r:hit1, c:miss1, b:hit4, m:miss4, k:predicted  (trained per trial)')
+title('Odor concentration per trial permuted, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
 
 
 R1=corrcoef(op_all_trials,op_decod_all_trials);
 fprintf(1, 'Correlation coefficient nn conv odor conc within trials %d\n\n',R1(1,2));
+handles_out.R1.all_trials=R1(1,2);
+
+R1=corrcoef(op_all_hits,op_decod_all_hits);
+fprintf(1, 'Correlation coefficient nn conv odor conc hits %d\n\n',R1(1,2));
+handles_out.R1.all_hits=R1(1,2);
+
+R1=corrcoef(op_all_miss,op_decod_all_miss);
+fprintf(1, 'Correlation coefficient nn conv odor conc miss %d\n\n',R1(1,2));
+handles_out.R1.all_miss=R1(1,2);
 
 R1=corrcoef(op_between_trials,op_decod_between_trials);
 fprintf(1, 'Correlation coefficient nn conv odor conc between trials %d\n\n',R1(1,2));
+handles_out.R1.between_trials=R1(1,2);
 
 R1=corrcoef(op_all_trials_sh,op_decod_all_trials_sh);
 fprintf(1, 'Correlation coefficient nn permuted odor conc per trial %d\n\n',R1(1,2));
+handles_out.R1.all_trials_sh=R1(1,2);
+
+R1=corrcoef(op_all_hits_sh,op_decod_all_hits_sh);
+fprintf(1, 'Correlation coefficient nn permuted odor conc hits %d\n\n',R1(1,2));
+handles_out.R1.hits_sh=R1(1,2);
+
+R1=corrcoef(op_all_miss_sh,op_decod_all_miss_sh);
+fprintf(1, 'Correlation coefficient nn permuted odor conc miss %d\n\n',R1(1,2));
+handles_out.R1.miss_sh=R1(1,2);
 
 R1=corrcoef(op_between_trials_sh,op_decod_between_trials_sh);
 fprintf(1, 'Correlation coefficient nn permuted odor conc between trial %d\n\n',R1(1,2));
+handles_out.R1.between_trials_sh=R1(1,2);
 
-percentExplained_op = drgMini_calculateVarianceExplained(op_all_trials, op_decod_all_trials);
-fprintf(1, 'Percent variance predicted nn conv odor conc within trials %d\n\n',percentExplained_op);
 
-percentExplained_op = drgMini_calculateVarianceExplained(op_between_trials, op_decod_between_trials);
-fprintf(1, '\n\nPercent variance predicted nn conv odor conc between trials %d\n\n',percentExplained_op);
+%Fraction of variance  explaind
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_trials, op_decod_all_trials);
+fprintf(1, 'Fraction of variance  predicted nn conv odor conc within trials %d\n\n',fractionExplained_op);
+handles_out.pVar.all_trials=fractionExplained_op;
 
-percentExplained_op = drgMini_calculateVarianceExplained(op_all_trials_sh, op_decod_all_trials_sh);
-fprintf(1, '\n\nPercent variance predicted nn permuted odor conc within trials %d\n\n',percentExplained_op);
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_hits, op_decod_all_hits);
+fprintf(1, 'Fraction of variance  predicted nn conv odor conc hits %d\n\n',fractionExplained_op);
+handles_out.pVar.all_hits=fractionExplained_op;
 
-percentExplained_op = drgMini_calculateVarianceExplained(op_between_trials_sh, op_decod_between_trials_sh);
-fprintf(1, '\n\nPercent variance predicted nn permuted odor conc between trials %d\n\n',percentExplained_op);
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_miss, op_decod_all_miss);
+fprintf(1, 'Fraction of variance  predicted nn conv odor conc misss %d\n\n',fractionExplained_op);
+handles_out.pVar.all_miss=fractionExplained_op;
+
+fractionExplained_op = drgMini_calculateVarianceExplained(op_between_trials, op_decod_between_trials);
+fprintf(1, '\n\nFraction of variance  predicted nn conv odor conc between trials %d\n\n',fractionExplained_op);
+handles_out.pVar.between_trials=fractionExplained_op;
+
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_trials_sh, op_decod_all_trials_sh);
+fprintf(1, '\n\nFraction of variance  predicted nn permuted odor conc within trials %d\n\n',fractionExplained_op);
+handles_out.pVar.all_trials_sh=fractionExplained_op;
+
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_hits_sh, op_decod_all_hits_sh);
+fprintf(1, '\n\nFraction of variance  predicted nn permuted odor conc hit %d\n\n',fractionExplained_op);
+handles_out.pVar.all_hits_sh=fractionExplained_op;
+
+fractionExplained_op = drgMini_calculateVarianceExplained(op_all_miss_sh, op_decod_all_miss_sh);
+fprintf(1, '\n\nFraction of variance  predicted nn permuted odor conc miss %d\n\n',fractionExplained_op);
+handles_out.pVar.all_miss_sh=fractionExplained_op;
+
+fractionExplained_op = drgMini_calculateVarianceExplained(op_between_trials_sh, op_decod_between_trials_sh);
+fprintf(1, '\n\nFraction of variance  predicted nn permuted odor conc between trials %d\n\n',fractionExplained_op);
+handles_out.pVar.between_trials_sh=fractionExplained_op;
 
 
 
@@ -1495,7 +1578,7 @@ plot(op_all_trials,op_decod_all_trials,'.b')
 xlabel('Odor concentration')
 ylabel('Predicted')
 
-title('odor concentration for nn per trial (trained per trial)')
+title('odor concentration per trial (trained per trial)')
 
 minC=min(odor_plume_template);
 maxC=max(odor_plume_template);
@@ -1730,6 +1813,10 @@ for trNo=1:trials.odor_trNo
     this_y=pos_binned_trimmed(op_predictedstart:op_predictedend,2);
     this_op=odor_plume_template(op_predictedstart:op_predictedend)';
 
+    handles_out.per_trial.trial(trNo).this_x=this_x;
+    handles_out.per_trial.trial(trNo).this_y=this_y;
+    handles_out.per_trial.trial(trNo).this_op=this_op;
+
     try
         close(figNo)
     catch
@@ -1749,11 +1836,17 @@ for trNo=1:trials.odor_trNo
     xlim([0 500])
     ylim([0 480])
 
-    if (trials.odor_trial_type(trNo)==3)||(trials.odor_trial_type(trNo)==4)
-        title(['Odor concentration for trial ' num2str(trNo) ' lane 4'])
-    else
-        title(['Odor concentration for trial ' num2str(trNo) ' lane 1'])
+    switch trials.odor_trial_type(trNo)
+        case 1
+            title(['Odor concentration for trial ' num2str(trNo) ' hit lane 1'])
+        case 2
+            title(['Odor concentration for trial ' num2str(trNo) ' miss lane 1'])
+        case 3
+            title(['Odor concentration for trial ' num2str(trNo) ' hit lane 4'])
+        case 4
+            title(['Odor concentration for trial ' num2str(trNo) ' miss lane 4'])
     end
+
 
     hold on
 
@@ -1778,6 +1871,8 @@ for trNo=1:trials.odor_trNo
     this_y=pos_binned_trimmed(op_predictedstart:op_predictedend,2);
     this_op_pred=op_predicted_conv(op_predictedstart:op_predictedend)';
 
+    handles_out.per_trial.trial(trNo).this_op_pred=this_op_pred;
+
 
     try
         close(figNo+1)
@@ -1798,10 +1893,15 @@ for trNo=1:trials.odor_trNo
     xlim([0 500])
     ylim([0 480])
 
-    if (trials.odor_trial_type(trNo)==3)||(trials.odor_trial_type(trNo)==4)
-        title(['Predicted odor concentration for trial ' num2str(trNo) ' lane 4'])
-    else
-        title(['Predicted odor concentration for trial ' num2str(trNo) ' lane 1'])
+    switch trials.odor_trial_type(trNo)
+        case 1
+            title(['Predicted odor concentration for trial ' num2str(trNo) ' hit lane 1'])
+        case 2
+            title(['Predicted odor concentration for trial ' num2str(trNo) ' miss lane 1'])
+        case 3
+            title(['Predicted odor concentration for trial ' num2str(trNo) ' hit lane 4'])
+        case 4
+            title(['Predicted odor concentration for trial ' num2str(trNo) ' miss lane 4'])
     end
 
     hold on
@@ -1818,9 +1918,10 @@ for trNo=1:trials.odor_trNo
         this_color(1,:)=this_cmap(this_color_ii,:);
         plot([this_x(ii_point) this_x(ii_point+1)],[this_y(ii_point) this_y(ii_point+1)],'-','LineWidth', 2,'Color',this_color)
     end
-
+ 
     pffft=1;
 end
 
+save([handles_choices.save_path arena_file(1:end-4) handles_choices.save_tag '.mat'],'handles_out','handles_choices','-v7.3')
 
 pffft=1;
