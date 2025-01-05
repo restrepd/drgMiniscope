@@ -1,4 +1,4 @@
-function handles_out=drgMini_DecodeOdorArenav3(handles_choices)
+function handles_out=drgMini_DecodeOdorArena_gpu(handles_choices)
 %Does decoding of the navigation path for a mouse undergoing odor plume navigation 
 %following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 
@@ -9,6 +9,8 @@ if exist('handles_choices')==0
     clear all
 
     handles_choices.save_results=1;
+    handles_choices.is_sphgpu=2; %1 sphgpu, 2 Alpine
+    is_sphgpu=handles_choices.is_sphgpu;
     %Troubleshooting Fabio's files May 14th
     % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
     % dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
@@ -40,6 +42,9 @@ if exist('handles_choices')==0
     arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn_mm.mat';
 
 
+    handles_choices.save_path='/scratch/alpine/drestrepo@xsede.org/PreProcessed/Temp/';
+    
+
     %No odor troubleshooting files
     %     this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
     %     dFF_file='20220824_FCM6_withoutodor_miniscope_sync_L1andL4_ncorre_ext.mat';
@@ -50,22 +55,15 @@ if exist('handles_choices')==0
     handles_choices.dFF_file=dFF_file;
     handles_choices.arena_file=arena_file;
 
-    %     isKording=0;
+    %algorithm
+    handles_choices.algo=2;
+    %1 fitrnet
+    %2 fitrtree
 
-    %Note: The data brought into the Kording lab jupyter notebbok seems to be
-    %binned in 200 msec bins
-    %     dt=0.2;
-
-    %Define the different ranges (training, valid and testing)
-    training_fraction=0.9;
-    handles_choices.training_fraction=training_fraction;
-
-    %     training_range=[0, 0.5];
-    %     valid_range=[0.5,0.65];
-    %     test_range=[0.5, 1];
+    handles_choices.save_tag='treexy';
 
     %The user can define what time period to use spikes from (with respect to the output).
-    bins_before=10; %How many bins of neural data prior to the output are used for decoding, 4
+    bins_before=16; %How many bins of neural data prior to the output are used for decoding, 4
     bins_current=1; %Whether to use concurrent time bin of neural data, 1
     bins_after=0; %How many bins of neural data after the output are used for decoding, 10
     handles_choices.bins_before=bins_before;
@@ -75,33 +73,29 @@ if exist('handles_choices')==0
 
     %Note: The data brought into the Kording lab jupyter notebbok seems to be
     %binned in 200 msec bins
-    dt=0.2; %Time bins for decoding
+    dt=0.1; %Time bins for decoding, this was 0.2
     dt_miniscope=1/30;
-    n_shuffle=5; %Note that n_shuffle is changed to a maximum of ii_n_training
+    n_shuffle=3; %Note that n_shuffle is changed to a maximum of ii_n_training
+        %n_shuffle=1 will yield an infinite loop
 
     handles_choices.dt=dt;
     handles_choices.dt_miniscope=dt_miniscope;
     handles_choices.n_shuffle=n_shuffle;
 
-    which_training_algorithm=2;
-    handles_choices.which_training_algorithm=which_training_algorithm;
-    %1=entire session is used for training
-    %2=only per trial is used for training
-    %3=trained with data between trials
-
+    handles_choices.trial_start_offset=-15; %This was -10
+    handles_choices.trial_end_offset=15;
 else
-
     this_path=handles_choices.this_path;
     dFF_file=handles_choices.dFF_file;
     arena_file=handles_choices.arena_file;
-    training_fraction=handles_choices.training_fraction;
+%     training_fraction=handles_choices.training_fraction;
     bins_before=handles_choices.bins_before;
     bins_current=handles_choices.bins_current;
     bins_after=handles_choices.bins_after;
     dt=handles_choices.dt;
     dt_miniscope=handles_choices.dt_miniscope;
     n_shuffle=handles_choices.n_shuffle;
-    which_training_algorithm=handles_choices.which_training_algorithm;
+    is_sphgpu=handles_choices.is_sphgpu;
 end
 
 try
@@ -111,14 +105,29 @@ end
 
 setenv('MW_PCT_TRANSPORT_HEARTBEAT_INTERVAL', '700')
 
-switch which_training_algorithm
+switch is_sphgpu
     case 1
-        fprintf(1,['\nTrained with data for the entire session\n\n'])
+        addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
+        addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
+        addpath('/home/restrepd/Documents/MATLAB/drgMaster')
+        addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
     case 2
-        fprintf(1,['\nTrained with within trial data\n\n'])
-    case 3
-        fprintf(1,['\nTrained with between trial data\n\n'])
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMiniscope')
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/m new/Chi Squared')
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMaster')
+        addpath(genpath('/projects/drestrepo@xsede.org/software/DR_matlab/m new/kakearney-boundedline-pkg-32f2a1f'))
 end
+
+if ~exist(handles_choices.save_path(1:end-1),'dir')
+    mkdir(handles_choices.save_path(1:end-1))
+end
+ 
+fileID = fopen([this_path 'R1R2output.txt'],'w');
+
+
+fprintf(1,['\nTrained with within trial data\n\n'])
+fprintf(fileID,['\nTrained with within trial data\n\n'])
+
 
 figNo=0;
 
@@ -476,6 +485,7 @@ percent_correct=100*(trials.hit4+trials.hit1)/(trials.hit4+trials.hit1+trials.mi
 percent_correct1=100*(trials.hit1)/(trials.hit1+trials.miss1);
 percent_correct4=100*(trials.hit4)/(trials.hit4+trials.miss4);
 fprintf(1,['\nPercent correct ' num2str(percent_correct) ' percent correct1 ' num2str(percent_correct1) ' percent correct4 ' num2str(percent_correct4) '\n\n'])
+fprintf(fileID,['\nPercent correct ' num2str(percent_correct) ' percent correct1 ' num2str(percent_correct1) ' percent correct4 ' num2str(percent_correct4) '\n\n'])
 
 
 nan_mask=logical(ones(1,no_time_bins));
@@ -516,589 +526,311 @@ for ii_t=bins_before+1:no_time_bins-bins_after
     end
 end
 
+handles_out.no_neurons=no_neurons;
+
 %Now do the neural networks
 tic
 %Set what part of data should be part of the training/testing/validation sets
 %Note that there was a long period of no movement after about 80% of recording, so I did not use this data.
 
-switch which_training_algorithm
-    case 1
-        %Train with entire session
-        ii_n_training=floor(1/(1-training_fraction));
+%Train within trials using a leave one out approach
+
+%training_range_template has all the trials
+training_range_template=zeros(1,no_time_bins);
+for trNo=1:trials.odor_trNo
+    y_pred(trNo).data=[];
+    x_pred(trNo).data=[];
+
+
+    x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+    if x_predictedend>no_time_bins
+        x_predictedend=no_time_bins;
+    end
+    training_range_template(x_predictedstart:x_predictedend)=1;
+end
+
+% parfor trNo=1:trials.odor_trNo
+for trNo=1:trials.odor_trNo
+    start_toc=toc;
+
+    this_test_range=zeros(1,no_time_bins);
+    if trNo==1
+        ii_test_range_start=1;
+    else
+        ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+    end
+
+    if trNo==trials.odor_trNo
+        ii_test_range_end=no_time_bins;
+    else
+        ii_test_range_end=trials.odor_ii_end(trNo)+15;
+    end
+
+    this_test_range(ii_test_range_start:ii_test_range_end)=1;
+    this_training_range=logical(training_range_template)&(~logical(this_test_range));
+
+    % ii_valid_range=ceil(valid_range*no_time_bins);
+    %     ii_test_range=ceil(test_range*no_time_bins);
+
+    XdFFtrain=X_dFF(this_training_range,:);
+    % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+    XdFFtest=X_dFF(logical(this_test_range),:);
+
+    XYtrain=pos_binned_trimmed(this_training_range,:);
+
+    %Use gpu
+    XdFFtrain_gpu=gpuArray(XdFFtrain);
+    XdFFtest_gpu=gpuArray(XdFFtest);
+    XYtrain_gpu=gpuArray(XYtrain);
+
+    switch handles_choices.algo
+        case 1
+            MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true);
+            MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true);
+        case 2
+            MdlY1_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,1));
+            impx_gpu=predictorImportance(MdlY1_gpu);
+            %Gather back imp from the gpu
+            impx=gather(impx_gpu);
+            MdlY2_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,2));
+            impy_gpu=predictorImportance(MdlY2_gpu);
+            %Gather back imp from the gpu
+            impy=gather(impy_gpu);
+            handles_out.imp.trial(trNo).impx=impx;
+            handles_out.imp.trial(trNo).impy=impy;
+    end
+
+    %Gather back the data from the gpu
+    MdlY1=gather(MdlY1_gpu);
+    MdlY2=gather(MdlY2_gpu);
+
+    x_pred(trNo).data=predict(MdlY1,XdFFtest);
+    y_pred(trNo).data=predict(MdlY2,XdFFtest);
+
+    x_pred(trNo).MdlY1=MdlY1;
+    y_pred(trNo).MdlY2=MdlY2;
+
+    fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' \n\n'])
+end
+
+
+%Parse out the parfor loop output
+x_predicted=zeros(no_time_bins,1);
+y_predicted=zeros(no_time_bins,1);
+for trNo=1:trials.odor_trNo
+    this_test_range=zeros(1,no_time_bins);
+
+    if trNo==1
+        ii_test_range_start=1;
+    else
+        ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+    end
+
+    if trNo==trials.odor_trNo
+        ii_test_range_end=no_time_bins;
+    else
+        ii_test_range_end=trials.odor_ii_end(trNo)+15;
+    end
+
+    this_test_range(ii_test_range_start:ii_test_range_end)=1;
 
-        for ii_train=1:ii_n_training
-            y_pred(ii_train).data=[];
-            x_pred(ii_train).data=[];
-        end
-
-        % parfor ii_train=1:ii_n_training
-        for ii_train=1:ii_n_training
-            start_toc=toc;
-            this_test_range=zeros(1,no_time_bins);
-            ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-            ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-            if ii_train==ii_n_training
-                ii_test_range_end=no_time_bins;
-            end
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(~logical(this_test_range),:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(~logical(this_test_range),:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            opts = struct('ShowPlots', false, ...
-                'Verbose', 0, ...
-                'MaxObjectiveEvaluations', 15,...
-                'UseParallel',true);
-
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     x_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            x_pred(ii_train).data=predict(MdlY1,XdFFtest);
-            y_pred(ii_train).data=predict(MdlY2,XdFFtest);
-            fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-        end
-        
-
-        %Parse out the parfor loop output
-        x_predicted=zeros(no_time_bins,1);
-        y_predicted=zeros(no_time_bins,1);
-        for ii_train=1:ii_n_training
-            this_test_range=zeros(1,no_time_bins);
-            ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-            ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-            if ii_train==ii_n_training
-                ii_test_range_end=no_time_bins;
-            end
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            x_predicted(logical(this_test_range),1)=x_pred(ii_train).data;
-            y_predicted(logical(this_test_range),1)=y_pred(ii_train).data;
-
-        end
-
-        %Now do predictions for reversed/permuted training periods
-        if n_shuffle>ii_n_training
-            n_shuffle=ii_n_training;
-        end
-        handles_choices.n_shuffle=n_shuffle;
-        x_predicted_sh=zeros(no_time_bins,n_shuffle);
-        y_predicted_sh=zeros(no_time_bins,n_shuffle);
-
-
-        %We will do a reversal and a circular permutation
-        sh_shift=0;
-        while sh_shift==0
-            sh_shift=floor(rand*n_shuffle);
-        end
-
-        pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
-        for ii_trl=1:size(pos_binned_trimmed,1)
-            pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
-        end
-
-        for ii_shuffled=1:n_shuffle
-
-            for ii_train=1:ii_n_training
-                y_pred(ii_train).data=[];
-                x_pred(ii_train).data=[];
-            end
-
-            parfor ii_train=1:ii_n_training
-
-                this_test_range=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-                if ii_train==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                ii_train_sh=ii_train+sh_shift;
-                if ii_train_sh>ii_n_training
-                    ii_train_sh=ii_train_sh-ii_n_training;
-                end
-                this_test_range_sh=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train_sh-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train_sh);
-                if ii_train_sh==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range_sh(ii_test_range_start:ii_test_range_end)=1;
-
-                %Make sure that this_test_range_sh is the same size as this_test_range
-                if sum(this_test_range_sh)>sum(this_test_range)
-                    first_ii=find(this_test_range_sh==1,1,'first');
-                    this_test_range_sh(first_ii:first_ii+sum(this_test_range_sh)-sum(this_test_range)-1)=0;
-                end
-
-                if sum(this_test_range_sh)<sum(this_test_range)
-                    first_ii=find(this_test_range_sh==1,1,'first');
-                    if first_ii+(sum(this_test_range_sh)-sum(this_test_range))>0
-                        this_test_range_sh(first_ii+(sum(this_test_range_sh)-sum(this_test_range)):first_ii-1)=1;
-                    else
-                        last_ii=find(this_test_range_sh==1,1,'last');
-                        this_test_range_sh(last_ii+1:last_ii+(sum(this_test_range)-sum(this_test_range_sh)))=1;
-                    end
-                end
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(~logical(this_test_range),:);
-
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-
-                XYtrain=pos_binned_reversed(~logical(this_test_range_sh),:);
-
-                %Decode using neural network
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-                x_pred(ii_train).data=predict(MdlY1,XdFFtest);
-                y_pred(ii_train).data=predict(MdlY2,XdFFtest);
-            end
-
-            for ii_train=1:ii_n_training
-                this_test_range=zeros(1,no_time_bins);
-                ii_test_range_start=floor(1+((1-training_fraction)*no_time_bins)*(ii_train-1));
-                ii_test_range_end=ceil(((1-training_fraction)*no_time_bins)*ii_train);
-                if ii_train==ii_n_training
-                    ii_test_range_end=no_time_bins;
-                end
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                x_predicted_sh(logical(this_test_range),ii_shuffled)=x_pred(ii_train).data;
-                y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(ii_train).data;
-            end
-
-        end
-
-    case 2
-        %Train with trials using a leave one out approach
-
-        %training_range_template has all the trials
-        training_range_template=zeros(1,no_time_bins);
-        for trNo=1:trials.odor_trNo
-            y_pred(trNo).data=[];
-            x_pred(trNo).data=[];
-
-            x_predictedstart=trials.odor_ii_start(trNo)-10;
-            x_predictedend=trials.odor_ii_end(trNo)+15;
-            training_range_template(x_predictedstart:x_predictedend)=1;
-        end
-
-        % parfor trNo=1:trials.odor_trNo
-        for trNo=1:trials.odor_trNo
-            start_toc=toc;
-           
-            this_test_range=zeros(1,no_time_bins);
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-            this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(this_training_range,:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(this_training_range,:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            opts = struct('ShowPlots', false, ...
-                'Verbose', 0, ...
-                'MaxObjectiveEvaluations', 15,...
-                'UseParallel',true);
-
-            try
-                delete(gcp('nocreate'));
-            catch
-            end
-            parpool;
-
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
-
-            try
-                delete(gcp('nocreate'));
-            catch
-            end
-            parpool;
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     x_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            x_pred(trNo).data=predict(MdlY1,XdFFtest);
-            y_pred(trNo).data=predict(MdlY2,XdFFtest);
-
-            x_pred(trNo).MdlY1=MdlY1;
-            y_pred(trNo).MdlY2=MdlY2;
-            
-            fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' \n\n'])
-        end
-        
-
-        %Parse out the parfor loop output
-        x_predicted=zeros(no_time_bins,1);
-        y_predicted=zeros(no_time_bins,1);
-        for trNo=1:trials.odor_trNo
-            this_test_range=zeros(1,no_time_bins);
-
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            x_predicted(logical(this_test_range),1)=x_pred(trNo).data;
-            y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
-
-        end
-
-        %Now do predictions for reversed/permuted training periods
-        x_predicted_sh=zeros(no_time_bins,n_shuffle);
-        y_predicted_sh=zeros(no_time_bins,n_shuffle);
-
-
-        %We will do a reversal and a circular permutation
-        sh_shift=0;
-        while sh_shift==0
-            sh_shift=floor(rand*n_shuffle);
-        end
-
-        pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
-        for ii_trl=1:size(pos_binned_trimmed,1)
-            pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
-        end
-
-        for ii_shuffled=1:n_shuffle
-
-            for trNo=1:trials.odor_trNo
-                y_pred(trNo).data=[];
-                x_pred(trNo).data=[];
-                MdlY1_pars(trNo).pars=[];
-                MdlY2_pars(trNo).pars=[];
-            end
-
-            parfor trNo=1:trials.odor_trNo
-
-                this_test_range=zeros(1,no_time_bins);
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(this_training_range,:);
-                % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-                XYtrain=pos_binned_reversed(this_training_range,:);
-
-                % x_pred(trNo).MdlY1=MdlY1;
-                % y_pred(trNo).MdlY2=MdlY2;
-
-                %Decode using neural network
-                bestHyperparameters = x_pred(trNo).MdlY1.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                activationsCell = cellstr(bestHyperparameters.Activations);
-                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                layer_sizes=bestHyperparameters.Layer_1_Size;
-                if ~isnan(bestHyperparameters.Layer_2_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                end
-                if ~isnan(bestHyperparameters.Layer_3_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                end
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'LayerSizes', layer_sizes, ...
-                    'Activations', activationsCell{1}, ...
-                    'Lambda', bestHyperparameters.Lambda, ...
-                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                MdlY1_pars(trNo).pars.activations=activationsCell{1};
-                MdlY1_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                MdlY1_pars(trNo).pars.Standardize=standardizeCell{1};
-
-                x_pred(trNo).data=predict(MdlY1,XdFFtest);
-
-                bestHyperparameters = y_pred(trNo).MdlY2.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                activationsCell = cellstr(bestHyperparameters.Activations);
-                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                layer_sizes=bestHyperparameters.Layer_1_Size;
-                if ~isnan(bestHyperparameters.Layer_2_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                end
-                if ~isnan(bestHyperparameters.Layer_3_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                end
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'LayerSizes', layer_sizes, ...
-                                    'Activations', activationsCell{1}, ...
-                                    'Lambda', bestHyperparameters.Lambda, ...
-                                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                MdlY2_pars(trNo).pars.activations=activationsCell{1};
-                MdlY2_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                MdlY2_pars(trNo).pars.Standardize=standardizeCell{1};
-
-                
-                y_pred(trNo).data=predict(MdlY2,XdFFtest);
-            end
-
-            for trNo=1:trials.odor_trNo
-                this_test_range=zeros(1,no_time_bins);
-
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                x_predicted_sh(logical(this_test_range),ii_shuffled)=x_pred(trNo).data;
-                y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(trNo).data;
-            end
-
-        end
-
-    case 3
-        %Train between trials using a leave one out approach
-
-        %training_range_template has all the trials
-        training_range_template=zeros(1,no_time_bins);
-        for trNo=1:trials.odor_trNo
-            y_pred(trNo).data=[];
-            x_pred(trNo).data=[];
-
-            if trNo==1
-                last_x_predictedend=1;
-            else
-                last_x_predictedend=trials.odor_ii_end(trNo-1)+15;
-            end
-
-
-            this_x_predictedstart=trials.odor_ii_start(trNo)-10;
-
-
-            training_range_template(last_x_predictedend:this_x_predictedstart)=1;
-        end
-
-        last_x_predictedend=trials.odor_ii_end(trials.odor_trNo)+15;
-        this_x_predictedstart=no_time_bins;
-        training_range_template(last_x_predictedend:this_x_predictedstart)=1;
-
-        parfor trNo=1:trials.odor_trNo
-
-            this_test_range=zeros(1,no_time_bins);
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-            this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-            % ii_valid_range=ceil(valid_range*no_time_bins);
-            %     ii_test_range=ceil(test_range*no_time_bins);
-
-            XdFFtrain=X_dFF(this_training_range,:);
-            % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-            XdFFtest=X_dFF(logical(this_test_range),:);
-
-            XYtrain=pos_binned_trimmed(this_training_range,:);
-            % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
-            %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
-
-            %Decode using neural network
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-            %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
-
-            %     x_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
-            %     y_predicted(logical(this_test_range),1)=predict(MdlY2,XdFFtest);
-
-            x_pred(trNo).data=predict(MdlY1,XdFFtest);
-            y_pred(trNo).data=predict(MdlY2,XdFFtest);
-        end
-        fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
-
-        %Parse out the parfor loop output
-        x_predicted=zeros(no_time_bins,1);
-        y_predicted=zeros(no_time_bins,1);
-        for trNo=1:trials.odor_trNo
-            this_test_range=zeros(1,no_time_bins);
-
-            if trNo==1
-                ii_test_range_start=1;
-            else
-                ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-            end
-
-            if trNo==trials.odor_trNo
-                ii_test_range_end=no_time_bins;
-            else
-                ii_test_range_end=trials.odor_ii_end(trNo)+15;
-            end
-
-            this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-            x_predicted(logical(this_test_range),1)=x_pred(trNo).data;
-            y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
-
-        end
-
-        %Now do predictions for reversed/permuted training periods
-        x_predicted_sh=zeros(no_time_bins,n_shuffle);
-        y_predicted_sh=zeros(no_time_bins,n_shuffle);
-
-
-        %We will do a reversal and a circular permutation
-        sh_shift=0;
-        while sh_shift==0
-            sh_shift=floor(rand*n_shuffle);
-        end
-
-        pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
-        for ii_trl=1:size(pos_binned_trimmed,1)
-            pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
-        end
-
-        for ii_shuffled=1:n_shuffle
-
-            for trNo=1:trials.odor_trNo
-                y_pred(trNo).data=[];
-                x_pred(trNo).data=[];
-            end
-
-            parfor trNo=1:trials.odor_trNo
-
-                this_test_range=zeros(1,no_time_bins);
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-                this_training_range=logical(training_range_template)&(~logical(this_test_range));
-
-                % ii_valid_range=ceil(valid_range*no_time_bins);
-                %     ii_test_range=ceil(test_range*no_time_bins);
-
-                XdFFtrain=X_dFF(this_training_range,:);
-                % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
-                XdFFtest=X_dFF(logical(this_test_range),:);
-
-                XYtrain=pos_binned_reversed(this_training_range,:);
-
-
-
-                %Decode using neural network
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1));
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2));
-
-                x_pred(trNo).data=predict(MdlY1,XdFFtest);
-                y_pred(trNo).data=predict(MdlY2,XdFFtest);
-            end
-
-            for trNo=1:trials.odor_trNo
-                this_test_range=zeros(1,no_time_bins);
-
-                if trNo==1
-                    ii_test_range_start=1;
-                else
-                    ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
-                end
-
-                if trNo==trials.odor_trNo
-                    ii_test_range_end=no_time_bins;
-                else
-                    ii_test_range_end=trials.odor_ii_end(trNo)+15;
-                end
-
-                this_test_range(ii_test_range_start:ii_test_range_end)=1;
-
-                x_predicted_sh(logical(this_test_range),ii_shuffled)=x_pred(trNo).data;
-                y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(trNo).data;
-            end
-
-        end
+    x_predicted(logical(this_test_range),1)=x_pred(trNo).data;
+    y_predicted(logical(this_test_range),1)=y_pred(trNo).data;
 
 end
+
+%Now do predictions for reversed/permuted training periods
+x_predicted_sh=zeros(no_time_bins,n_shuffle);
+y_predicted_sh=zeros(no_time_bins,n_shuffle);
+
+
+%We will do a reversal and a circular permutation
+sh_shift=0;
+
+if n_shuffle==1
+    sh_shift=1;
+else
+    while sh_shift==0
+        sh_shift=floor(rand*n_shuffle);
+    end
+end
+
+pos_binned_reversed=zeros(size(pos_binned_trimmed,1),size(pos_binned_trimmed,2));
+for ii_trl=1:size(pos_binned_trimmed,1)
+    pos_binned_reversed(size(pos_binned_trimmed,1)-ii_trl+1,:)=pos_binned_trimmed(ii_trl,:);
+end
+
+for ii_shuffled=1:n_shuffle
+
+    for trNo=1:trials.odor_trNo
+        y_pred(trNo).data=[];
+        x_pred(trNo).data=[];
+        MdlY1_pars(trNo).pars=[];
+        MdlY2_pars(trNo).pars=[];
+    end
+
+    for trNo=1:trials.odor_trNo
+        %                 parfor trNo=1:trials.odor_trNo
+        start_toc=toc;
+        this_test_range=zeros(1,no_time_bins);
+        if trNo==1
+            ii_test_range_start=1;
+        else
+            ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+        end
+
+        if trNo==trials.odor_trNo
+            ii_test_range_end=no_time_bins;
+        else
+            ii_test_range_end=trials.odor_ii_end(trNo)+15;
+        end
+
+        this_test_range(ii_test_range_start:ii_test_range_end)=1;
+        this_training_range=logical(training_range_template)&(~logical(this_test_range));
+
+        % ii_valid_range=ceil(valid_range*no_time_bins);
+        %     ii_test_range=ceil(test_range*no_time_bins);
+
+        XdFFtrain=X_dFF(this_training_range,:);
+        % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
+        XdFFtest=X_dFF(logical(this_test_range),:);
+
+        XYtrain=pos_binned_reversed(this_training_range,:);
+
+
+        XdFFtrain_gpu=gpuArray(XdFFtrain);
+        XdFFtest_gpu=gpuArray(XdFFtest);
+        XYtrain_gpu=gpuArray(XYtrain);
+
+        switch handles_choices.algo
+            case 1
+                MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true);
+                MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true);
+            case 2
+                MdlY1_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,1));
+                impx_gpu=predictorImportance(MdlY1_gpu);
+                %Gather back imp from the gpu
+                impx=gather(impx_gpu);
+                MdlY2_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,2));
+                impy_gpu=predictorImportance(MdlY2_gpu);
+                %Gather back imp from the gpu
+                impy=gather(impy_gpu);
+                handles_out.imp.trial(trNo).impx=impx;
+                handles_out.imp.trial(trNo).impy=impy;
+        end
+
+        %Gather back the data from the gpu
+        MdlY1=gather(MdlY1_gpu);
+        MdlY2=gather(MdlY2_gpu);
+
+        %Calculate predictions
+        x_pred(trNo).data=predict(MdlY1,XdFFtest);
+        y_pred(trNo).data=predict(MdlY2,XdFFtest);
+
+        %         %                 try
+        %         %                     delete(gcp('nocreate'));
+        %         %                 catch
+        %         %                 end
+        %         %                 parpool;
+        %
+        %         MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true...
+        %             );
+        %
+        %         %             MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true,...
+        %         %                 'OptimizeHyperparameters','auto',...
+        %         %                 'HyperparameterOptimizationOptions', opts);
+        %
+        %         MdlY1=gather(MdlY1_gpu);
+        %
+        %         % x_pred(trNo).MdlY1=MdlY1;
+        %         % y_pred(trNo).MdlY2=MdlY2;
+        %         %
+        %         %                 %Decode using neural network
+        %         %                 bestHyperparameters = x_pred(trNo).MdlY1.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+        %         %                 activationsCell = cellstr(bestHyperparameters.Activations);
+        %         %                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+        %         %                 layer_sizes=bestHyperparameters.Layer_1_Size;
+        %         %                 if ~isnan(bestHyperparameters.Layer_2_Size)
+        %         %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+        %         %                 end
+        %         %                 if ~isnan(bestHyperparameters.Layer_3_Size)
+        %         %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+        %         %                 end
+        %         %                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'LayerSizes', layer_sizes, ...
+        %         %                     'Activations', activationsCell{1}, ...
+        %         %                     'Lambda', bestHyperparameters.Lambda, ...
+        %         %                     'Standardize', strcmpi(standardizeCell{1},'true'));
+        %         %
+        %         %                 MdlY1_pars(trNo).pars.activations=activationsCell{1};
+        %         %                 MdlY1_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+        %         %                 MdlY1_pars(trNo).pars.Standardize=standardizeCell{1};
+
+
+
+        %                 bestHyperparameters = y_pred(trNo).MdlY2.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+        %                 activationsCell = cellstr(bestHyperparameters.Activations);
+        %                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+        %                 layer_sizes=bestHyperparameters.Layer_1_Size;
+        %                 if ~isnan(bestHyperparameters.Layer_2_Size)
+        %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+        %                 end
+        %                 if ~isnan(bestHyperparameters.Layer_3_Size)
+        %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+        %                 end
+        %                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'LayerSizes', layer_sizes, ...
+        %                                     'Activations', activationsCell{1}, ...
+        %                                     'Lambda', bestHyperparameters.Lambda, ...
+        %                                     'Standardize', strcmpi(standardizeCell{1},'true'));
+        %
+        %                 MdlY2_pars(trNo).pars.activations=activationsCell{1};
+        %                 MdlY2_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+        %                 MdlY2_pars(trNo).pars.Standardize=standardizeCell{1};
+
+        %                 try
+        %                     delete(gcp('nocreate'));
+        %                 catch
+        %                 end
+        %                 parpool;
+
+        %         MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true...
+        %             );
+        %
+        %         %             MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true,...
+        %         %                 'OptimizeHyperparameters','auto',...
+        %         %                 'HyperparameterOptimizationOptions', opts);
+        %
+        %         MdlY2=gather(MdlY2_gpu);
+
+
+
+        fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' shuffle no ' num2str(ii_shuffled) '\n\n'])
+    end
+
+    for trNo=1:trials.odor_trNo
+        this_test_range=zeros(1,no_time_bins);
+
+        if trNo==1
+            ii_test_range_start=1;
+        else
+            ii_test_range_start=trials.odor_ii_end(trNo-1)+15;
+        end
+
+        if trNo==trials.odor_trNo
+            ii_test_range_end=no_time_bins;
+        else
+            ii_test_range_end=trials.odor_ii_end(trNo)+15;
+        end
+
+        this_test_range(ii_test_range_start:ii_test_range_end)=1;
+
+        x_predicted_sh(logical(this_test_range),ii_shuffled)=x_pred(trNo).data;
+        y_predicted_sh(logical(this_test_range),ii_shuffled)=y_pred(trNo).data;
+    end
+
+end
+
+
 
 fprintf(1,['Elapsed time ' num2str(toc/(60*60)) ' hrs\n\n'])
 
@@ -1116,7 +848,7 @@ handles_out.trials=trials;
 handles_out.MdlY2_pars=MdlY2_pars;
 handles_out.MdlY1_pars=MdlY1_pars;
 
-save([this_path arena_file(1:end-4) 'decxy' num2str(which_training_algorithm) '.mat'],'handles_out','handles_choices','-v7.3')
+% save([this_path arena_file(1:end-4) 'decxy.mat'],'handles_out','handles_choices','-v7.3')
 
 no_conv_points=11;
 % conv_win=ones(1,no_conv_points)/no_conv_points;
@@ -1171,14 +903,28 @@ end
 R1=corrcoef(XYtest(:,1),x_predicted_conv);
 R2=corrcoef(XYtest(:,2),y_predicted_conv);
 fprintf(1, 'Correlation coefficient nn conv x, y entire run %d %d\n\n',R1(1,2),R2(1,2));
+fprintf(fileID, 'Correlation coefficient nn conv x, y entire run %d %d\n\n',R1(1,2),R2(1,2));
+handles_out.R1.entire_run_x=R1;
+handles_out.R1.entire_run_y=R2;
+ 
+R1XY=corr2(XYtest,[x_predicted_conv y_predicted_conv]);
+fprintf(1, 'Correlation coefficient nn conv XY entire run %d %d\n',R1XY);
+fprintf(fileID, 'Correlation coefficient nn conv XY entire run %d %d\n',R1XY);
+handles_out.R1.entire_run_XY=R1XY;
 
 fractionExplained_x = drgMini_calculateVarianceExplained(XYtest(:,1), x_predicted_conv);
 fractionExplained_y = drgMini_calculateVarianceExplained(XYtest(:,2), y_predicted_conv);
-fprintf(1, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
-fprintf(1, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, '\n\nFraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+handles_out.pVar.entire_run_x=fractionExplained_x;
+handles_out.pVar.entire_run_y=fractionExplained_y;
+
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(XYtest(:,1),XYtest(:,2),x_predicted_conv, y_predicted_conv);
-fprintf(1, 'Percent variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
+fprintf(1, 'Fraction of variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
+fprintf(fileID, 'Fraction of variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
+handles_out.pVar.entire_run_XY=fractionExplainedXY;
+
 
 figNo=figNo+1;
 try
@@ -1194,14 +940,10 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 plot(x_predicted_conv(x_predictedstart:x_predictedend,1),y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
 plot(XYtest(x_predictedstart:x_predictedend,1),XYtest(x_predictedstart:x_predictedend,2),'-b','LineWidth',1.5)
-switch which_training_algorithm
-    case 1
-        title('xy for neural network convolved (trained per session)')
-    case 2
-        title('xy for neural network convolved (trained per trial)')
-    case 3
-        title('xy for neural network convolved (trained between)')
-end
+
+
+title('xy for neural network convolved (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure2.fig'])
@@ -1226,20 +968,14 @@ plot(XYtest(x_predictedstart:x_predictedend,1),'-b','LineWidth',3)
 plot(x_predicted_conv(x_predictedstart:x_predictedend,1),'-r','LineWidth',1)
 
 for trNo=1:trials.odor_trNo
-    this_x_predictedstart=trials.odor_ii_start(trNo)-10;
-    this_x_predictedend=trials.odor_ii_end(trNo)+15;
+   
+    this_x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    this_x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
     plot([this_x_predictedstart:this_x_predictedend],75*ones(this_x_predictedend-this_x_predictedstart+1,1),'-k','LineWidth',2)
 end
 
+title('x for nn, b:original, r:predicted (trained per trial)')
 
-switch which_training_algorithm
-    case 1
-        title('x for nn, b:original, r:predicted (trained per session)')
-    case 2
-        title('x for nn, b:original, r:predicted (trained per trial)')
-    case 3
-        title('x for nn, b:original, r:predicted (trained between)')
-end
 
 if handles_choices.save_results==1
     savefig([this_path 'figure3.fig'])
@@ -1262,14 +998,9 @@ plot(XYtest(x_predictedstart:x_predictedend,1),x_predicted_conv(x_predictedstart
 xlabel('Actual x')
 ylabel('Decoded x')
 
-switch which_training_algorithm
-    case 1
-        title('x for nn (trained per session)')
-    case 2
-        title('x for nn (trained per trial)')
-    case 3
-        title('x for nn (trained between)')
-end
+
+title('x for nn (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure4.fig'])
@@ -1291,20 +1022,15 @@ plot(XYtest(x_predictedstart:x_predictedend,2),'-b','LineWidth',3)
 plot(y_predicted_conv(x_predictedstart:x_predictedend,1),'-r','LineWidth',1)
 
 for trNo=1:trials.odor_trNo
-    this_x_predictedstart=trials.odor_ii_start(trNo)-10;
-    this_x_predictedend=trials.odor_ii_end(trNo)+15;
+    
+    this_x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    this_x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
     plot([this_x_predictedstart:this_x_predictedend],75*ones(this_x_predictedend-this_x_predictedstart+1,1),'-k','LineWidth',2)
 end
 
 
-switch which_training_algorithm
-    case 1
-        title('y for nn, b:original, r:predicted (trained per session)')
-    case 2
-        title('y for nn, b:original, r:predicted (trained per trial)')
-    case 3
-        title('y for nn, b:original, r:predicted (trained between)')
-end
+title('y for nn, b:original, r:predicted (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure5.fig'])
@@ -1326,14 +1052,9 @@ plot(XYtest(x_predictedstart:x_predictedend,2),y_predicted_conv(x_predictedstart
 xlabel('Actual y')
 ylabel('Decoded y')
 
-switch which_training_algorithm
-    case 1
-        title('y for nn(trained per session)')
-    case 2
-        title('y for nn (trained per trial)')
-    case 3
-        title('y for nn (trained between)')
-end
+
+title('y for nn (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure6.fig'])
@@ -1375,8 +1096,13 @@ ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
 
-    x_predictedstart=trials.odor_ii_start(trNo)-10;
-    x_predictedend=trials.odor_ii_end(trNo)+15;
+
+    x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+
+    if x_predictedend>no_time_bins
+        x_predictedend=no_time_bins;
+    end
 
     y_all_trials_sh=[y_all_trials_sh; XYtest(x_predictedstart:x_predictedend,2)];
     y_decod_all_trials_sh=[y_decod_all_trials_sh; y_predicted_sh_conv(x_predictedstart:x_predictedend,1)];
@@ -1396,28 +1122,29 @@ for trNo=1:trials.odor_trNo
 
     [hlsp, hpsp] = boundedline(dt*[ii_start:ii_end]',mean(y_predicted_sh_conv(x_predictedstart:x_predictedend,:)',1)', CIsp', '-k');
 
+    %Okabe_Ito colors
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[1 0.6 0.6],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[213/255 94/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[230/255 159/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0.4 0.4 1],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0 114/255 178/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[86/255 180/255 233/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
@@ -1427,14 +1154,9 @@ for trNo=1:trials.odor_trNo
 
 end
 
-switch which_training_algorithm
-    case 1
-        title('y for nn, permuted b:original, r:predicted (trained per session)')
-    case 2
-        title('y for nn, permuted b:original, r:predicted (trained per trial)')
-    case 3
-        title('y for nn, permuted b:original, r:predicted (trained between)')
-end
+
+title('y prediction permuted, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure7.fig'])
@@ -1457,8 +1179,13 @@ ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
 
-    x_predictedstart=trials.odor_ii_start(trNo)-10;
-    x_predictedend=trials.odor_ii_end(trNo)+15;
+      
+    x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+
+    if x_predictedend>no_time_bins
+        x_predictedend=no_time_bins;
+    end
 
     y_all_trials=[y_all_trials; XYtest(x_predictedstart:x_predictedend,2)];
     y_decod_all_trials=[y_decod_all_trials; y_predicted_conv(x_predictedstart:x_predictedend,1)];
@@ -1470,28 +1197,29 @@ for trNo=1:trials.odor_trNo
     %Plot accuracy per trial
     ii_end=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))-1;
 
+    %Okabe_Ito colors
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[1 0.4 0.4],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[213/255 94/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[230/255 159/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0.6 0.6 1],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0 114/255 178/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
             %Lane 4 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[86/255 180/255 233/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
@@ -1501,14 +1229,9 @@ for trNo=1:trials.odor_trNo
 
 end
 
-switch which_training_algorithm
-    case 1
-        title('y for nn within trial, r:hit1, c:mis1, b:hit4, m:miss4 k:predicted (trained per session)')
-    case 2
-        title('y for nn within trial, r:hit1, c:mis1, b:hit4, m:miss4 k:predicted (trained per trial)')
-    case 3
-        title('y for nn within trial, r:hit1, c:mis1, b:hit4, m:miss4 k:predicted (trained between)')
-end
+
+title('y prediction within trial, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure8.fig'])
@@ -1532,8 +1255,13 @@ ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
 
-    x_predictedstart=trials.odor_ii_start(trNo)-10;
-    x_predictedend=trials.odor_ii_end(trNo)+15;
+       
+    x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+
+    if x_predictedend>no_time_bins
+        x_predictedend=no_time_bins;
+    end
 
     x_all_trials=[x_all_trials; XYtest(x_predictedstart:x_predictedend,1)];
     x_decod_all_trials=[x_decod_all_trials; x_predicted_conv(x_predictedstart:x_predictedend,1)];
@@ -1544,28 +1272,29 @@ for trNo=1:trials.odor_trNo
 
     ii_end=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))-1;
 
+    %Okabe_Ito colors
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[1 0.4 0.4],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[213/255 94/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[230/255 159/255 0],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0.6 0.6 1],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0 114/255 178/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 4
             %Lane 4 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[86/255 180/255 233/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
@@ -1573,14 +1302,10 @@ for trNo=1:trials.odor_trNo
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 end
 
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial, r:hit1, c:mis1, b:hit4, m:miss4 (trained per session)')
-    case 2
-        title('x for nn per trial, r:hit1, c:mis1, b:hit4, m:miss4 (trained per trial)')
-    case 3
-        title('x for nn per trial, r:hit1, c:mis1, b:hit4, m:miss4 (trained between)')
-end
+
+title('x prediction within trial, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
+
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure9.fig'])
@@ -1603,8 +1328,13 @@ ii_start=0;
 last_x_predictedend=1;
 for trNo=1:trials.odor_trNo
 
-    x_predictedstart=trials.odor_ii_start(trNo)-10;
-    x_predictedend=trials.odor_ii_end(trNo)+15;
+    
+    x_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+    x_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+
+    if x_predictedend>no_time_bins
+        x_predictedend=no_time_bins;
+    end
 
     x_all_trials_sh=[x_all_trials_sh; XYtest(x_predictedstart:x_predictedend,1)];
     x_decod_all_trials_sh=[x_decod_all_trials_sh; x_predicted_sh_conv(x_predictedstart:x_predictedend,1)];
@@ -1623,29 +1353,29 @@ for trNo=1:trials.odor_trNo
 
     [hlsp, hpsp] = boundedline(dt*[ii_start:ii_end]',mean(x_predicted_sh_conv(x_predictedstart:x_predictedend,:)',1)', CIsp', '-k');
 
-
+    %Okabe_Ito colors
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[1 0.6 0.6],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[213/255 94/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[230/255 159/255 0],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0.4 0.4 1],'LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0 114/255 178/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
         case 4
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[86/255 180/255 233/255],'LineWidth',3)
             %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
             plot(dt*[ii_start+10 ii_start+10],[0 500],'-k')
             plot(dt*[ii_end-15 ii_end-15],[0 500],'-k')
@@ -1653,80 +1383,113 @@ for trNo=1:trials.odor_trNo
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 end
 
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial permuted, r:hit1, c:miss1, b:hit4, m:miss4, k:predicted (trained per session)')
-    case 2
-        title('x for nn per trial permuted, r:hit1, c:miss1, b:hit4, m:miss4, k:predicted  (trained per trial)')
-    case 3
-        title('x for nn per trial permuted, r:hit1, c:miss1, b:hit4, m:miss4, k:predicted (trained between)')
-end
+title('x prediction permuted, verm:hit1, or:mis1, b:hit4, bsky:miss4 k:predicted')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure10.fig'])
 end
 
-fileID = fopen([this_path 'R1R2output.txt'],'w');
+
 
 % fprintf(1, 'R2 nn conv x, y per trial run: %d %d\n',drgGetR2(x_all_trials,x_decod_all_trials),drgGetR2(y_all_trials,y_decod_all_trials));
 R1=corrcoef(x_all_trials,x_decod_all_trials);
 R2=corrcoef(y_all_trials,y_decod_all_trials);
-fprintf(1, 'Correlation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, '\n\n\n\nCorrelation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(fileID, '\n\n\n\nCorrelation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
+handles_out.R1.within_x=R1;
+handles_out.R1.within_y=R2;
+
+R1XY=corr2([x_all_trials y_all_trials],[x_decod_all_trials y_decod_all_trials]);
+fprintf(1, '\n\nCorrelation coefficient nn conv XY within trials %d %d\n',R1XY);
+fprintf(fileID, '\n\nCorrelation coefficient nn conv XY within trials %d %d\n',R1XY);
+handles_out.R1.within_XY=R1XY;
 
 R1=corrcoef(x_between_trials,x_decod_between_trials);
 R2=corrcoef(y_between_trials,y_decod_between_trials);
-fprintf(1, 'Correlation coefficient nn conv x, y between trials %d %d\n\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn conv x, y betweeen trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, '\n\nCorrelation coefficient nn conv x, y between trials %d %d\n\n',R1(1,2),R2(1,2));
+fprintf(fileID, '\n\nCorrelation coefficient nn conv x, y betweeen trials %d %d\n',R1(1,2),R2(1,2));
+handles_out.R1.between_x=R1;
+handles_out.R1.between_y=R2;
+
+R1XY=corr2([x_between_trials y_between_trials],[x_decod_between_trials y_decod_between_trials]);
+fprintf(1, '\n\nCorrelation coefficient nn conv XY between trials %d %d\n',R1XY);
+fprintf(fileID, '\n\nCorrelation coefficient nn conv XY between trials %d %d\n',R1XY);
+handles_out.R1.betweenXY=R1XY;
 
 % fprintf(1, 'R2 nn permuted x, y per trial run: %d %d\n',drgGetR2(x_all_trials_sh,x_decod_all_trials_sh),drgGetR2(y_all_trials_sh,y_decod_all_trials_sh));
 R1=corrcoef(x_all_trials_sh,x_decod_all_trials_sh);
 R2=corrcoef(y_all_trials_sh,y_decod_all_trials_sh);
-fprintf(1, 'Correlation coefficient nn permuted x, y per trial %d %d\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn permuted x, y per trial  %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, '\n\nCorrelation coefficient nn permuted x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(fileID, '\n\nCorrelation coefficient nn permuted x, y within trials %d %d\n',R1(1,2),R2(1,2));
+handles_out.R1.within_x_sh=R1;
+handles_out.R1.within_y_sh=R2;
+
+R1XY=corr2([x_all_trials_sh y_all_trials_sh],[x_decod_all_trials_sh y_decod_all_trials_sh]);
+fprintf(1, '\n\nCorrelation coefficient nn permuted XY within trials %d %d\n',R1XY);
+fprintf(fileID, '\n\nCorrelation coefficient nn permuted XY within trials %d %d\n',R1XY);
+handles_out.R1.within_XY_sh=R1XY;
 
 R1=corrcoef(x_between_trials_sh,x_decod_between_trials_sh);
 R2=corrcoef(y_between_trials_sh,y_decod_between_trials_sh);
-fprintf(1, 'Correlation coefficient nn permuted x, y between trial %d %d\n\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn permuted x, y between trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, '\n\nCorrelation coefficient nn permuted x, y between trial %d %d\n\n',R1(1,2),R2(1,2));
+fprintf(fileID, '\n\nCorrelation coefficient nn permuted x, y between trials %d %d\n\n',R1(1,2),R2(1,2));
+handles_out.R1.between_x_sh=R1;
+handles_out.R1.between_y_sh=R2;
 
+R1XY=corr2([x_between_trials_sh y_between_trials_sh],[x_decod_between_trials_sh y_decod_between_trials_sh]);
+fprintf(1, '\n\nCorrelation coefficient nn permuted XY between trials %d %d\n',R1XY);
+fprintf(fileID, '\n\nCorrelation coefficient nn permuted XY between trials %d %d\n\n',R1XY);
+handles_out.R1.between_XY_sh=R1XY;
 
+%Now ccalculate fraction of the variance
 fractionExplained_x = drgMini_calculateVarianceExplained(x_all_trials, x_decod_all_trials);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_all_trials, y_decod_all_trials);
-fprintf(1, 'Fraction of variance predicted nn conv x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
-fprintf(fileID, 'Fraction of variance predicted nn conv x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn conv x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, '\n\nFraction of variance predicted nn conv x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+handles_out.pVar.within_x=fractionExplained_x;
+handles_out.pVar.within_y=fractionExplained_y;
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_all_trials,y_all_trials,x_decod_all_trials, y_decod_all_trials);
 fprintf(1, 'Fraction of variance predicted nn conv XY within trials %d %d\n\n',fractionExplainedXY);
 fprintf(fileID, 'Fraction of variance predicted nn conv XY within trials %d %d\n\n',fractionExplainedXY);
+handles_out.pVar.within_XY=fractionExplainedXY;
 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_between_trials, x_decod_between_trials);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_between_trials, y_decod_between_trials);
-fprintf(1, '\n\nPFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 fprintf(fileID, '\n\nFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+handles_out.pVar.between_x=fractionExplained_x;
+handles_out.pVar.between_y=fractionExplained_y;
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_between_trials,y_between_trials,x_decod_between_trials, y_decod_between_trials);
 fprintf(1, 'Fraction of variance predicted nn conv XY between trials %d %d\n\n',fractionExplainedXY);
 fprintf(fileID, 'Fraction of variance predicted nn conv XY between trials %d %d\n\n',fractionExplainedXY);
+handles_out.pVar.between_XY=fractionExplainedXY;
 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_all_trials_sh, x_decod_all_trials_sh);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_all_trials_sh, y_decod_all_trials_sh);
-fprintf(1, '\n\nPFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 fprintf(fileID, '\n\nFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+handles_out.pVar.within_x_sh=fractionExplained_x;
+handles_out.pVar.within_y_sh=fractionExplained_y;
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_all_trials_sh,y_all_trials_sh,x_decod_all_trials_sh, y_decod_all_trials_sh);
 fprintf(1, 'Fraction of variance predicted nn permuted XY within trials %d %d\n\n',fractionExplainedXY);
 fprintf(fileID, 'Fraction of variance predicted nn permuted XY within trials %d %d\n\n',fractionExplainedXY);
+handles_out.pVar.within_XY_sh=fractionExplainedXY;
 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_between_trials_sh, x_decod_between_trials_sh);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_between_trials_sh, y_decod_between_trials_sh);
 fprintf(1, '\n\nFraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
-fprintf(fileID, 'Fraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, '\n\nFraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+handles_out.pVar.between_x_sh=fractionExplained_x;
+handles_out.pVar.between_y_sh=fractionExplained_y;
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_between_trials_sh,y_between_trials_sh,x_decod_between_trials_sh, y_decod_between_trials_sh);
 fprintf(1, 'Fraction of variance predicted nn permuted XY between trials %d %d\n\n',fractionExplainedXY);
 fprintf(fileID, 'Fraction of variance predicted nn cpermuted XY within trials %d %d\n\n',fractionExplainedXY);
-
+handles_out.pVar.between_XY_sh=fractionExplainedXY;
 
 
 
@@ -1747,14 +1510,9 @@ hold on
 plot(x_all_trials,x_decod_all_trials,'.b')
 xlabel('x')
 ylabel('x decoded')
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial(trained per session)')
-    case 2
-        title('x for nn per trial (trained per trial)')
-    case 3
-        title('x for nn per trial (trained between)')
-end
+
+title('x for nn per trial (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure11.fig'])
@@ -1779,19 +1537,20 @@ xlabel('y')
 ylabel('y decoded')
 
 
-switch which_training_algorithm
-    case 1
-        title('y for nn per trial (trained per session)')
-    case 2
-        title('y for nn per trial (trained per trial)')
-    case 3
-        title('y for nn per trial (trained between)')
-end
+title('y for nn per trial (trained per trial)')
+
 
 if handles_choices.save_results==1
     savefig([this_path 'figure12.fig'])
 end
 
+fprintf(1,['\n\nElapsed time for entire run ' num2str(toc/(60*60)) ' hr']) 
+fprintf(fileID,['\n\nElapsed time for entire run ' num2str(toc/(60*60)) ' hr']) 
+
 fclose(fileID);
+
+save([handles_choices.save_path arena_file(1:end-4) handles_choices.save_tag '.mat'],'handles_out','handles_choices','-v7.3')
+
+
 
 pffft=1;

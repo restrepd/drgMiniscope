@@ -1,5 +1,5 @@
-%drgMini_batch_MoserAnalysis
-[choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniMoserChoices_*.m'},'Select the .m file with all the choices for analysis');
+%drgMini_batch_AngleAnalysis
+[choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniAngleChoices_*.m'},'Select the .m file with all the choices for analysis');
 
 
 fprintf(1, ['\ndrgMini_batch_dFFPrediction run for ' choiceFileName '\n\n']);
@@ -67,6 +67,7 @@ if all_files_present==1
             handles_choices.displayFigures=handles.displayFigures;
             % handles_choices.dt_decoding_op=handles.dt_decoding_op;
             % handles_choices.dt_decoding_xy=handles.dt_decoding_xy;
+            handles_choices.display_figures=0;
             handles_choices.save_tag=handles.save_tag;
             handles_choices.save_path=handles.save_path;
             handles_choices.cm_from_floor=handles.cm_from_floor(fileNo);
@@ -78,6 +79,9 @@ if all_files_present==1
             handles_choices.is_sphgpu=handles.is_sphgpu;
             handles_choices.prctile_thr=handles.prctile_thr;
             % handles_choices.binary_dFF=handles.binary_dFF;
+
+            handles_choices.trial_start_offset=handles.trial_start_offset;
+            handles_choices.trial_end_offset=handles.trial_end_offset;
 
             %Run if overwrite is on or overwrite off and the file does not
             %exist
@@ -95,7 +99,7 @@ if all_files_present==1
             if process_data==1
                 fprintf(1, ['Started processing file number %d\n'],fileNo);
 
-                handles_out=drgMini_MoserAnalysisv2(handles_choices);
+                handles_out=drgMini_AnalyzePathv4(handles_choices);
 
 
                 fprintf(1, ['Data processed for file number %d\n'],fileNo);

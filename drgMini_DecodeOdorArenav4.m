@@ -1,4 +1,4 @@
-function handles_out=drgMini_DecodeOdorArenav3(handles_choices)
+function handles_out=drgMini_DecodeOdorArenav4(handles_choices)
 %Does decoding of the navigation path for a mouse undergoing odor plume navigation 
 %following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 
@@ -9,6 +9,8 @@ if exist('handles_choices')==0
     clear all
 
     handles_choices.save_results=1;
+    handles_choices.is_sphgpu=2; %1 sphgpu, 2 Alpine
+    is_sphgpu=handles_choices.is_sphgpu;
     %Troubleshooting Fabio's files May 14th
     % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
     % dFF_file='20220729_FCM22_withodor_miniscope_sync_L4_ncorre_ext_nonneg.mat';
@@ -77,7 +79,7 @@ if exist('handles_choices')==0
     %binned in 200 msec bins
     dt=0.2; %Time bins for decoding
     dt_miniscope=1/30;
-    n_shuffle=5; %Note that n_shuffle is changed to a maximum of ii_n_training
+    n_shuffle=3; %Note that n_shuffle is changed to a maximum of ii_n_training
 
     handles_choices.dt=dt;
     handles_choices.dt_miniscope=dt_miniscope;
@@ -110,6 +112,21 @@ catch
 end
 
 setenv('MW_PCT_TRANSPORT_HEARTBEAT_INTERVAL', '700')
+
+switch is_sphgpu
+    case 1
+        addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
+        addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
+        addpath('/home/restrepd/Documents/MATLAB/drgMaster')
+        addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
+    case 2
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMiniscope')
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/Chi Squared')
+        addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMaster')
+        addpath(genpath('/projects/drestrepo@xsede.org/software/DR_matlab/m new/kakearney-boundedline-pkg-32f2a1f'))
+end
+
+fileID = fopen([this_path 'R1R2output.txt'],'w');
 
 switch which_training_algorithm
     case 1
@@ -476,6 +493,7 @@ percent_correct=100*(trials.hit4+trials.hit1)/(trials.hit4+trials.hit1+trials.mi
 percent_correct1=100*(trials.hit1)/(trials.hit1+trials.miss1);
 percent_correct4=100*(trials.hit4)/(trials.hit4+trials.miss4);
 fprintf(1,['\nPercent correct ' num2str(percent_correct) ' percent correct1 ' num2str(percent_correct1) ' percent correct4 ' num2str(percent_correct4) '\n\n'])
+fprintf(fileID,['\nPercent correct ' num2str(percent_correct) ' percent correct1 ' num2str(percent_correct1) ' percent correct4 ' num2str(percent_correct4) '\n\n'])
 
 
 nan_mask=logical(ones(1,no_time_bins));
@@ -735,29 +753,45 @@ switch which_training_algorithm
             % Yvalid=pos_binned_trimmed(ii_valid_range(1):ii_valid_range(2),:);
             %     XYtest=pos_binned_trimmed(logical(this_test_range),:);
 
-            %Decode using neural network
-            opts = struct('ShowPlots', false, ...
-                'Verbose', 0, ...
-                'MaxObjectiveEvaluations', 15,...
-                'UseParallel',true);
+            XdFFtrain_gpu=gpuArray(XdFFtrain);
+            XdFFtest_gpu=gpuArray(XdFFtest);
+            XYtrain_gpu=gpuArray(XYtrain);
+% 
+%             %Decode using neural network
+%             opts = struct('ShowPlots', false, ...
+%                 'Verbose', 0, ...
+%                 'MaxObjectiveEvaluations', 15,...
+%                 'UseParallel',true);
+% 
+%             try
+%                 delete(gcp('nocreate'));
+%             catch
+%             end
+%             parpool;
 
-            try
-                delete(gcp('nocreate'));
-            catch
-            end
-            parpool;
+            MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true...
+                );
 
-            MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
+            %             MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true,...
+            %                 'OptimizeHyperparameters','auto',...
+            %                 'HyperparameterOptimizationOptions', opts);
 
-            try
-                delete(gcp('nocreate'));
-            catch
-            end
-            parpool;
-            MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'OptimizeHyperparameters','auto',...
-                'HyperparameterOptimizationOptions', opts);
+            MdlY1=gather(MdlY1_gpu);
+% 
+%             try
+%                 delete(gcp('nocreate'));
+%             catch
+%             end
+%             parpool;
 
+            MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true...
+                );
+
+%             MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true,...
+%                 'OptimizeHyperparameters','auto',...
+%                 'HyperparameterOptimizationOptions', opts);
+
+            MdlY2=gather(MdlY2_gpu);
             %     MdlY1and2 = fitrnet(XdFFtrain,XYtrain','LayerSizes',[2 10]);
 
             %     x_predicted(logical(this_test_range),1)=predict(MdlY1,XdFFtest);
@@ -823,7 +857,8 @@ switch which_training_algorithm
                 MdlY2_pars(trNo).pars=[];
             end
 
-            parfor trNo=1:trials.odor_trNo
+            for trNo=1:trials.odor_trNo
+                %                 parfor trNo=1:trials.odor_trNo
 
                 this_test_range=zeros(1,no_time_bins);
                 if trNo==1
@@ -850,52 +885,88 @@ switch which_training_algorithm
 
                 XYtrain=pos_binned_reversed(this_training_range,:);
 
+
+                XdFFtrain_gpu=gpuArray(XdFFtrain);
+                XdFFtest_gpu=gpuArray(XdFFtest);
+                XYtrain_gpu=gpuArray(XYtrain);
+
+%                 try
+%                     delete(gcp('nocreate'));
+%                 catch
+%                 end
+%                 parpool;
+
+                MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true...
+                    );
+
+                %             MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true,...
+                %                 'OptimizeHyperparameters','auto',...
+                %                 'HyperparameterOptimizationOptions', opts);
+
+                MdlY1=gather(MdlY1_gpu);
+
                 % x_pred(trNo).MdlY1=MdlY1;
                 % y_pred(trNo).MdlY2=MdlY2;
-
-                %Decode using neural network
-                bestHyperparameters = x_pred(trNo).MdlY1.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                activationsCell = cellstr(bestHyperparameters.Activations);
-                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                layer_sizes=bestHyperparameters.Layer_1_Size;
-                if ~isnan(bestHyperparameters.Layer_2_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                end
-                if ~isnan(bestHyperparameters.Layer_3_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                end
-                MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'LayerSizes', layer_sizes, ...
-                    'Activations', activationsCell{1}, ...
-                    'Lambda', bestHyperparameters.Lambda, ...
-                    'Standardize', strcmpi(standardizeCell{1},'true'));
-
-                MdlY1_pars(trNo).pars.activations=activationsCell{1};
-                MdlY1_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                MdlY1_pars(trNo).pars.Standardize=standardizeCell{1};
+                %
+                %                 %Decode using neural network
+                %                 bestHyperparameters = x_pred(trNo).MdlY1.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+                %                 activationsCell = cellstr(bestHyperparameters.Activations);
+                %                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+                %                 layer_sizes=bestHyperparameters.Layer_1_Size;
+                %                 if ~isnan(bestHyperparameters.Layer_2_Size)
+                %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+                %                 end
+                %                 if ~isnan(bestHyperparameters.Layer_3_Size)
+                %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+                %                 end
+                %                 MdlY1 = fitrnet(XdFFtrain,XYtrain(:,1),'LayerSizes', layer_sizes, ...
+                %                     'Activations', activationsCell{1}, ...
+                %                     'Lambda', bestHyperparameters.Lambda, ...
+                %                     'Standardize', strcmpi(standardizeCell{1},'true'));
+                %
+                %                 MdlY1_pars(trNo).pars.activations=activationsCell{1};
+                %                 MdlY1_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+                %                 MdlY1_pars(trNo).pars.Standardize=standardizeCell{1};
 
                 x_pred(trNo).data=predict(MdlY1,XdFFtest);
 
-                bestHyperparameters = y_pred(trNo).MdlY2.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
-                activationsCell = cellstr(bestHyperparameters.Activations);
-                standardizeCell = cellstr(bestHyperparameters.Standardize);
-                layer_sizes=bestHyperparameters.Layer_1_Size;
-                if ~isnan(bestHyperparameters.Layer_2_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
-                end
-                if ~isnan(bestHyperparameters.Layer_3_Size)
-                    layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
-                end
-                MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'LayerSizes', layer_sizes, ...
-                                    'Activations', activationsCell{1}, ...
-                                    'Lambda', bestHyperparameters.Lambda, ...
-                                    'Standardize', strcmpi(standardizeCell{1},'true'));
+                %                 bestHyperparameters = y_pred(trNo).MdlY2.HyperparameterOptimizationResults.XAtMinEstimatedObjective;
+                %                 activationsCell = cellstr(bestHyperparameters.Activations);
+                %                 standardizeCell = cellstr(bestHyperparameters.Standardize);
+                %                 layer_sizes=bestHyperparameters.Layer_1_Size;
+                %                 if ~isnan(bestHyperparameters.Layer_2_Size)
+                %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_2_Size];
+                %                 end
+                %                 if ~isnan(bestHyperparameters.Layer_3_Size)
+                %                     layer_sizes=[layer_sizes bestHyperparameters.Layer_3_Size];
+                %                 end
+                %                 MdlY2 = fitrnet(XdFFtrain,XYtrain(:,2),'LayerSizes', layer_sizes, ...
+                %                                     'Activations', activationsCell{1}, ...
+                %                                     'Lambda', bestHyperparameters.Lambda, ...
+                %                                     'Standardize', strcmpi(standardizeCell{1},'true'));
+                %
+                %                 MdlY2_pars(trNo).pars.activations=activationsCell{1};
+                %                 MdlY2_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
+                %                 MdlY2_pars(trNo).pars.Standardize=standardizeCell{1};
 
-                MdlY2_pars(trNo).pars.activations=activationsCell{1};
-                MdlY2_pars(trNo).pars.Lambda=bestHyperparameters.Lambda;
-                MdlY2_pars(trNo).pars.Standardize=standardizeCell{1};
+%                 try
+%                     delete(gcp('nocreate'));
+%                 catch
+%                 end
+%                 parpool;
 
-                
+                MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true...
+                    );
+
+                %             MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true,...
+                %                 'OptimizeHyperparameters','auto',...
+                %                 'HyperparameterOptimizationOptions', opts);
+
+                MdlY2=gather(MdlY2_gpu);
+
                 y_pred(trNo).data=predict(MdlY2,XdFFtest);
+
+                fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' shuffle no ' num2str(ii_shuffled) '\n\n'])
             end
 
             for trNo=1:trials.odor_trNo
@@ -1171,14 +1242,21 @@ end
 R1=corrcoef(XYtest(:,1),x_predicted_conv);
 R2=corrcoef(XYtest(:,2),y_predicted_conv);
 fprintf(1, 'Correlation coefficient nn conv x, y entire run %d %d\n\n',R1(1,2),R2(1,2));
+fprintf(fileID, 'Correlation coefficient nn conv x, y entire run %d %d\n\n',R1(1,2),R2(1,2));
 
 fractionExplained_x = drgMini_calculateVarianceExplained(XYtest(:,1), x_predicted_conv);
 fractionExplained_y = drgMini_calculateVarianceExplained(XYtest(:,2), y_predicted_conv);
+
 fprintf(1, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+
 fprintf(1, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, 'Fraction of variance predicted nn conv x, y entire run %d %d\n\n',fractionExplained_x,fractionExplained_y);
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(XYtest(:,1),XYtest(:,2),x_predicted_conv, y_predicted_conv);
-fprintf(1, 'Percent variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
+
+fprintf(1, 'Fraction of variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
+fprintf(fileID, 'Fraction of variance predicted nn conv XY entire run %d %d\n\n',fractionExplainedXY);
 
 figNo=figNo+1;
 try
@@ -1666,13 +1744,13 @@ if handles_choices.save_results==1
     savefig([this_path 'figure10.fig'])
 end
 
-fileID = fopen([this_path 'R1R2output.txt'],'w');
+
 
 % fprintf(1, 'R2 nn conv x, y per trial run: %d %d\n',drgGetR2(x_all_trials,x_decod_all_trials),drgGetR2(y_all_trials,y_decod_all_trials));
 R1=corrcoef(x_all_trials,x_decod_all_trials);
 R2=corrcoef(y_all_trials,y_decod_all_trials);
-fprintf(1, 'Correlation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, '\n\nCorrelation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(fileID, '\n\nCorrelation coefficient nn conv x, y within trials %d %d\n',R1(1,2),R2(1,2));
 
 R1=corrcoef(x_between_trials,x_decod_between_trials);
 R2=corrcoef(y_between_trials,y_decod_between_trials);
@@ -1682,8 +1760,8 @@ fprintf(fileID, 'Correlation coefficient nn conv x, y betweeen trials %d %d\n',R
 % fprintf(1, 'R2 nn permuted x, y per trial run: %d %d\n',drgGetR2(x_all_trials_sh,x_decod_all_trials_sh),drgGetR2(y_all_trials_sh,y_decod_all_trials_sh));
 R1=corrcoef(x_all_trials_sh,x_decod_all_trials_sh);
 R2=corrcoef(y_all_trials_sh,y_decod_all_trials_sh);
-fprintf(1, 'Correlation coefficient nn permuted x, y per trial %d %d\n',R1(1,2),R2(1,2));
-fprintf(fileID, 'Correlation coefficient nn permuted x, y per trial  %d %d\n',R1(1,2),R2(1,2));
+fprintf(1, 'Correlation coefficient nn permuted x, y within trials %d %d\n',R1(1,2),R2(1,2));
+fprintf(fileID, 'Correlation coefficient nn permuted x, y within trials %d %d\n',R1(1,2),R2(1,2));
 
 R1=corrcoef(x_between_trials_sh,x_decod_between_trials_sh);
 R2=corrcoef(y_between_trials_sh,y_decod_between_trials_sh);
@@ -1702,7 +1780,7 @@ fprintf(fileID, 'Fraction of variance predicted nn conv XY within trials %d %d\n
 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_between_trials, x_decod_between_trials);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_between_trials, y_decod_between_trials);
-fprintf(1, '\n\nPFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 fprintf(fileID, '\n\nFraction of variance predicted nn conv x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_between_trials,y_between_trials,x_decod_between_trials, y_decod_between_trials);
@@ -1711,7 +1789,7 @@ fprintf(fileID, 'Fraction of variance predicted nn conv XY between trials %d %d\
 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_all_trials_sh, x_decod_all_trials_sh);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_all_trials_sh, y_decod_all_trials_sh);
-fprintf(1, '\n\nPFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(1, '\n\nFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 fprintf(fileID, '\n\nFraction of variance predicted nn permuted x, y within trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_all_trials_sh,y_all_trials_sh,x_decod_all_trials_sh, y_decod_all_trials_sh);
@@ -1721,7 +1799,7 @@ fprintf(fileID, 'Fraction of variance predicted nn permuted XY within trials %d 
 fractionExplained_x = drgMini_calculateVarianceExplained(x_between_trials_sh, x_decod_between_trials_sh);
 fractionExplained_y = drgMini_calculateVarianceExplained(y_between_trials_sh, y_decod_between_trials_sh);
 fprintf(1, '\n\nFraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
-fprintf(fileID, 'Fraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
+fprintf(fileID, '\n\nFraction of variance predicted nn permuted x, y between trials %d %d\n\n',fractionExplained_x,fractionExplained_y);
 
 fractionExplainedXY = drgMini_calculateVarianceExplainedXY(x_between_trials_sh,y_between_trials_sh,x_decod_between_trials_sh, y_decod_between_trials_sh);
 fprintf(1, 'Fraction of variance predicted nn permuted XY between trials %d %d\n\n',fractionExplainedXY);

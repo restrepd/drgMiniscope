@@ -5,13 +5,16 @@
 fprintf(1, ['\ndrgMini_batch_DecodeOdorConc run for ' choiceFileName '\n\n']);
 
 tempDirName=['temp' choiceFileName(12:end-2)];
- 
+
 addpath(choiceBatchPathName)
 eval(['handles=' choiceFileName(1:end-2) ';'])
 handles.choiceFileName=choiceFileName;
 handles.choiceBatchPathName=choiceBatchPathName;
 handles.no_files=length(handles.dFF_file);
 
+if ~isfield(handles,'process_these_groups')
+    handles.process_these_groups=unique(handles.group);
+end
 
 first_file=handles.first_file;
 first_run=handles.first_run;
@@ -19,8 +22,8 @@ first_run=handles.first_run;
 %Parallel batch processing for each file
 all_files_present=1;
 for filNum=first_file:handles.no_files
-       
-    
+
+
     %Make sure that all the files exist
     dFF_file=handles.dFF_file{filNum};
 
@@ -28,15 +31,15 @@ for filNum=first_file:handles.no_files
     % else
     %     this_path=handles.this_path;
     % end
-      
+
     if exist([this_path dFF_file])==0
         fprintf(1, ['Program will be terminated because file No %d, ' dFF_file ' does not exist\n'],filNum);
         all_files_present=0;
     end
-    
+
     arena_file=handles.arena_file{filNum};
 
-     if exist([this_path arena_file])==0
+    if exist([this_path arena_file])==0
         fprintf(1, ['Program will be terminated because file No %d, ' arena_file ' does not exist\n'],filNum);
         all_files_present=0;
     end
@@ -44,23 +47,24 @@ end
 
 %Now run the decoder for all files and all choices of algorithms
 tic
-handles_choices.save_path='/data2/SFTP/DecodeOdorConc/';
+handles_choices.save_path=handles.save_path;
+
 if all_files_present==1
 
     fprintf(1, ['Started processing odor concentration decoding\n']);
     %Process each file separately
     for fileNo=first_file:handles.no_files
-        
+        if sum(handles.process_these_groups==handles.group(fileNo))>0
 
             first_toc=toc;
             handles_choices.this_path=handles.this_path{fileNo};
             handles_choices.dFF_file=handles.dFF_file{fileNo};
             handles_choices.arena_file=handles.arena_file{fileNo};
             handles_choices.group=handles.group(fileNo);
-    
+
             handles_choices.multiplier=handles.multiplier;
             handles_choices.lowest_conc=handles.lowest_conc;
-            
+
             %Hill transform
             handles_choices.hill=handles.hill; %0=no Hill transform, 1=Hill transform
             handles_choices.k_half=handles.k_half; %Hill equation K1/2
@@ -76,7 +80,7 @@ if all_files_present==1
             handles_choices.displayFigures=handles.displayFigures;
             % handles_choices.dt_decoding_op=handles.dt_decoding_op;
             % handles_choices.dt_decoding_xy=handles.dt_decoding_xy;
-            
+
             handles_choices.cm_from_floor=handles.cm_from_floor(fileNo);
             handles_choices.resume_processing=handles.resume_processing;
             % handles_choices.n_shuffle_SI=handles.n_shuffle_SI;
@@ -99,35 +103,57 @@ if all_files_present==1
                 handles_choices.save_tag=handles.save_tag{ii_run};
                 handles_choices.which_training_algorithm=handles.algo(ii_run); %1 ann, 2 glm
 
-                fprintf(1, ['Started processing file number %d run %d\n'],fileNo, ii_run);
+                arena_file=handles.arena_file{fileNo};
 
-                %Added this try/catch here because of "Error using
-                %parallel.Future/fetchOutputs"
-                is_done=0;
-                ii_failures=0;
-                while is_done==0
-                    try
-                        handles_out=drgMini_DecodeOdorConc(handles_choices);
-                        is_done=1;
-                    catch
-                        ii_failures=ii_failures+1;
-                        fprintf(1, ['Failure number %d for file number %d run %d\n'],ii_failures,fileNo, ii_run);
+                %Run if overwrite is on or overwrite off and the file does not
+                %exist
+                if handles.overwrite_output==1
+                    process_data=1;
+                else
+                    %Overwrite off, does the file exist?
+                    if exist([handles_choices.save_path arena_file(1:end-4) handles_choices.save_tag '.mat'],'file')==2
+                        process_data=0;
+                    else
+                        process_data=1;
                     end
                 end
 
+                if process_data==1
 
-                fprintf(1, ['Data processed for file number %d run %d\n'],fileNo, ii_run);
+                    fprintf(1, ['Started processing file number %d run %d\n'],fileNo, ii_run);
+
+                    %Added this try/catch here because of "Error using
+                    %parallel.Future/fetchOutputs"
+                    % is_done=0;
+                    % ii_failures=0;
+                    % while is_done==0
+                    %     try
+                            handles_out=drgMini_DecodeOdorConcv2(handles_choices);
+                            is_done=1;
+                    %     catch
+                    %         ii_failures=ii_failures+1;
+                    %         fprintf(1, ['Failure number %d for file number %d run %d\n'],ii_failures,fileNo, ii_run);
+                    %     end
+                    % end
+
+                    fprintf(1, ['Data processed for file number %d run %d\n'],fileNo, ii_run);
+                else
+                    fprintf(1, ['Overwrite on and file number %d run %d exists\n'],fileNo, ii_run);
+                end
+
+
+                first_run=1;
+
+                fprintf(1,'\n\nProcessing time for file No %d is %d hours\n\n',fileNo,(toc-first_toc)/(60*60));
+
+
             end
-
-            first_run=1;
-
-            fprintf(1,'\n\nProcessing time for file No %d is %d hours\n\n',fileNo,(toc-first_toc)/(60*60));
-
-      
+            fprintf(1, 'Total processing time for file No %d is %d hours\n',fileNo,toc/(60*60));
+        else
+            fprintf(1, 'File No %d was not processed because it is not included in groups to be processed\n',fileNo);
+        end
     end
-    fprintf(1, 'Total processing time %d hours\n',toc/(60*60));
+
 end
-
-
 
 pffft=1;

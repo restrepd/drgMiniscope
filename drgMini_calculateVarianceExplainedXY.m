@@ -12,5 +12,5 @@ SSR = sum((x - xfit).^2)+sum((y - yfit).^2);
 R2 = 1 - (SSR / SST);
 
 %Multiply by 100
-percentExplained = R2 * 100;
+percentExplained = R2;
 end
