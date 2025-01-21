@@ -734,7 +734,7 @@ for trNo=1:trials.odor_trNo
         yticks([50 100 200 300 400 430])
         yticklabels({'lane 4','100','200','300','400','lane 1'})
     end
-
+ 
     pffft1=1;
 
     mean_end_angles=[mean_end_angles angles.trial(trNo).mean_end_angle];
@@ -762,5 +762,5 @@ handles_out.trials=trials;
 handles_out.angles=angles;
 
 save([handles_choices.save_path arena_file(1:end-4) handles_choices.save_tag '.mat'],'handles_out','handles_choices','-v7.3')
-
+ 
 pfft=1;

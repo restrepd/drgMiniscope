@@ -16,6 +16,10 @@ if ~isfield(handles,'process_these_groups')
     handles.process_these_groups=unique(handles.group);
 end
 
+if ~isfield(handles,'train_with_hits')
+    handles.train_with_hits=0;
+end
+
 first_file=handles.first_file;
 first_run=handles.first_run;
 
@@ -92,6 +96,7 @@ if all_files_present==1
             % handles_choices.binary_dFF=handles.binary_dFF;
             handles_choices.trial_start_offset=handles.trial_start_offset; %This was -10
             handles_choices.trial_end_offset=handles.trial_end_offset;
+            handles_choices.train_with_hits=handles.train_with_hits;
 
             handles_choices.bins_after=handles.bins_after;
             handles_choices.bins_current=handles.bins_current;
@@ -128,7 +133,7 @@ if all_files_present==1
                     % ii_failures=0;
                     % while is_done==0
                     %     try
-                            handles_out=drgMini_DecodeOdorConcv2(handles_choices);
+                            handles_out=drgMini_DecodeOdorConcv3(handles_choices);
                             is_done=1;
                     %     catch
                     %         ii_failures=ii_failures+1;

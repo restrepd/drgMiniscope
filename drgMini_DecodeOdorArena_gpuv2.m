@@ -131,8 +131,7 @@ fprintf(fileID,['\nTrained with within trial data\n\n'])
 
 figNo=0;
 
-%Restart random seeds
-rng('shuffle');
+
 
 % gcp;
 
@@ -486,7 +485,7 @@ for trNo=1:trials.odor_trNo
     x_pred(trNo).MdlY1=MdlY1;
     y_pred(trNo).MdlY2=MdlY2;
 
-    fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' \n\n'])
+%     fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' \n\n'])
 end
 
 
@@ -520,23 +519,24 @@ x_predicted_sh=zeros(no_time_bins,n_shuffle);
 y_predicted_sh=zeros(no_time_bins,n_shuffle);
 
 
-%We will do a reversal and a circular permutation
-sh_shift=0;
 
-if n_shuffle==1
-    sh_shift=1;
-else
-    while sh_shift==0
-        sh_shift=floor(rand*n_shuffle);
-    end
-end
 
-pos_binned_reversed=zeros(size(pos_binned,1),size(pos_binned,2));
-for ii_trl=1:size(pos_binned,1)
-    pos_binned_reversed(size(pos_binned,1)-ii_trl+1,:)=pos_binned(ii_trl,:);
-end
+
 
 for ii_shuffled=1:n_shuffle
+
+    %We will do a reversal and a circular permutation
+    pos_binned_reversed=zeros(size(pos_binned,1),size(pos_binned,2));
+    offset_ii=(ii_shuffled-1)*floor(size(pos_binned,1)/n_shuffle);
+    for ii_trl=1:size(pos_binned,1)
+        this_ii_trl=ii_trl+offset_ii;
+        if this_ii_trl>size(pos_binned,1)
+            offset_ii=-ii_trl+1;
+            this_ii_trl=ii_trl+offset_ii;
+        end
+        pos_binned_reversed(size(pos_binned,1)-ii_trl+1,:)=pos_binned(this_ii_trl,:);
+    end
+
 
     for trNo=1:trials.odor_trNo
         y_pred(trNo).data=[];
@@ -679,7 +679,7 @@ for ii_shuffled=1:n_shuffle
 
 
 
-        fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' shuffle no ' num2str(ii_shuffled) '\n\n'])
+%         fprintf(1,['Elapsed time ' num2str(toc-start_toc) ' for trial number ' num2str(trNo) ' shuffle no ' num2str(ii_shuffled) '\n\n'])
     end
 
     for trNo=1:trials.odor_trNo
