@@ -84,7 +84,7 @@ d_xy=40;
 if is_sphgpu==1
     load('/data/SFTP/PreProcessedDR/Odor Arena Plumes/odorArenaPlumesDR.mat')
 else
-    load('/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Odor Arena Plumes/odorArenaPlumesDR.mat')
+    load('/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Odor Arena Plumes/odorArenaPlumesDR2.mat')
 end
 
 %Now make mean_plume matrices for lanes 1 and 4
@@ -264,6 +264,8 @@ for cm_from_floor=1:2
     % Ax.Color = 'k';
     xlabel('x (mm)')
     ylabel('y (mm)')
+    yticks([70 100 200 300 400 430])
+    yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Mean odor plume lane 4, ' num2str(cm_from_floor) ' cm from floor'])
 
@@ -288,6 +290,8 @@ for cm_from_floor=1:2
     % Ax.Color = 'k';
     xlabel('x (mm)')
     ylabel('y (mm)')
+    yticks([70 100 200 300 400 430])
+    yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Mean odor plume lane 1, ' num2str(cm_from_floor) ' cm from floor'])
  
@@ -300,8 +304,12 @@ for cm_from_floor=1:2
     minC_odor=min([minC_odor min(mean_plume_l1(:)) min(mean_plume_l4(:))]);
 end
   
-
-
+if is_sphgpu==1
+    save('/data/SFTP/PreProcessedDR/Odor Arena Plumes/odor_plume_patternsDR.mat','odor_plume_patterns','x_for_plume','y_for_plume','-v7.3')
+else
+    save('/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Odor Arena Plumes/odor_plume_patternsDR.mat','odor_plume_patterns','x_for_plume','y_for_plume','-v7.3')
+end
+  
 %Find which files are included in the analysis
 files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc);
 
@@ -478,7 +486,7 @@ for ii_time_window=1:3
             max_odor_plume_actual=max(odor_plume_template);
 
 
-            %Load conc data
+            %Load XY data
             arena_file=handles_XY.arena_file{fileNo};
             %load the ouptut file
             load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
@@ -791,7 +799,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+    yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Lane 1 hit predicted odor ' window_legend{ii_time_window}])
@@ -818,7 +826,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Lane 1 miss predicted odor ' window_legend{ii_time_window}])
@@ -844,7 +852,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Lane 4 hit predicted odor ' window_legend{ii_time_window}])
@@ -870,7 +878,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
 
@@ -900,7 +908,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
  
     title(['Lane 1 hit actual odor '  window_legend{ii_time_window}])
@@ -926,7 +934,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Lane 1 miss actual odor '  window_legend{ii_time_window}])
@@ -952,7 +960,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
     title(['Lane 4 hit actual odor '  window_legend{ii_time_window}])
@@ -978,7 +986,7 @@ for ii_time_window=1:3
     xlabel('x (mm)')
     ylabel('y (mm)')
 
-    yticks([50 100 200 300 400 430])
+      yticks([70 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
 
 
@@ -1051,6 +1059,7 @@ for ii_lane=[1 4]
             %plot bar
             switch ii_hit_miss+2*(ii_time_window-1)
                 case 1
+                    %Orange
                     bar(bar_offset,mean(these_odors),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255],'BaseValue',-10)
                 case 2
                     bar(bar_offset,mean(these_odors),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255],'BaseValue',-10)

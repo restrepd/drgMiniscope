@@ -95,7 +95,8 @@ if all_files_present==1
             if process_data==1
                 fprintf(1, ['Started processing file number %d\n'],fileNo);
 
-                handles_out=drgMini_MoserAnalysisv2(handles_choices);
+
+                handles_out=drgMini_MoserAnalysisv3(handles_choices);
 
 
                 fprintf(1, ['Data processed for file number %d\n'],fileNo);

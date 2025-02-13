@@ -21,7 +21,7 @@ switch is_sphgpu
 
          %Trained with hits only
          save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m';
 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
         % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01062025.m';
@@ -32,14 +32,19 @@ switch is_sphgpu
 
         save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
         choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+        
+        % save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser12212024/';
+        % choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_12192024.m';
 
-        save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser12212024/';
-        choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_12192024.m';
+        save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser02032025/';
+        choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_02032025.m';
 
         choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
         fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
 
-
+        %The imps file with predictive importance values is be saved here
+        save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        save_FilePredImp='outputPredictionImportance.mat';
 
     case 1
         fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_stats.txt','w');
@@ -89,6 +94,7 @@ ii_run=1;
 all_mean_conc_imps=[];
 above_thr_conc_imps=[];
 all_mean_x_imps=[];
+all_imps_ROI=[];
 above_thr_x_imps=[];
 all_mean_y_imps=[];
 above_thr_y_imps=[];
@@ -98,6 +104,11 @@ thr_conc_imps=zeros(1,length(handles_conc.arena_file));
 all_spatial_rhol1l4=[];
 all_delta_center_of_mass=[];
 all_information_content=[];
+all_information_contentl1=[];
+all_information_contentl4=[];
+all_information_content_sh=[];
+all_information_contentl1_sh=[];
+all_information_contentl4_sh=[];
 all_sparsity=[];
 conc_spatial_rhol1l4=[];
 conc_delta_center_of_mass=[];
@@ -111,7 +122,7 @@ y_spatial_rhol1l4=[];
 y_delta_center_of_mass=[];
 y_information_content=[];
 y_sparsity=[];
-
+ 
 file_numbers=[];
 
 
@@ -139,10 +150,18 @@ for fileNo=1:length(handles_conc.arena_file)
         % imps.file(fileNo).conc.thr_conc_imps=prctile(mean_conc_imps,percentile_stringency);
         all_mean_conc_imps=[all_mean_conc_imps; mean_conc_imps];
         above_thr_conc_imps=[above_thr_conc_imps; mean_conc_imps>=thr_conc_imps(fileNo)];
+        
         file_numbers=[file_numbers; fileNo*ones(length(mean_conc_imps),1)];
         these_ROIs=[1:length(mean_conc_imps)];
-        imps.file(fileNo).ROIs_conc=these_ROIs(mean_conc_imps>=thr_conc_imps(fileNo));
+        all_imps_ROI=[all_imps_ROI these_ROIs];
 
+        %Save the data in imps
+        imps.file(fileNo).ROIs_conc=these_ROIs(mean_conc_imps>=thr_conc_imps(fileNo));
+        imps.thr_conc_imps=thr_conc_imps;
+        imps.all_mean_conc_imps=all_mean_conc_imps;
+        imps.all_imps_ROI=all_imps_ROI;
+        imps.file_numbers=file_numbers;
+ 
         %Get predictor importance for x and y decoding
         load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
         all_x_imps=[];
@@ -162,6 +181,8 @@ for fileNo=1:length(handles_conc.arena_file)
         above_thr_x_imps=[above_thr_x_imps; mean_x_imps>=thr_x_imps(fileNo)];
         imps.file(fileNo).ROIs_x=these_ROIs(mean_x_imps>=thr_x_imps(fileNo));
 
+        imps.thr_x_imps=thr_x_imps;
+        imps.all_mean_x_imps=all_mean_x_imps;
 
         sum_all_y_imps=sum(all_y_imps);
         mat_sum_all_y_imps=repmat(sum_all_y_imps,size(all_y_imps,1),1);
@@ -171,6 +192,9 @@ for fileNo=1:length(handles_conc.arena_file)
         all_mean_y_imps=[all_mean_y_imps; mean_y_imps];
         above_thr_y_imps=[above_thr_y_imps; mean_y_imps>=thr_y_imps(fileNo)];
         imps.file(fileNo).ROIs_y=these_ROIs(mean_y_imps>=thr_y_imps(fileNo));
+
+        imps.thr_y_imps=thr_y_imps;
+        imps.all_mean_y_imps=all_mean_y_imps;
 
         %Get Moser analysis results
         load([save_PathMoser arena_file(1:end-4) handles_Moser.save_tag '.mat'])
@@ -182,6 +206,11 @@ for fileNo=1:length(handles_conc.arena_file)
         all_spatial_rhol1l4=[all_spatial_rhol1l4; handles_out.spatial_rhol1l4];
         all_delta_center_of_mass=[all_delta_center_of_mass; handles_out.delta_center_of_mass];
         all_information_content=[all_information_content; handles_out.information_content];
+        all_information_contentl1=[all_information_contentl1; handles_out.information_contentl1];
+        all_information_contentl4=[all_information_contentl4; handles_out.information_contentl4];
+        all_information_content_sh=[all_information_content_sh; handles_out.sh_information_content(:)];
+        all_information_contentl1_sh=[all_information_contentl1_sh; handles_out.sh_information_contentl1(:)];
+        all_information_contentl4_sh=[all_information_contentl4_sh; handles_out.sh_information_contentl4(:)];
         all_sparsity=[all_sparsity; handles_out.sparsity];
 
         imps.file(fileNo).spatial_rhol1l4=handles_out.spatial_rhol1l4;
@@ -189,7 +218,19 @@ for fileNo=1:length(handles_conc.arena_file)
         imps.file(fileNo).information_content=handles_out.information_content;
         imps.file(fileNo).information_contentl1=handles_out.information_contentl1;
         imps.file(fileNo).information_contentl4=handles_out.information_contentl4;
+        imps.file(fileNo).sh_information_content=handles_out.sh_information_content;
+        imps.file(fileNo).sh_information_contentl1=handles_out.sh_information_contentl1;
+        imps.file(fileNo).sh_information_contentl4=handles_out.sh_information_contentl4;
         imps.file(fileNo).sparsity=handles_out.sparsity;
+        imps.all_spatial_rhol1l4=all_spatial_rhol1l4;
+        imps.all_delta_center_of_mass=all_delta_center_of_mass;
+        imps.all_Fusi_SSI=all_information_content;
+        imps.all_Fusi_SSIl4=all_information_contentl4;
+        imps.all_Fusi_SSIl1=all_information_contentl1;
+        imps.all_Fusi_SSI_sh=all_information_content_sh;
+        imps.all_Fusi_SSIl4_sh=all_information_contentl4_sh;
+        imps.all_Fusi_SSIl1_sh=all_information_contentl1_sh;
+
 
         conc_spatial_rhol1l4=[conc_spatial_rhol1l4; handles_out.spatial_rhol1l4((mean_conc_imps>=thr_conc_imps(fileNo))&(mean_y_imps<thr_y_imps(fileNo))&(mean_x_imps<thr_x_imps(fileNo)))];
         conc_delta_center_of_mass=[conc_delta_center_of_mass; handles_out.delta_center_of_mass((mean_conc_imps>=thr_conc_imps(fileNo))&(mean_y_imps<thr_y_imps(fileNo))&(mean_x_imps<thr_x_imps(fileNo)))];
@@ -295,6 +336,9 @@ for fileNo=1:length(handles_conc.arena_file)
         pffft=1;
     end
 end
+
+
+
 figureNo=figureNo+2;
 
 mean_x_imps_x95=all_mean_x_imps(logical(above_thr_x_imps));
@@ -323,6 +367,13 @@ mean_x_imps_xy95=all_mean_x_imps(logical(above_thr_x_imps)&logical(above_thr_y_i
 mean_x_imps=[];
 mean_y_imps=[];
 mean_conc_imps=[];
+mean_imp_fileNo=[];
+mean_imp_ROI=[];
+sig_pred_imp_x=[];
+sig_pred_imp_y=[];
+sig_pred_imp_conc=[];
+
+
 ii_95_class=[]; %1 is >=x95, 2 is >=y95, 3 is >=conc95, 4 is >=x95 and conc95, 5 is >=y95 and conc95, 6 is >=x95 and y95, 7 is >= all 95s
 ii_included=0;
 
@@ -382,9 +433,40 @@ for ii=1:length(all_mean_x_imps)
         mean_x_imps(ii_included)=log10(all_mean_x_imps(ii));
         mean_y_imps(ii_included)=log10(all_mean_y_imps(ii));
         mean_conc_imps(ii_included)=log10(all_mean_conc_imps(ii));
+        mean_imp_fileNo(ii_included)=file_numbers(ii);
+        mean_imp_ROI(ii_included)=all_imps_ROI(ii);
+        if (this_ii_95_class==1)||(this_ii_95_class==4)||(this_ii_95_class==6)||(this_ii_95_class==7)
+            sig_pred_imp_x(ii_included)=1;
+        else
+            sig_pred_imp_x(ii_included)=0;
+        end
+        if (this_ii_95_class==2)||(this_ii_95_class==5)||(this_ii_95_class==6)||(this_ii_95_class==7)
+            sig_pred_imp_y(ii_included)=1;
+        else
+            sig_pred_imp_y(ii_included)=0;
+        end
+        if (this_ii_95_class==3)||(this_ii_95_class==3)||(this_ii_95_class==5)||(this_ii_95_class==7)
+            sig_pred_imp_conc(ii_included)=1;
+        else
+            sig_pred_imp_conc(ii_included)=0;
+        end
     end
 
 end
+ 
+imps.ii_95_class=ii_95_class;
+imps.mean_x_imps=mean_x_imps;
+imps.mean_y_imps=mean_y_imps;
+imps.mean_conc_imps=mean_conc_imps;
+imps.mean_imp_fileNo=mean_imp_fileNo;
+imps.mean_imp_ROI=mean_imp_ROI;
+imps.sig_pred_imp_x=sig_pred_imp_x;
+imps.sig_pred_imp_y=sig_pred_imp_y;
+imps.sig_pred_imp_conc=sig_pred_imp_conc;
+
+
+
+save([save_PathPredImp save_FilePredImp],'imps')
 
 data = [mean_x_imps; mean_y_imps; mean_conc_imps];
 
@@ -633,7 +715,7 @@ hold on
 
 ax=gca;ax.LineWidth=3;
 set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
+ 
 [f_aic,x_aic] = drg_ecdf(conc_sparsity);
 plot(x_aic,f_aic,'Color',[0 0.6 0.5],'LineWidth',3)
 
@@ -645,7 +727,7 @@ plot(x_aic,f_aic,'Color',[0.35 0.7 0.9],'LineWidth',3)
 
 title('Sparsity y vs all (blue)')
 xlabel('Sparsity')
-
+ 
 these_ylim=ylim;
 these_xlim=xlim;
 text(these_xlim(1)+0.50*(these_xlim(2)-these_xlim(1)),these_ylim(1)+0.3*(these_ylim(2)-these_ylim(1)),'odor','Color',[0 0.6 0.5],'FontWeight','bold','FontSize',16)
@@ -1047,7 +1129,7 @@ for fileNo=1:length(handles_conc.arena_file)
             end
 
             sgtitle(sgt_legend)
-   
+      
             pffft=1;
 
         end

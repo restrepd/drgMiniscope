@@ -1,4 +1,4 @@
-%drgBatchDecodeOdorArenav2
+%drgMini_BatchDecodeOdorArenav2
 [choiceFileName,choiceBatchPathName] = uigetfile({'drgOdorArenaChoices_*.m'},'Select the .m file with all the choices for analysis');
 
 

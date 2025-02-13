@@ -7,8 +7,12 @@ is_sphgpu=0;
 switch is_sphgpu
     case 0
 
-        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc12192024/';
-        choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_12192024.m';
+        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc12192024/';
+        % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_12192024.m';
+
+         %Trained with hits only
+        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
+        choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
 
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput12192024/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_12192024.m';
