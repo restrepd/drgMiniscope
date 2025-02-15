@@ -135,10 +135,16 @@ for cm_from_floor=1:2
 
 end
 
-%Now calculate mutual information
+%Now calculate mutual information for the least and most important ROIs for
+%prediction of odor concentration
+
+%Load information on prediction importance 
+load([save_PathPredImp save_FilePredImp])
+
 figNo=figureNo+1;
 x=25:50:475;
 y=24:48:456;
+n_bits=5; %Number of bits (ROIs) for most and least important prediction ROIs
 
 all_info_ii=0;
 all_info_fileNo=[];
@@ -436,9 +442,6 @@ for fileNo=1:length(handles_conc.arena_file)
 
             all_info_lane(all_info_ii)=0;
 
-            % all_info_op(all_info_ii)=0;
-            % all_info_mutual_info_op(all_info_ii)=0;
-
             all_info_op_bin(all_info_ii)=0;
             all_info_mutual_info_dFFbin_xy_op_bin(all_info_ii)=0;
 
@@ -491,31 +494,6 @@ for fileNo=1:length(handles_conc.arena_file)
                     end
                 end
             end
-
-            %  %Calculate info for op
-            % for ii_op=1:size(p_op_bindFF,2)
-            %     for ii_bin_dFF=1:2
-            %         if p_op_bindFF(ii_bin_dFF,ii_op)~=0
-            %             all_info_op(all_info_ii)=all_info_op(all_info_ii)+p_op_bindFF(ii_bin_dFF,ii_op)*...
-            %                 log2(p_op_bindFF(ii_bin_dFF,ii_op)/(p_op(ii_op)*p_bindFF(ii_bin_dFF)));
-            %         end
-            %     end
-            % end
-            % 
-            % %Calculate mutual info with op
-            % for ii_xy=1:size(p_xy_bindFF_op,2)
-            %     % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
-            %         for ii_op=1:size(p_xy_bindFF_op,3)
-            %             for ii_bin_dFF=1:2
-            %                 if p_xy_bindFF_op(ii_bin_dFF,ii_xy,ii_op)~=0
-            %                     delta_info=p_xy_bindFF_op(ii_bin_dFF,ii_xy,ii_op)*...
-            %                         log2(p_xy_bindFF_op(ii_bin_dFF,ii_xy,ii_op)/(p_xy(ii_xy)*p_bindFF(ii_bin_dFF)*p_op(ii_op)));
-            %                     all_info_mutual_info_op(all_info_ii)=all_info_mutual_info_op(all_info_ii)+delta_info;
-            %                 end
-            %             end
-            %         end
-            %     % end
-            % end
 
               %Calculate info for op_bin
             for ii_op=1:2
@@ -1569,7 +1547,6 @@ mappedXl = tsne(data2,'Algorithm','exact','Distance','cosine'); %works better
 %kmeans misclassifies a small number of points
 % k = 3; % Number of clusters
 % [idx, centroids] = kmeans(mappedX, k,'Distance','cityblock');
-
 nclusXl=3;
 gml = fitgmdist(mappedXl, nclusXl); % Assuming 3 clusters
 idxl = cluster(gml, mappedXl);
@@ -1610,7 +1587,7 @@ end
 text(-60,70,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
 text(-60,60,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
 if nclusXl>2
- text(-60,50,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+    text(-60,50,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
 end
 
 xlabel('t-SNE Component 1');
@@ -1694,7 +1671,7 @@ for ii_k=1:nclusXF
             plot(mappedXF(idxF==ii_k,1),mappedXF(idxF==ii_k,2),'.','MarkerFaceColor',[230/255 159/255 0/255],'MarkerEdgeColor',[230/255 159/255 0/255]);
         case 2
             plot(mappedXF(idxF==ii_k,1),mappedXF(idxF==ii_k,2),'.','MarkerFaceColor',[86/255 180/255 233/255],'MarkerEdgeColor',[86/255 180/255 233/255]);
-         case 3
+        case 3
             plot(mappedXF(idxF==ii_k,1),mappedXF(idxF==ii_k,2),'.','MarkerFaceColor',[0/255 158/255 115/255],'MarkerEdgeColor',[0/255 158/255 115/255]);
     end
 end
