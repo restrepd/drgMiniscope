@@ -135,16 +135,11 @@ for cm_from_floor=1:2
 
 end
 
-%Now calculate mutual information for the least and most important ROIs for
-%prediction of odor concentration
-
-%Load information on prediction importance 
-load([save_PathPredImp save_FilePredImp])
+%Now calcualte mutual information
 
 figNo=figureNo+1;
 x=25:50:475;
 y=24:48:456;
-n_bits=5; %Number of bits (ROIs) for most and least important prediction ROIs
 
 all_info_ii=0;
 all_info_fileNo=[];
@@ -524,13 +519,13 @@ for fileNo=1:length(handles_conc.arena_file)
             for ii_xy=1:size(p_xy_op_bin,1)
                 % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
                     for ii_op=1:2
-                        for ii_bin_dFF=1:2
-                            if p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)~=0
+                        % for ii_bin_dFF=1:2
+                            if p_xy_op_bin(ii_xy,ii_op)~=0
                                 delta_info=p_xy_op_bin(ii_xy,ii_op)*...
                                     log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
                                 all_info_mutual_xy_op_bin(all_info_ii)=all_info_mutual_xy_op_bin(all_info_ii)+delta_info;
                             end
-                        end
+                        % end
                     end
                 % end
             end
@@ -889,14 +884,12 @@ for fileNo=1:length(handles_conc.arena_file)
 
                      %Calculate mutual info with op
                 for ii_xy=1:size(p_xy_op_bin,1)
-                    % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
                     for ii_op=1:2
-                        % for ii_bin_dFF=1:2
                             if p_xy_op_bin(ii_xy,ii_op)~=0
                                 all_info_mutual_xy_op_bin_sh(all_info_ii,ii_sh)=all_info_mutual_xy_op_bin_sh(all_info_ii)+p_xy_op_bin(ii_xy,ii_op)*...
                                     log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
                             end
-                        % end
+
                     end
                     % end
                 end
@@ -1056,6 +1049,1006 @@ for fileNo=1:length(handles_conc.arena_file)
             pffft=1; 
  
         end
+    end
+end
+
+%Now calculate mutual information for the least and most important ROIs for
+%prediction of odor concentration
+
+%Load information on prediction importance 
+load([save_PathPredImp save_FilePredImp])
+
+
+n_bits=5; %Number of bits (ROIs) for most and least important prediction ROIs
+
+imp_all_info_ii=0;
+imp_all_info_least_most=0;
+imp_all_info_fileNo=[];
+imp_all_info_ii_ROI=[];
+imp_all_info_lane1=[];
+imp_all_info_lane4=[];
+imp_all_info_mutual_info14=[];
+
+imp_all_info_lane1_sh=[];
+imp_all_info_lane4_sh=[];
+imp_all_info_mutual_info14_sh=[];
+
+imp_all_info_op_bin=[];
+imp_all_info_mutual_info_dFFbin_xy_op_bin=[];
+imp_all_info_mutual_xy_op_bin=[];
+
+
+
+for fileNo=1:length(handles_conc.arena_file)
+    if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
+
+        %Find the least and most important ROIs for conc prediciton
+        these_ROIs=imps.all_imps_ROI(imps.file_numbers==fileNo);
+        these_imps=imps.all_mean_conc_imps(imps.file_numbers==fileNo);
+        to_sort=[these_imps';these_ROIs]';
+
+        sorted_rows=sortrows(to_sort);
+
+        %Get XY and dFF per trial
+        arena_file=handles_XY.arena_file{fileNo};
+        load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
+        trials=handles_out.trials;
+        no_neurons=handles_out.no_neurons;
+
+
+        angle_file=handles_Angle.arena_file{fileNo};
+        %load the ouptut file
+        load([save_PathAngle angle_file(1:end-4) handles_Angle.save_tag '.mat'])
+        angles=handles_out.angles;
+
+
+
+        %Now show the spatial activity maps
+        no_place_cells=0;
+        place_cells=[];
+        no_lane_trial_cells=0;
+        lane_trial_cells=[];
+        for importance=1:2 %least and most
+
+            switch importance
+                case 1 %least
+                    these_ROIs=sorted_rows(1:n_bits,2);
+                case 2 %most
+                    these_ROIs=sorted_rows(end-n_bits+1:end,2);
+            end
+
+            % %Initialize variables
+            % this_dFF_activity=zeros(10,10);
+            % this_dFF_activity_n=zeros(10,10);
+            % sum_dFF_activity=0;
+            %
+            % this_dFFl1_activity=zeros(10,10);
+            % this_dFFl1_activity_n=zeros(10,10);
+            % sum_dFFl1_activity=0;
+            %
+            % this_dFFl4_activity=zeros(10,10);
+            % this_dFFl4_activity_n=zeros(10,10);
+            % sum_dFFl4_activity=0;
+
+            %Cumulative counts for info
+
+            cum_xy=zeros(1,10*10);
+            cum_lane=zeros(1,2);
+
+
+            cum_bindFF=zeros(n_bits,2);
+
+            cum_xy_bindFF_Lane1=zeros(n_bits,2,10*10);
+            cum_xy_bindFF_Lane4=zeros(n_bits,2,10*10);
+            cum_xy_bindFF_BothLanes=zeros(n_bits,2,10*10);
+
+            cum_xy_bindFF_lane=zeros(n_bits,2,10*10,2);
+
+            include_xy=zeros(1,10*10);
+            include_op=zeros(1,2*10*10);
+
+
+            cum_xy_Lane1=zeros(1,10*10);
+            cum_xy_Lane4=zeros(1,10*10);
+            cum_xy_BothLanes=zeros(1,10*10);
+
+            cum_lane_bindFF=zeros(n_bits,2,2);
+
+
+            cum_bindFF_Lane1=zeros(n_bits,2);
+            cum_bindFF_Lane4=zeros(n_bits,2);
+            cum_bindFF_BothLanes=zeros(n_bits,2);
+
+
+            cum_op_bin=zeros(1,2); %Added op
+            cum_xy_bindFF_op_bin=zeros(n_bits,2,10*10,2); %Added op
+            cum_op_bindFF_bin=zeros(n_bits,2,2); %Added op
+            cum_xy_op_bin=zeros(10*10,2);
+
+            all_these_x=[];
+            all_these_y=[];
+
+            for trNo=1:trials.odor_trNo
+                these_x=trials.trial(trNo).XYtest(:,1);
+                these_y=trials.trial(trNo).XYtest(:,2);
+
+
+                all_these_x=[all_these_x; these_x];
+                all_these_y=[all_these_y; these_y];
+
+                for ii_t=1:length(these_x)
+                    this_x_ii=ceil(these_x(ii_t)/50);
+                    if this_x_ii==11
+                        this_x_ii=10;
+                    end
+
+                    this_y_ii=ceil(these_y(ii_t)/48);
+                    if this_y_ii==11
+                        this_y_ii=10;
+                    end
+
+                    % this_dFF_activity(this_x_ii,this_y_ii)=this_dFF_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                    % this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
+                    % sum_dFF_activity=sum_dFF_activity+these_dFF(ii_t);
+
+                    %Tally info
+
+                    this_xy_ii=this_x_ii+10*(this_y_ii-1);
+                    include_xy(this_xy_ii)=1;
+                    include_op(this_xy_ii)=1;
+                    include_op(this_xy_ii+100)=1;
+
+                    cum_xy(this_xy_ii)=cum_xy(this_xy_ii)+1;
+                    cum_xy_BothLanes(this_xy_ii)=cum_xy_BothLanes(this_xy_ii)+1;
+
+                    for jj_ROI=1:length(these_ROIs)
+                        ii_ROI=these_ROIs(jj_ROI);
+                        these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                        this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                        cum_bindFF(jj_ROI,this_bin_dFF)=cum_bindFF(jj_ROI,this_bin_dFF)+1;
+                        cum_bindFF_BothLanes(jj_ROI,this_bin_dFF)=cum_bindFF_BothLanes(jj_ROI,this_bin_dFF)+1;
+                        cum_xy_bindFF_BothLanes(jj_ROI,this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothLanes(jj_ROI,this_bin_dFF,this_xy_ii)+1;
+                    end
+
+                    if trials.lane_per_trial(trNo)==1
+                        % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+
+                        for jj_ROI=1:length(these_ROIs)
+                            ii_ROI=these_ROIs(jj_ROI);
+                            these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                            this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                            cum_lane_bindFF(jj_ROI,this_bin_dFF,1)=cum_lane_bindFF(jj_ROI,this_bin_dFF,1)+1;
+                            cum_xy_bindFF_Lane1(jj_ROI,this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane1(jj_ROI,this_bin_dFF,this_xy_ii)+1;
+                            cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,1)+1;
+                            cum_bindFF_Lane1(jj_ROI,this_bin_dFF)=cum_bindFF_Lane1(jj_ROI,this_bin_dFF)+1;
+                        end
+
+                        cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
+                        cum_lane(1)=cum_lane(1)+1;
+
+                        switch handles_conc.group(fileNo)
+                            case 1
+                                %2 cm from the floor
+                                cm_from_floor=2;
+                                %Find the binary op
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
+                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
+                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
+
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+                                cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
+
+                                for jj_ROI=1:length(these_ROIs)
+                                    ii_ROI=these_ROIs(jj_ROI);
+                                    these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                                    this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                                    cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                        cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                    cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)+1;
+                                end
+                            case 5
+                                %1 cm from the floor
+                                cm_from_floor=1;
+                                %Find the binary op
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
+                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
+                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
+
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+                                cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
+                                % cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                %     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                % cum_op_bindFF_bin(this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF,binary_op+1)+1;
+
+                                for jj_ROI=1:length(these_ROIs)
+                                    ii_ROI=these_ROIs(jj_ROI);
+                                    these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                                    this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                                    cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                        cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                    cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)+1;
+                                end
+                        end
+
+                    else
+                        % this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        % cum_lane_bindFF(this_bin_dFF,2)=cum_lane_bindFF(this_bin_dFF,2)+1;
+                        % cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)+1;
+                        % cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)+1;
+                        % cum_bindFF_Lane4(this_bin_dFF)=cum_bindFF_Lane4(this_bin_dFF)+1;
+
+
+                        for jj_ROI=1:length(these_ROIs)
+                            ii_ROI=these_ROIs(jj_ROI);
+                            these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                            this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                            cum_lane_bindFF(jj_ROI,this_bin_dFF,2)=cum_lane_bindFF(jj_ROI,this_bin_dFF,2)+1;
+                            cum_xy_bindFF_Lane4(jj_ROI,this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane4(jj_ROI,this_bin_dFF,this_xy_ii)+1;
+                            cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,2)+1;
+                            cum_bindFF_Lane4(jj_ROI,this_bin_dFF)=cum_bindFF_Lane4(jj_ROI,this_bin_dFF)+1;
+                        end
+
+                        cum_xy_Lane4(this_xy_ii)=cum_xy_Lane4(this_xy_ii)+1;
+                        cum_lane(2)=cum_lane(2)+1;
+
+                        switch handles_conc.group(fileNo)
+                            case 1
+                                %2 cm from the floor
+                                cm_from_floor=2;
+                                %Find the binary op
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
+                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
+                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
+
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+                                cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
+
+                                % cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                %     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                % cum_op_bindFF_bin(this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF,binary_op+1)+1;
+
+                                for jj_ROI=1:length(these_ROIs)
+                                    ii_ROI=these_ROIs(jj_ROI);
+                                    these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                                    this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                                    cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                        cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                    cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)+1;
+                                end
+
+                            case 5
+                                %1 cm from the floor
+                                cm_from_floor=1;
+                                %Find the binary op
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
+                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
+                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
+
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+                                cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
+
+                                % cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                %     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                % cum_op_bindFF_bin(this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF,binary_op+1)+1;
+
+                                for jj_ROI=1:length(these_ROIs)
+                                    ii_ROI=these_ROIs(jj_ROI);
+                                    these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+                                    this_bin_dFF=(these_dFF(ii_t)>0)+1;
+                                    cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)=...
+                                        cum_xy_bindFF_op_bin(jj_ROI,this_bin_dFF,this_xy_ii,binary_op+1)+1;
+                                    cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)=cum_op_bindFF_bin(jj_ROI,this_bin_dFF,binary_op+1)+1;
+                                end
+
+                        end
+                    end
+
+                end
+            end
+
+            %Calculate information
+
+            p_xy=cum_xy(logical(include_xy))/sum(cum_xy(logical(include_xy)));
+            p_lane=cum_lane/sum(cum_lane(:));
+            p_bindFF=cum_bindFF/sum(cum_bindFF(:));
+
+
+            p_lane_bindFF=cum_lane_bindFF/sum(cum_lane_bindFF(:));
+
+            included_cum_xy_bindFF_Lane1=cum_xy_bindFF_Lane1(:,:,logical(include_xy));
+            p_xy_bindFF_Lane1=included_cum_xy_bindFF_Lane1/sum(included_cum_xy_bindFF_Lane1(:));
+
+            included_cum_xy_bindFF_Lane4=cum_xy_bindFF_Lane4(:,:,logical(include_xy));
+            p_xy_bindFF_Lane4=included_cum_xy_bindFF_Lane4/sum(included_cum_xy_bindFF_Lane4(:));
+
+            included_cum_xy_bindFF_BothLanes=cum_xy_bindFF_BothLanes(:,:,logical(include_xy));
+            p_xy_bindFF_BothLanes=included_cum_xy_bindFF_BothLanes/sum(included_cum_xy_bindFF_BothLanes(:));
+
+            included_cum_xy_bindFF_lane=cum_xy_bindFF_lane(:,:,logical(include_xy),:);
+            p_xy_bindFF_lane=included_cum_xy_bindFF_lane/sum(included_cum_xy_bindFF_lane(:));
+
+
+            included_cum_xy_Lane1=cum_xy_Lane1(1,logical(include_xy));
+            p_xy_Lane1=included_cum_xy_Lane1/sum(included_cum_xy_Lane1(:));
+
+            included_cum_xy_Lane4=cum_xy_Lane4(1,logical(include_xy));
+            p_xy_Lane4=included_cum_xy_Lane4/sum(included_cum_xy_Lane4(:));
+
+            included_cum_xy_BothLanes=cum_xy_BothLanes(1,logical(include_xy));
+            p_xy_BothLanes=included_cum_xy_BothLanes/sum(included_cum_xy_BothLanes(:));
+
+            p_bindFF_Lane1=cum_bindFF_Lane1/sum(cum_bindFF_Lane1(:));
+
+            p_bindFF_Lane4=cum_bindFF_Lane4/sum(cum_bindFF_Lane4(:));
+
+            p_bindFF_BothLanes=cum_bindFF_BothLanes/sum(cum_bindFF_BothLanes(:));
+
+            % p_op=cum_op(logical(include_op))/sum(cum_op(logical(include_op)));
+            %
+            % included_cum_xy_bindFF_op=cum_xy_bindFF_op(:,logical(include_xy),logical(include_op));
+            % p_xy_bindFF_op=included_cum_xy_bindFF_op/sum(included_cum_xy_bindFF_op(:));
+
+            included_cum_xy_op_bin=cum_xy_op_bin(logical(include_xy),:);
+            p_xy_op_bin=included_cum_xy_op_bin/sum(included_cum_xy_op_bin(:));
+
+            % included_cum_op_bindFF=cum_op_bindFF(:,logical(include_op));
+            % p_op_bindFF=included_cum_op_bindFF/sum(included_cum_op_bindFF(:));
+
+            p_op_bin=cum_op_bin/sum(cum_op_bin);
+
+            included_cum_xy_bindFF_op_bin=cum_xy_bindFF_op_bin(:,:,logical(include_xy),:);
+            p_xy_bindFF_op_bin=included_cum_xy_bindFF_op_bin/sum(included_cum_xy_bindFF_op_bin(:));
+
+            p_op_bindFF_bin=cum_op_bindFF_bin/sum(cum_op_bindFF_bin(:));
+
+            imp_all_info_ii=imp_all_info_ii+1;
+            imp_all_info_least_most(imp_all_info_ii)=importance;
+            imp_all_info_fileNo(imp_all_info_ii)=fileNo;
+            imp_all_info_ii_ROI(imp_all_info_ii)=ii_ROI;
+
+            imp_all_info_lane1(imp_all_info_ii)=0;
+            imp_all_info_lane4(imp_all_info_ii)=0;
+            imp_all_info_mutual_info14(imp_all_info_ii)=0;
+
+            imp_all_info_lane(imp_all_info_ii)=0;
+
+            imp_all_info_op_bin(imp_all_info_ii)=0;
+            imp_all_info_mutual_info_dFFbin_xy_op_bin(imp_all_info_ii)=0;
+
+            imp_all_info_mutual_xy_op_bin(imp_all_info_ii)=0;
+
+            %Calculate info for lane 1
+            for ii_xy=1:size(p_xy_bindFF_Lane1,2)
+                for ii_bits=1:n_bits
+                    for ii_bin_dFF=1:2
+                        if p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)~=0
+                            imp_all_info_lane1(imp_all_info_ii)=imp_all_info_lane1(imp_all_info_ii)+p_xy_bindFF_Lane1(ii_bits,ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_Lane1(ii_bits,ii_bin_dFF,ii_xy)/(p_xy_Lane1(ii_xy)*p_bindFF_Lane1(ii_bits,ii_bin_dFF)));
+                        end
+                    end
+                end
+            end
+
+            %Calculate info for lane 4
+            for ii_xy=1:size(p_xy_bindFF_Lane4,2)
+                for ii_bits=1:n_bits
+                    for ii_bin_dFF=1:2
+                        if p_xy_bindFF_Lane4(ii_bits,ii_bin_dFF,ii_xy)~=0
+                            imp_all_info_lane4(all_info_ii)=imp_all_info_lane4(imp_all_info_ii)+p_xy_bindFF_Lane4(ii_bits,ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_Lane4(ii_bits,ii_bin_dFF,ii_xy)/(p_xy_Lane4(ii_xy)*p_bindFF_Lane4(ii_bits,ii_bin_dFF)));
+                        end
+                    end
+                end
+            end
+
+            %Calculate mutual info between lanes 1 and 4
+            for ii_xy=1:size(p_xy_bindFF_lane,2)
+                for ii_bits=1:n_bits
+                    for ii_lane=1:2
+                        for ii_bin_dFF=1:2
+                            if p_xy_bindFF_lane(ii_bits,ii_bin_dFF,ii_xy,ii_lane)~=0
+                                imp_all_info_mutual_info14(imp_all_info_ii)=imp_all_info_mutual_info14(imp_all_info_ii)+p_xy_bindFF_lane(ii_bits,ii_bin_dFF,ii_xy,ii_lane)*...
+                                    log2(p_xy_bindFF_lane(ii_bits,ii_bin_dFF,ii_xy,ii_lane)/(p_xy(ii_xy)*p_bindFF(ii_bits,ii_bin_dFF)*p_lane(ii_lane)));
+                            end
+                        end
+                    end
+                end
+            end
+
+            %Calculate info for lanes
+            for ii_lane=1:2
+                for ii_bits=1:n_bits
+                    for ii_bin_dFF=1:2
+                        if p_lane_bindFF(ii_bits,ii_bin_dFF,ii_lane)~=0
+                            imp_all_info_lane(imp_all_info_ii)=imp_all_info_lane(imp_all_info_ii)+p_lane_bindFF(ii_bits,ii_bin_dFF,ii_lane)*...
+                                log2(p_lane_bindFF(ii_bits,ii_bin_dFF,ii_lane)/(p_lane(ii_lane)*p_bindFF(ii_bits,ii_bin_dFF)));
+                        end
+                    end
+                end
+            end
+
+            %Calculate info for op_bin
+            for ii_op=1:2
+                for ii_bits=1:n_bits
+                    for ii_bin_dFF=1:2
+                        if p_op_bindFF_bin(ii_bits,ii_bin_dFF,ii_op)~=0
+                            imp_all_info_op_bin(imp_all_info_ii)=imp_all_info_op_bin(imp_all_info_ii)+p_op_bindFF_bin(ii_bits,ii_bin_dFF,ii_op)*...
+                                log2(p_op_bindFF_bin(ii_bits,ii_bin_dFF,ii_op)/(p_op_bin(ii_op)*p_bindFF(ii_bits,ii_bin_dFF)));
+                        end
+                    end
+                end
+            end
+
+            %Calculate mutual info with op_bin
+            for ii_xy=1:size(p_xy_bindFF_op_bin,2)
+                for ii_bits=1:n_bits
+                    for ii_op=1:2
+                        for ii_bin_dFF=1:2
+                            if p_xy_bindFF_op_bin(ii_bits,ii_bin_dFF,ii_xy,ii_op)~=0
+                                delta_info=p_xy_bindFF_op_bin(ii_bits,ii_bin_dFF,ii_xy,ii_op)*...
+                                    log2(p_xy_bindFF_op_bin(ii_bits,ii_bin_dFF,ii_xy,ii_op)/(p_xy(ii_xy)*p_bindFF(ii_bits,ii_bin_dFF)*p_op_bin(ii_op)));
+                                imp_all_info_mutual_info_dFFbin_xy_op_bin(imp_all_info_ii)=imp_all_info_mutual_info_dFFbin_xy_op_bin(imp_all_info_ii)+delta_info;
+                            end
+                        end
+                    end
+                end
+            end
+
+            %Calculate mutual info with xy x op_bin
+            for ii_xy=1:size(p_xy_op_bin,1)
+                for ii_op=1:2
+                    if p_xy_op_bin(ii_xy,ii_op)~=0
+                        delta_info=p_xy_op_bin(ii_xy,ii_op)*...
+                            log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
+                        imp_all_info_mutual_xy_op_bin(imp_all_info_ii)=imp_all_info_mutual_xy_op_bin(imp_all_info_ii)+delta_info;
+                    end
+                end
+            end
+
+        end
+
+
+            % %Now calculate information content with the shuffled dFF
+            % rng(ii_ROI)
+            % these_rnd=rand(1,2*n_shuffle_SI);
+            % 
+            % for ii_sh=1:n_shuffle_SI
+            % 
+            % 
+            % 
+            %     %Flip and roll Stefanini et al 2020 https://doi.org/10.1016/j.neuron.2020.05.022
+            % 
+            % 
+            %     % We will do a reversal and a circular permutation of dFF
+            %     these_x_reversed=zeros(1,length(all_these_x));
+            %     these_y_reversed=zeros(1,length(all_these_y));
+            % 
+            %     % With this one you flip and roll x and y
+            %     offset_ii=floor(these_rnd(ii_sh)*length(all_these_x));
+            %     for ii_trl=1:length(all_these_x)
+            %         this_ii_trl=ii_trl+offset_ii;
+            %         if this_ii_trl>length(all_these_x)
+            %             offset_ii=-ii_trl+1;
+            %             this_ii_trl=ii_trl+offset_ii;
+            %         end
+            %         these_x_reversed(1,length(all_these_x)-ii_trl+1)=all_these_x(this_ii_trl);
+            %         these_y_reversed(1,length(all_these_y)-ii_trl+1)=all_these_y(this_ii_trl);
+            %     end
+            % 
+            %     %With this one you flip and roll dFF
+            %     offset_ii=floor(these_rnd(ii_sh+n_shuffle_SI)*length(all_these_x));
+            %     all_these_dFF_reversed=zeros(1,length(all_these_dFF));
+            %     for ii_trl=1:length(all_these_dFF)
+            %         this_ii_trl=ii_trl+offset_ii;
+            %         if this_ii_trl>length(all_these_dFF)
+            %             offset_ii=-ii_trl+1;
+            %             this_ii_trl=ii_trl+offset_ii;
+            %         end
+            %         all_these_dFF_reversed(1,length(all_these_dFF)-ii_trl+1)=all_these_dFF(this_ii_trl);
+            %     end
+            % 
+            % 
+            %     %Cumulative counts for info
+            % 
+            %     cum_xy=zeros(1,10*10);
+            %     cum_lane=zeros(1,2);
+            % 
+            % 
+            %     cum_bindFF=zeros(n_bits,2);
+            % 
+            %     cum_xy_bindFF_Lane1=zeros(n_bits,2,10*10);
+            %     cum_xy_bindFF_Lane4=zeros(n_bits,2,10*10);
+            %     cum_xy_bindFF_BothLanes=zeros(n_bits,2,10*10);
+            % 
+            %     cum_xy_bindFF_lane=zeros(n_bits,2,10*10,2);
+            % 
+            %     include_xy=zeros(1,10*10);
+            %     include_op=zeros(1,2*10*10);
+            % 
+            % 
+            %     cum_xy_Lane1=zeros(1,10*10);
+            %     cum_xy_Lane4=zeros(1,10*10);
+            %     cum_xy_BothLanes=zeros(1,10*10);
+            % 
+            %     cum_lane_bindFF=zeros(n_bits,2,2);
+            % 
+            % 
+            %     cum_bindFF_Lane1=zeros(n_bits,2);
+            %     cum_bindFF_Lane4=zeros(n_bits,2);
+            %     cum_bindFF_BothLanes=zeros(n_bits,2);
+            % 
+            % 
+            %     cum_op_bin=zeros(1,2); %Added op
+            %     cum_xy_bindFF_op_bin=zeros(n_bits,2,10*10,2); %Added op
+            %     cum_op_bindFF_bin=zeros(n_bits,2,2); %Added op
+            %     cum_xy_op_bin=zeros(10*10,2);
+            % 
+            % 
+            %     for ii_t=1:length(all_these_dFF_reversed)
+            %         this_x_ii=ceil(all_these_x(ii_t)/50);
+            %         if this_x_ii==11
+            %             this_x_ii=10;
+            %         end
+            % 
+            %         this_y_ii=ceil(all_these_y(ii_t)/48);
+            %         if this_y_ii==11
+            %             this_y_ii=10;
+            %         end
+            % 
+            %          this_x_ii_rev=ceil(these_x_reversed(ii_t)/50);
+            %         if this_x_ii_rev==11
+            %             this_x_ii_rev=10;
+            %         end
+            % 
+            %         this_y_ii_rev=ceil(these_y_reversed(ii_t)/48);
+            %         if this_y_ii_rev==11
+            %             this_y_ii_rev=10;
+            %         end
+            % 
+            %         % this_dFF_activity(this_x_ii,this_y_ii)=this_dFF_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+            %         % this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
+            %         % sum_dFF_activity=sum_dFF_activity+these_dFF(ii_t);
+            % 
+            % 
+            % 
+            %         %Tally info
+            %         cum_xy(this_xy_ii)=cum_xy(this_xy_ii)+1;
+            %         cum_xy_BothLanes(this_xy_ii)=cum_xy_BothLanes(this_xy_ii)+1;
+            % 
+            %          for jj_ROI=1:length(these_ROIs)
+            %             ii_ROI=these_ROIs(jj_ROI);
+            %             these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);   
+            %             this_bin_dFF=(these_dFF(ii_t)>0)+1;
+            %             cum_bindFF(jj_ROI,this_bin_dFF_rev)=cum_bindFF(jj_ROI,this_bin_dFF_rev)+1;
+            %             cum_bindFF_BothLanes(jj_ROI,this_bin_dFF_rev)=cum_bindFF_BothLanes(jj_ROI,this_bin_dFF_rev)+1;
+            %             cum_xy_bindFF_BothLanes(jj_ROI,this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_BothLanes(jj_ROI,this_bin_dFF_rev,this_xy_ii)+1;
+            %         end
+            % 
+            % 
+            %         this_xy_ii=this_x_ii+10*(this_y_ii-1);
+            %         this_xy_ii_rev=this_x_ii_rev+10*(this_y_ii_rev-1);
+            %         include_xy(this_xy_ii)=1;
+            %         include_op(this_xy_ii)=1;
+            %         include_op(this_xy_ii+100)=1;
+            % 
+            % 
+            %         if all_lanes(ii_t)==1
+            % 
+            %               for jj_ROI=1:length(these_ROIs)
+            %                 ii_ROI=these_ROIs(jj_ROI);
+            %                 these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+            %                 this_bin_dFF=(these_dFF(ii_t)>0)+1;
+            %                 cum_lane_bindFF(jj_ROI,this_bin_dFF,1)=cum_lane_bindFF(jj_ROI,this_bin_dFF,1)+1;
+            %                 cum_xy_bindFF_Lane1(jj_ROI,this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane1(jj_ROI,this_bin_dFF,this_xy_ii)+1;
+            %                 cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(jj_ROI,this_bin_dFF,this_xy_ii,1)+1;
+            %                 cum_bindFF_Lane1(jj_ROI,this_bin_dFF)=cum_bindFF_Lane1(jj_ROI,this_bin_dFF)+1;
+            %             end
+            % 
+            %             cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
+            %             cum_lane(1)=cum_lane(1)+1;
+            % 
+            %             % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+            %             % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
+            %             % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+            %             cum_lane_bindFF(this_bin_dFF_rev,1)=cum_lane_bindFF(this_bin_dFF_rev,1)+1;
+            %             cum_xy_bindFF_Lane1(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_Lane1(this_bin_dFF_rev,this_xy_ii)+1;
+            %             cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)+1;
+            %             cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
+            %             cum_bindFF_Lane1(this_bin_dFF_rev)=cum_bindFF_Lane1(this_bin_dFF_rev)+1;
+            %             cum_lane(1)=cum_lane(1)+1;
+            % 
+            %             switch handles_conc.group(fileNo)
+            %                 case 1
+            %                     %2 cm from the floor
+            %                     cm_from_floor=2;
+            %                     %Find the binary op
+            %                     binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+            %                     % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+            %                     % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
+            %                     %     cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)+1;
+            %                     % 
+            %                     % cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)+1;
+            %                     % 
+            % 
+            %                     cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)=...
+            %                         cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)+1;
+            %                     cum_xy_op_bin(this_xy_ii_rev,binary_op+1)=cum_xy_op_bin(this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+            %                 case 5
+            %                     %1 cm from the floor
+            %                     cm_from_floor=1;
+            %                     %Find the binary op
+            %                     binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+            %                     % 
+            %                     % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+            %                     % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
+            %                     %     cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)+1;
+            %                     % cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)+1;
+            % 
+            %                     cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)=...
+            %                         cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)+1;
+            %                     cum_xy_op_bin(this_xy_ii_rev,binary_op+1)=cum_xy_op_bin(this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+            %             end
+            %         else
+            %             % this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+            %             % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
+            %             % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+            %             cum_lane_bindFF(this_bin_dFF_rev,2)=cum_lane_bindFF(this_bin_dFF_rev,2)+1;
+            %             cum_xy_bindFF_Lane4(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_Lane4(this_bin_dFF_rev,this_xy_ii)+1;
+            %             cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)+1;
+            %             cum_xy_Lane4(this_xy_ii)=cum_xy_Lane4(this_xy_ii)+1;
+            %             cum_bindFF_Lane4(this_bin_dFF_rev)=cum_bindFF_Lane4(this_bin_dFF_rev)+1;
+            %             cum_lane(2)=cum_lane(2)+1;
+            % 
+            %             switch handles_conc.group(fileNo)
+            %                 case 1
+            %                     %2 cm from the floor
+            %                     cm_from_floor=2;
+            %                     %Find the binary op
+            %                     binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+            % 
+            %                     % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+            %                     % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
+            %                     %     cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)+1;
+            %                     % cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)+1;
+            %                     %
+            %                     cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)=...
+            %                         cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)+1;
+            %                     cum_xy_op_bin(this_xy_ii_rev,binary_op+1)=cum_xy_op_bin(this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+            %                 case 5
+            %                     %1 cm from the floor
+            %                     cm_from_floor=1;
+            %                     %Find the binary op
+            %                     binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+            % 
+            %                     % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
+            %                     % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
+            %                     %     cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)+1;
+            %                     % cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF_rev,binary_op*100+this_xy_ii)+1;
+            %                     %
+            % 
+            %                     cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)=...
+            %                         cum_xy_bindFF_op_bin(this_bin_dFF_rev,this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)=cum_op_bindFF_bin(this_bin_dFF_rev,binary_op+1)+1;
+            %                     cum_xy_op_bin(this_xy_ii_rev,binary_op+1)=cum_xy_op_bin(this_xy_ii_rev,binary_op+1)+1;
+            %                     cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
+            %             end
+            %         end
+            % 
+            %     end
+            % 
+            %     %Calculate information
+            % 
+            %     p_xy=cum_xy(logical(include_xy))/sum(cum_xy(logical(include_xy)));
+            %     p_lane=cum_lane/sum(cum_lane(:));
+            %     p_bindFF=cum_bindFF/sum(cum_bindFF(:));
+            % 
+            % 
+            %     p_lane_bindFF=cum_lane_bindFF/sum(cum_lane_bindFF(:));
+            % 
+            %     included_cum_xy_bindFF_Lane1=cum_xy_bindFF_Lane1(:,logical(include_xy));
+            %     p_xy_bindFF_Lane1=included_cum_xy_bindFF_Lane1/sum(included_cum_xy_bindFF_Lane1(:));
+            % 
+            %     included_cum_xy_bindFF_Lane4=cum_xy_bindFF_Lane4(:,logical(include_xy));
+            %     p_xy_bindFF_Lane4=included_cum_xy_bindFF_Lane4/sum(included_cum_xy_bindFF_Lane4(:));
+            % 
+            %     included_cum_xy_bindFF_BothLanes=cum_xy_bindFF_BothLanes(:,logical(include_xy));
+            %     p_xy_bindFF_BothLanes=included_cum_xy_bindFF_BothLanes/sum(included_cum_xy_bindFF_BothLanes(:));
+            % 
+            %     included_cum_xy_bindFF_lane=cum_xy_bindFF_lane(:,logical(include_xy),:);
+            %     p_xy_bindFF_lane=included_cum_xy_bindFF_lane/sum(included_cum_xy_bindFF_lane(:));
+            % 
+            % 
+            %     included_cum_xy_Lane1=cum_xy_Lane1(1,logical(include_xy));
+            %     p_xy_Lane1=included_cum_xy_Lane1/sum(included_cum_xy_Lane1(:));
+            % 
+            %     included_cum_xy_Lane4=cum_xy_Lane4(1,logical(include_xy));
+            %     p_xy_Lane4=included_cum_xy_Lane4/sum(included_cum_xy_Lane4(:));
+            % 
+            %     included_cum_xy_BothLanes=cum_xy_BothLanes(1,logical(include_xy));
+            %     p_xy_BothLanes=included_cum_xy_BothLanes/sum(included_cum_xy_BothLanes(:));
+            % 
+            %     p_bindFF_Lane1=cum_bindFF_Lane1/sum(cum_bindFF_Lane1(:));
+            % 
+            %     p_bindFF_Lane4=cum_bindFF_Lane4/sum(cum_bindFF_Lane4(:));
+            % 
+            %     p_bindFF_BothLanes=cum_bindFF_BothLanes/sum(cum_bindFF_BothLanes(:));
+            % 
+            %     % p_op=cum_op(logical(include_op))/sum(cum_op(logical(include_op)));
+            % 
+            %     p_op_bin=cum_op_bin/sum(cum_op_bin);
+            % 
+            %     % included_cum_xy_bindFF_op=cum_xy_bindFF_op(:,logical(include_xy),logical(include_op));
+            %     % p_xy_bindFF_op=included_cum_xy_bindFF_op/sum(included_cum_xy_bindFF_op(:));
+            %     %
+            %     % included_cum_op_bindFF=cum_op_bindFF(:,logical(include_op));
+            %     % p_op_bindFF=included_cum_op_bindFF/sum(included_cum_op_bindFF(:));
+            % 
+            %     included_cum_xy_op_bin=cum_xy_op_bin(logical(include_xy),:);
+            %     p_xy_op_bin=included_cum_xy_op_bin/sum(included_cum_xy_op_bin(:));
+            % 
+            %     included_cum_xy_bindFF_op_bin=cum_xy_bindFF_op_bin(:,logical(include_xy),:);
+            %     p_xy_bindFF_op_bin=included_cum_xy_bindFF_op_bin/sum(included_cum_xy_bindFF_op_bin(:));
+            % 
+            %     all_info_lane1_sh(all_info_ii,ii_sh)=0;
+            %     all_info_lane4_sh(all_info_ii,ii_sh)=0;
+            %     all_info_mutual_info14_sh(all_info_ii,ii_sh)=0;
+            % 
+            %     all_info_lane_sh(all_info_ii,ii_sh)=0;
+            % 
+            %     all_info_op_bin_sh(all_info_ii,ii_sh)=0;
+            %     % all_info_mutual_info_dFFbin_xy_op_bin_sh(all_info_ii,ii_sh)=0;
+            % 
+            %     all_info_mutual_xy_op_bin_sh(all_info_ii,ii_sh)=0;
+            % 
+            %     all_info_mutual_info_dFFbin_xy_op_bin_sh(all_info_ii,ii_sh)=0;
+            % 
+            %     %Calculate info for lane 1
+            %     for ii_xy=1:size(p_xy_bindFF_Lane1,2)
+            %         if sum(p_xy_bindFF_Lane1(:,ii_xy))>0
+            %             for ii_bin_dFF=1:2
+            %                 if p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)~=0
+            %                     all_info_lane1_sh(all_info_ii,ii_sh)=all_info_lane1_sh(all_info_ii,ii_sh)+p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)*...
+            %                         log2(p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)/(p_xy_Lane1(ii_xy)*p_bindFF_Lane1(ii_bin_dFF)));
+            %                 end
+            %             end
+            %         end
+            %     end
+            % 
+            %     %Calculate info for lane 4
+            %     for ii_xy=1:size(p_xy_bindFF_Lane4,2)
+            %         if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            %             for ii_bin_dFF=1:2
+            %                 if p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)~=0
+            %                     all_info_lane4_sh(all_info_ii,ii_sh)=all_info_lane4_sh(all_info_ii,ii_sh)+p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)*...
+            %                         log2(p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)/(p_xy_Lane4(ii_xy)*p_bindFF_Lane4(ii_bin_dFF)));
+            %                 end
+            %             end
+            %         end
+            %     end
+            % 
+            %     %Calculate mutual info between lanes 1 and 4
+            %     for ii_xy=1:size(p_xy_bindFF_lane,2)
+            %         % if sum(p_xy_bindFF_lane(:,ii_xy))>0
+            %             for ii_lane=1:2
+            %                 for ii_bin_dFF=1:2
+            %                     if p_xy_bindFF_lane(ii_bin_dFF,ii_xy,ii_lane)~=0
+            %                         all_info_mutual_info14_sh(all_info_ii,ii_sh)=all_info_mutual_info14_sh(all_info_ii,ii_sh)+p_xy_bindFF_lane(ii_bin_dFF,ii_xy,ii_lane)*...
+            %                             log2(p_xy_bindFF_lane(ii_bin_dFF,ii_xy,ii_lane)/(p_xy(ii_xy)*p_bindFF(ii_bin_dFF)*p_lane(ii_lane)));
+            %                     end
+            %                 end
+            %             end
+            %         % end
+            %     end
+            % 
+            %     %Calculate info for lanes
+            %     for ii_lane=1:2
+            %         for ii_bin_dFF=1:2
+            %             if p_lane_bindFF(ii_bin_dFF,ii_lane)~=0
+            %                 all_info_lane_sh(all_info_ii,ii_sh)=all_info_lane_sh(all_info_ii,ii_sh)+p_lane_bindFF(ii_bin_dFF,ii_lane)*...
+            %                     log2(p_lane_bindFF(ii_bin_dFF,ii_lane)/(p_lane(ii_lane)*p_bindFF(ii_bin_dFF)));
+            %             end
+            %         end
+            %     end
+            % 
+            % 
+            %     %Calculate info for op
+            %     for ii_op=1:2
+            %         for ii_bin_dFF=1:2
+            %             if p_op_bindFF_bin(ii_bin_dFF,ii_op)~=0
+            %                 all_info_op_bin_sh(all_info_ii,ii_sh)=all_info_op_bin_sh(all_info_ii,ii_sh)+p_op_bindFF_bin(ii_bin_dFF,ii_op)*...
+            %                     log2(p_op_bindFF_bin(ii_bin_dFF,ii_op)/(p_op_bin(ii_op)*p_bindFF(ii_bin_dFF)));
+            %             end
+            %         end
+            %     end
+            % 
+            %     %Calculate mutual info with xy, dFFbin, op bin
+            %     for ii_xy=1:size(p_xy_bindFF_op_bin,2)
+            %         % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            %         for ii_op=1:2
+            %             for ii_bin_dFF=1:2
+            %                 if p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)~=0
+            %                     all_info_mutual_info_dFFbin_xy_op_bin_sh(all_info_ii,ii_sh)=all_info_mutual_info_dFFbin_xy_op_bin_sh(all_info_ii)+p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)*...
+            %                         log2(p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)/(p_xy(ii_xy)*p_bindFF(ii_bin_dFF)*p_op_bin(ii_op)));
+            %                 end
+            %             end
+            %         end
+            %         % end
+            %     end
+            % 
+            %          %Calculate mutual info with op
+            %     for ii_xy=1:size(p_xy_op_bin,1)
+            %         % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            %         for ii_op=1:2
+            %             % for ii_bin_dFF=1:2
+            %                 if p_xy_op_bin(ii_xy,ii_op)~=0
+            %                     all_info_mutual_xy_op_bin_sh(all_info_ii,ii_sh)=all_info_mutual_xy_op_bin_sh(all_info_ii)+p_xy_op_bin(ii_xy,ii_op)*...
+            %                         log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
+            %                 end
+            %             % end
+            %         end
+            %         % end
+            %     end
+            % 
+            % end
+
+            
+            % 
+            % 
+            % %Find turn points and time vectors
+            % all_ii_turns=zeros(1,trials.odor_trNo);
+            % all_ii_ends=zeros(1,trials.odor_trNo);
+            % include_trial=zeros(1,trials.odor_trNo);
+            % for trNo=1:trials.odor_trNo
+            %     this_ii_last_turn=find(angles.trial(trNo).delta_x>=100,1,'last');
+            %     if ~isempty(this_ii_last_turn)
+            %         all_ii_turns(trNo)=angles.trial(trNo).ii_turns(this_ii_last_turn);
+            %         all_ii_ends(trNo)= size(trials.trial(trNo).XYtest,1);
+            %         include_trial(trNo)=1;
+            %     else
+            %         [maxnum, maxii]=max(angles.trial(trNo).delta_x);
+            %         all_ii_turns(trNo)=angles.trial(trNo).ii_turns(maxii);
+            %         all_ii_ends(trNo)= size(trials.trial(trNo).XYtest,1);
+            %     end
+            % end
+            % 
+            % % delta_below_zero_ii=max(all_ii_turns(include_trial==1));
+            % % delta_above_zero_ii=max(all_ii_ends(include_trial==1)-all_ii_turns(include_trial==1));
+            % 
+            % delta_below_zero_ii=max(all_ii_turns);
+            % delta_above_zero_ii=max(all_ii_ends-all_ii_turns);
+            % 
+            % time_bins=handles_XY.dt*([1:delta_below_zero_ii+delta_above_zero_ii]-delta_below_zero_ii);
+            % 
+            % hit1_dFF=[];
+            % ii_hit1=0;
+            % miss1_dFF=[];
+            % ii_miss1=0;
+            % hit4_dFF=[];
+            % ii_hit4=0;
+            % miss4_dFF=[];
+            % ii_miss4=0;
+            % 
+            % %Let's do the glm stats from -3 to 3 sec in 1 sec bins
+            % trimmed_time_range=[-3 3];
+            % trimmed_dt=1;
+            % trimmed_time_bins=[trimmed_time_range(1)+(trimmed_dt/2):trimmed_dt:trimmed_time_range(2)-(trimmed_dt/2)];
+            % 
+            % glm_div_ii=0;
+            % glm_div=[];
+            % 
+            % for trNo=1:trials.odor_trNo
+            %     % if include_trial(trNo)==1
+            %         these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
+            %         these_time_bins=time_bins(delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)));
+            %         %Okabe_Ito colors
+            %         switch trials.odor_trial_type(trNo)
+            %             case 1
+            %                 %Lane 1 hits vermillion
+            %                 ii_hit1=ii_hit1+1;
+            %                 hit1_dFF(ii_hit1,1:length(time_bins))=min(these_dFF);
+            %                 hit1_dFF(ii_hit1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+            %                 for ii_tr=1:length(trimmed_time_bins)
+            %                     these_tr_time_bins=(these_time_bins>=(trimmed_time_range(1)+(ii_tr-1)*trimmed_dt))&(these_time_bins<(trimmed_time_range(1)+ii_tr*trimmed_dt));
+            %                     if sum(these_tr_time_bins)>0
+            %                         glm_div.data(glm_div_ii+1)=mean(these_dFF(these_tr_time_bins));
+            %                         glm_div.trial_type(glm_div_ii+1)=1;
+            %                         glm_div.time(glm_div_ii+1)=trimmed_time_bins(ii_tr);
+            %                         glm_div_ii=glm_div_ii+1;
+            %                     end
+            %                 end
+            %             case 2
+            %                 %Lane 1 miss orange
+            %                 ii_miss1=ii_miss1+1;
+            %                 miss1_dFF(ii_miss1,1:length(time_bins))=min(these_dFF);
+            %                 miss1_dFF(ii_miss1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+            %                 for ii_tr=1:length(trimmed_time_bins)
+            %                     these_tr_time_bins=(these_time_bins>=(trimmed_time_range(1)+(ii_tr-1)*trimmed_dt))&(these_time_bins<(trimmed_time_range(1)+ii_tr*trimmed_dt));
+            %                     if sum(these_tr_time_bins)>0
+            %                         glm_div.data(glm_div_ii+1)=mean(these_dFF(these_tr_time_bins));
+            %                         glm_div.trial_type(glm_div_ii+1)=2;
+            %                         glm_div.time(glm_div_ii+1)=trimmed_time_bins(ii_tr);
+            %                         glm_div_ii=glm_div_ii+1;
+            %                     end
+            %                 end
+            %             case 3
+            %                 %Lane 4 hit blue
+            %                 ii_hit4=ii_hit4+1;
+            %                 hit4_dFF(ii_hit4,1:length(time_bins))=min(these_dFF);
+            %                 hit4_dFF(ii_hit4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+            %                 for ii_tr=1:length(trimmed_time_bins)
+            %                     these_tr_time_bins=(these_time_bins>=(trimmed_time_range(1)+(ii_tr-1)*trimmed_dt))&(these_time_bins<(trimmed_time_range(1)+ii_tr*trimmed_dt));
+            %                     if sum(these_tr_time_bins)>0
+            %                         glm_div.data(glm_div_ii+1)=mean(these_dFF(these_tr_time_bins));
+            %                         glm_div.trial_type(glm_div_ii+1)=3;
+            %                         glm_div.time(glm_div_ii+1)=trimmed_time_bins(ii_tr);
+            %                         glm_div_ii=glm_div_ii+1;
+            %                     end
+            %                 end
+            %             case 4
+            %                 %Lane 4 miss sky blue
+            %                 ii_miss4=ii_miss4+1;
+            %                 miss4_dFF(ii_miss4,1:length(time_bins))=min(these_dFF);
+            %                 miss4_dFF(ii_miss4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+            %                 for ii_tr=1:length(trimmed_time_bins)
+            %                     these_tr_time_bins=(these_time_bins>=(trimmed_time_range(1)+(ii_tr-1)*trimmed_dt))&(these_time_bins<(trimmed_time_range(1)+ii_tr*trimmed_dt));
+            %                     if sum(these_tr_time_bins)>0
+            %                         glm_div.data(glm_div_ii+1)=mean(these_dFF(these_tr_time_bins));
+            %                         glm_div.trial_type(glm_div_ii+1)=4;
+            %                         glm_div.time(glm_div_ii+1)=trimmed_time_bins(ii_tr);
+            %                         glm_div_ii=glm_div_ii+1;
+            %                     end
+            %                 end
+            %         end
+            %     % end
+            % end
+
+           
+
+
+            % %Plot dFFs for lane 1 and 4
+            % y_gap=2;
+            % hit_miss_1=zeros(size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
+            % hit_miss_1(size(miss1_dFF,1)+y_gap+1:size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,:)=hit1_dFF;
+            % hit_miss_1(1:size(miss1_dFF,1),:)=miss1_dFF;
+            % 
+            % y_trials1=[1:size(hit_miss_1,1)];
+            % 
+            % hit_miss_4=zeros(size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
+            % hit_miss_4(size(miss4_dFF,1)+y_gap+1:size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,:)=hit4_dFF;
+            % hit_miss_4(1:size(miss4_dFF,1),:)=miss4_dFF;
+            % 
+            % y_trials4=[1:size(hit_miss_4,1)];
+            % 
+            % y_trials_end=max([y_trials1(end) y_trials4(end)]);
+            % 
+            % 
+            % %Now do glm
+            % tbl = table(glm_div.data',glm_div.trial_type',glm_div.time',...
+            %     'VariableNames',{'dFF','trial_type','time'});
+            % mdl = fitglm(tbl,'dFF~trial_type+time'...
+            %     ,'CategoricalVars',[2])
+            % pffft=1; 
+ 
+        % end
+    % end
     end
 end
 

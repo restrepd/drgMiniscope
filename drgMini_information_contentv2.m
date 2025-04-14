@@ -97,7 +97,7 @@ n_shuffle_SI=100;
 %Load the odor plumes
 load('/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Odor Arena Plumes/odor_plume_patternsDR.mat')
 
-op_threshold=-3.2;
+op_threshold=-3.5;
 for cm_from_floor=1:2
     mean_plume_l1=odor_plume_patterns.cm_from_floor(cm_from_floor).mean_plume_l1';
     mean_plume_l4=odor_plume_patterns.cm_from_floor(cm_from_floor).mean_plume_l4';
@@ -432,6 +432,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
             all_info_lane1(all_info_ii)=0;
             all_info_lane4(all_info_ii)=0;
+            all_info_both_lanes(all_info_ii)=0;
             all_info_mutual_info14(all_info_ii)=0;
 
             all_info_lane(all_info_ii)=0;
@@ -463,6 +464,18 @@ for fileNo=1:length(handles_conc.arena_file)
                         if p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)~=0
                             all_info_lane4(all_info_ii)=all_info_lane4(all_info_ii)+p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)*...
                                 log2(p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)/(p_xy_Lane4(ii_xy)*p_bindFF_Lane4(ii_bin_dFF)));
+                        end
+                    end
+                % end
+            end
+
+            %Calculate info for both lanes
+            for ii_xy=1:size(p_xy_bindFF_BothLanes,2)
+                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                    for ii_bin_dFF=1:2
+                        if p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)~=0
+                            all_info_both_lanes(all_info_ii)=all_info_both_lanes(all_info_ii)+p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothLanes(ii_bin_dFF)));
                         end
                     end
                 % end
@@ -542,18 +555,16 @@ for fileNo=1:length(handles_conc.arena_file)
                 % end
             end
 
-              %Calculate mutual info with xy x op_bin
+            %Calculate mutual info with xy x op_bin
             for ii_xy=1:size(p_xy_op_bin,1)
                 % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
-                    for ii_op=1:2
-                        for ii_bin_dFF=1:2
-                            if p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)~=0
-                                delta_info=p_xy_op_bin(ii_xy,ii_op)*...
-                                    log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
-                                all_info_mutual_xy_op_bin(all_info_ii)=all_info_mutual_xy_op_bin(all_info_ii)+delta_info;
-                            end
-                        end
+                for ii_op=1:2
+                    if p_xy_op_bin(ii_xy,ii_op)~=0
+                        delta_info=p_xy_op_bin(ii_xy,ii_op)*...
+                            log2(p_xy_op_bin(ii_xy,ii_op)/(p_xy(ii_xy)*p_op_bin(ii_op)));
+                        all_info_mutual_xy_op_bin(all_info_ii)=all_info_mutual_xy_op_bin(all_info_ii)+delta_info;
                     end
+                end
                 % end
             end
 
@@ -690,7 +701,7 @@ for fileNo=1:length(handles_conc.arena_file)
                                 %2 cm from the floor
                                 cm_from_floor=2;
                                 %Find the binary op
-                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii_rev,this_y_ii_rev);
                                 % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
                                 % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
                                 %     cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)+1;
@@ -707,7 +718,7 @@ for fileNo=1:length(handles_conc.arena_file)
                                 %1 cm from the floor
                                 cm_from_floor=1;
                                 %Find the binary op
-                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii_rev,this_y_ii_rev);
                                 % 
                                 % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
                                 % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
@@ -736,7 +747,7 @@ for fileNo=1:length(handles_conc.arena_file)
                                 %2 cm from the floor
                                 cm_from_floor=2;
                                 %Find the binary op
-                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii_rev,this_y_ii_rev);
 
                                 % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
                                 % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
@@ -752,7 +763,7 @@ for fileNo=1:length(handles_conc.arena_file)
                                 %1 cm from the floor
                                 cm_from_floor=1;
                                 %Find the binary op
-                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii_rev,this_y_ii_rev);
 
                                 % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
                                 % cum_xy_bindFF_op(this_bin_dFF_rev,this_xy_ii,binary_op*100+this_xy_ii)=...
@@ -825,6 +836,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 all_info_lane1_sh(all_info_ii,ii_sh)=0;
                 all_info_lane4_sh(all_info_ii,ii_sh)=0;
+                all_info_both_lanes_sh(all_info_ii,ii_sh)=0;
                 all_info_mutual_info14_sh(all_info_ii,ii_sh)=0;
 
                 all_info_lane_sh(all_info_ii,ii_sh)=0;
@@ -858,6 +870,18 @@ for fileNo=1:length(handles_conc.arena_file)
                             end
                         end
                     end
+                end
+
+                %Calculate info for both lanes
+                for ii_xy=1:size(p_xy_bindFF_BothLanes,2)
+                    % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                    for ii_bin_dFF=1:2
+                        if p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)~=0
+                            all_info_both_lanes_sh(all_info_ii,ii_sh)=all_info_both_lanes_sh(all_info_ii,ii_sh)+p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothLanes(ii_bin_dFF)));
+                        end
+                    end
+                    % end
                 end
 
                 %Calculate mutual info between lanes 1 and 4
@@ -1081,76 +1105,44 @@ for fileNo=1:length(handles_conc.arena_file)
     end
 end
 
-%Plot histograms
-figureNo=figureNo+1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-set(hFig, 'units','normalized','position',[.1 .1 .4 .4])
-hold on
-
-[f_aic,x_aic] = drg_ecdf(all_info_lane1);
-plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_lane4);
-plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_mutual_info14);
-plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_lane);
-plot(x_aic,f_aic,'Color',[240/255 228/255 66/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_op_bin);
-plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_mutual_info_dFFbin_xy_op_bin);
-plot(x_aic,f_aic,'Color',[213/255 94/255 0/255],'LineWidth',3)
-
-[f_aic,x_aic] = drg_ecdf(all_info_mutual_xy_op_bin);
-plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
-
-
-
-
-these_ylim=ylim;
-these_xlim=xlim;
-text(0.3,0.4,'MI xy x bindFF Lane 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.35,'MI xy x bindFF Lane 4','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.30,'MI xy x bindFF x lane','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.25,'MI lane x bindFF','Color',[240/255 228/255 66/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.20,'MI op x bindFF','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.15,'MI op x bindFF x xy','Color',[213/255 94/255 0/255],'FontWeight','bold','FontSize',16)
-text(0.3,0.10,'MI op x xy','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
-
-title('Cumulative histograms for mutual information')
-xlabel('Information bits')
-ylabel('Cumulative fraction')
 
 
 %Now calculate 3xSD for the shuffled distributions
 sd_all_info_lane1_sh=zeros(all_info_ii,1);
 sd_all_info_lane4_sh=zeros(all_info_ii,1);
+sd_all_info_both_lanes_sh=zeros(all_info_ii,1);
 sd_all_info_mutual_info14_sh=zeros(all_info_ii,1);
 sd_all_info_lane_sh=zeros(all_info_ii,1);
 sd_all_info_op_bin=zeros(all_info_ii,1);
 sd_all_info_mutual_info_dFFbin_xy_op_bin=zeros(all_info_ii,1);
+sd_all_info_mutual_xy_op_bin=zeros(all_info_ii,1);
 
 mean_all_info_lane1_sh=zeros(all_info_ii,1);
 mean_all_info_lane4_sh=zeros(all_info_ii,1);
+mean_all_info_both_lanes_sh=zeros(all_info_ii,1);
 mean_all_info_mutual_info14_sh=zeros(all_info_ii,1);
 mean_all_info_lane_sh=zeros(all_info_ii,1);
-mean_all_info_op_bin=zeros(all_info_ii,1);
-mean_all_info_mutual_info_dFFbin_xy_op_bin=zeros(all_info_ii,1);
+mean_all_info_op_bin_sh=zeros(all_info_ii,1);
+mean_all_info_mutual_info_dFFbin_xy_op_bin_sh=zeros(all_info_ii,1);
+mean_all_info_mutual_xy_op_bin_sh=zeros(all_info_ii,1);
 
 all_all_info_lane1_sh=[];
 all_all_info_lane4_sh=[];
+all_all_info_both_lanes_sh=[];
 all_all_info_mutual_info14_sh=[];
 all_all_info_lane_sh=[];
 all_all_info_op_bin_sh=[];
 all_all_info_mutual_info_dFFbin_xy_op_bin_sh=[];
+all_all_info_mutual_xy_op_bin_sh=[];
+
+ssi_all_info_lane1=zeros(all_info_ii,1);
+ssi_all_info_lane4=zeros(all_info_ii,1);
+ssi_all_info_both_lanes=zeros(all_info_ii,1);
+ssi_all_info_mutual_info14=zeros(all_info_ii,1);
+ssi_all_info_lane=zeros(all_info_ii,1);
+ssi_all_info_op_bin=zeros(all_info_ii,1);
+ssi_all_info_mutual_info_dFFbin_xy_op_bin=zeros(all_info_ii,1);
+ssi_all_info_mutual_xy_op_binn=zeros(all_info_ii,1);
 
 
 for ii_ROI=1:all_info_ii
@@ -1161,6 +1153,8 @@ for ii_ROI=1:all_info_ii
     this_all_info_lane1_sh(1,:)=all_info_lane1_sh(ii_ROI,:);
     this_all_info_lane4_sh=zeros(1,n_shuffle_SI);
     this_all_info_lane4_sh(1,:)=all_info_lane4_sh(ii_ROI,:);
+    this_all_info_both_lanes_sh=zeros(1,n_shuffle_SI);
+    this_all_info_both_lanes_sh(1,:)=all_info_both_lanes_sh(ii_ROI,:);
     this_all_info_mutual_info14_sh=zeros(1,n_shuffle_SI);
     this_all_info_mutual_info14_sh(1,:)=all_info_mutual_info14_sh(ii_ROI,:);
     this_all_info_lane_sh=zeros(1,n_shuffle_SI);
@@ -1169,16 +1163,19 @@ for ii_ROI=1:all_info_ii
     this_all_info_op_bin_sh(1,:)=all_info_op_bin_sh(ii_ROI,:);
     this_all_info_mutual_info_dFFbin_xy_op_bin_sh=zeros(1,n_shuffle_SI);
     this_all_info_mutual_info_dFFbin_xy_op_bin_sh(1,:)=all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI,:);
+    this_all_info_mutual_xy_op_bin_sh(1,:)=all_info_mutual_xy_op_bin_sh(ii_ROI,:);
 
     all_all_info_lane1_sh=[all_all_info_lane1_sh this_all_info_lane1_sh];
     all_all_info_lane4_sh=[all_all_info_lane4_sh this_all_info_lane4_sh];
+    all_all_info_both_lanes_sh=[all_all_info_both_lanes_sh this_all_info_both_lanes_sh];
     all_all_info_mutual_info14_sh=[all_all_info_mutual_info14_sh this_all_info_mutual_info14_sh];
     all_all_info_lane_sh=[all_all_info_lane_sh this_all_info_lane_sh];
 
     all_all_info_op_bin_sh=[all_all_info_op_bin_sh this_all_info_op_bin_sh];
     all_all_info_mutual_info_dFFbin_xy_op_bin_sh=[all_all_info_mutual_info_dFFbin_xy_op_bin_sh this_all_info_mutual_info_dFFbin_xy_op_bin_sh];
+    all_all_info_mutual_xy_op_bin_sh=[all_all_info_mutual_xy_op_bin_sh this_all_info_mutual_xy_op_bin_sh];
 
-    for jj=1:6
+    for jj=1:8
         switch jj
             case 1
                 data=this_all_info_lane1_sh;
@@ -1192,6 +1189,11 @@ for ii_ROI=1:all_info_ii
                 data=this_all_info_op_bin_sh;
             case 6
                 data=this_all_info_mutual_info_dFFbin_xy_op_bin_sh;
+            case 7
+                data=this_all_info_both_lanes_sh;
+            case 8
+                data=this_all_info_mutual_xy_op_bin_sh;
+
         end
         n_bootstrap = 1000; % Number of bootstrap samples
         n_samples = length(data);
@@ -1221,17 +1223,853 @@ for ii_ROI=1:all_info_ii
                 sd_all_info_op_bin_sh(ii_ROI)=estimated_std;
             case 6
                 sd_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI)=estimated_std;
+            case 7
+                sd_all_info_both_lanes_sh(ii_ROI)=estimated_std;
+            case 8
+                sd_all_info_mutual_xy_op_bin_sh(ii_ROI)=estimated_std;
         end
     end
 
     mean_all_info_lane1_sh(ii_ROI)=mean(this_all_info_lane1_sh);
     mean_all_info_lane4_sh(ii_ROI)=mean(this_all_info_lane4_sh);
+    mean_all_info_both_lanes_sh(ii_ROI)=mean(this_all_info_both_lanes_sh);
     mean_all_info_mutual_info14_sh(ii_ROI)=mean(this_all_info_mutual_info14_sh);
     mean_all_info_lane_sh(ii_ROI)=mean(this_all_info_lane_sh);
     mean_all_info_op_bin_sh(ii_ROI)=mean(this_all_info_lane_sh);
     mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI)=mean(this_all_info_lane_sh);
+    mean_all_info_mutual_xy_op_bin_sh(ii_ROI)=mean(this_all_info_mutual_xy_op_bin_sh);
+
+    ssi_all_info_lane1(ii_ROI)=(all_info_lane1(ii_ROI)-mean_all_info_lane1_sh(ii_ROI))/sd_all_info_lane1_sh(ii_ROI);
+    ssi_all_info_lane4(ii_ROI)=(all_info_lane4(ii_ROI)-mean_all_info_lane4_sh(ii_ROI))/sd_all_info_lane4_sh(ii_ROI);
+    ssi_all_info_both_lanes(ii_ROI)=(all_info_both_lanes(ii_ROI)-mean_all_info_both_lanes_sh(ii_ROI))/sd_all_info_both_lanes_sh(ii_ROI);
+    ssi_all_info_mutual_info14(ii_ROI)=(all_info_mutual_info14(ii_ROI)-mean_all_info_mutual_info14_sh(ii_ROI))/sd_all_info_mutual_info14_sh(ii_ROI);
+    ssi_all_info_lane(ii_ROI)=(all_info_lane(ii_ROI)-mean_all_info_lane_sh(ii_ROI))/sd_all_info_lane_sh(ii_ROI);
+    ssi_all_info_op_bin(ii_ROI)=(all_info_op_bin(ii_ROI)-mean_all_info_op_bin_sh(ii_ROI))/sd_all_info_op_bin_sh(ii_ROI);
+    ssi_all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)=(all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)-mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI);
+    ssi_all_info_mutual_xy_op_bin(ii_ROI)=(all_info_mutual_xy_op_bin(ii_ROI)-mean_all_info_mutual_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_xy_op_bin_sh(ii_ROI);
+end
+
+
+%Plot histogram for SSI mutual info for both lanes for xy x bindFF
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+hold on
+
+edges=[-4:2:34];
+histogram(ssi_all_info_both_lanes)
+
+plot([3 3],[0 450],'-k','LineWidth',2)
+
+xlim([-5 35])
+title('Histogram for SSI MI xy x bindFF')
+xlabel('Sigma')
+ylabel('Count')
+
+
+%Plot histogram for SSI mutual info for op x bindFF
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+hold on
+
+edges=[-4:2:20];
+histogram(ssi_all_info_op_bin)
+
+plot([3 3],[0 800],'-k','LineWidth',2)
+
+xlim([-5 20])
+title('Histogram for SSI MI op x bindFF')
+xlabel('Sigma')
+ylabel('Count')
+
+%Plot histograms for SSI mutual info for xy x bindFF
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+hold on
+
+[f_aic,x_aic] = drg_ecdf(ssi_all_info_lane1);
+plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(ssi_all_info_lane4); %xy x bindFF for lane 4
+plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(ssi_all_info_both_lanes);   %xy x bindFF x lane
+plot(x_aic,f_aic,'Color',[213/255 94/255 0/255],'LineWidth',3)
+
+% [f_aic,x_aic] = drg_ecdf(ssi_all_info_mutual_xy_op_bin);
+% plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
+% 
+% [f_aic,x_aic] = drg_ecdf(ssi_all_info_op_bin);
+% plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
+% 
+% [f_aic,x_aic] = drg_ecdf(ssi_all_info_mutual_info_dFFbin_xy_op_bin);
+% plot(x_aic,f_aic,'Color',[213/255 94/255 0/255],'LineWidth',3)
+
+plot([3 3],[0 1],'-k','LineWidth',2)
+
+these_ylim=ylim;
+these_xlim=xlim;
+text(4,0.4,'Lane 1','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
+text(4,0.32,'Lane 2','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
+text(4,0.24,'Both Lanes','Color',[213/255 94/255 0/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.25,'MI lane x bindFF','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.20,'MI op x bindFF','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.15,'MI op x bindFF x xy','Color',[213/255 94/255 0/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.10,'MI op x xy','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
+
+xlim([-2 15])
+title('z-scored mutual information (position and binary dF/F)')
+xlabel('Sigma')
+ylabel('Cumulative fraction')
+
+    
+
+%Now do tsne analysis with SSI for place cells
+% ssi_all_info_lane1_no_nan=ssi_all_info_lane1((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+% ssi_all_info_lane4_no_nan=ssi_all_info_lane4((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+% ssi_all_info_both_lanes_no_nan=ssi_all_info_both_lanes((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+
+datassi = [ssi_all_info_lane1'; ssi_all_info_lane4'; ssi_all_info_both_lanes'];
+
+ii_all_ROIs=1:length(ssi_all_info_lane1);
+not_nan_ii_allROIs=ii_all_ROIs((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+
+% Step 1 Transpose the data if necessary (N samples x 3 variables)
+datassi = datassi';
+
+rng('default') % for reproducibility
+
+% Step 2: Run t-SNE
+% The default parameters are usually sufficient, but you can adjust them
+% For example, set 'NumPCAComponents' to reduce dimensionality before t-SNE
+% mappedX = tsne(data, 'NumPCAComponents', 2, 'Perplexity', 30);
+% mappedX = tsne(data,'Algorithm','exact','Distance','mahalanobis'); %Works well
+mappedX = tsne(datassi,'Algorithm','exact','Distance','cosine'); %works better
+
+% mappedX = tsne(data,'Algorithm','exact','Distance','chebychev'); %Ok
+% mappedX = tsne(data,'Algorithm','exact','Distance','euclidean'); %OK
+
+% %Step 3: Plot the results
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% plot(mappedX(:,1),mappedX(:,2),'.','Color',[0.7 0.7 0.7]);
+% 
+% xlabel('t-SNE Component 1');
+% ylabel('t-SNE Component 2');
+% title(['t-SNE Information Content ' ]);
+
+%Cool, it looks like we have three clear clusters
+
+% Perform k-means clustering
+%kmeans misclassifies a small number of points
+% k = 3; % Number of clusters
+% [idx, centroids] = kmeans(mappedX, k,'Distance','cityblock');
+
+no_clusters=3;
+gm = fitgmdist(mappedX, no_clusters); % Assuming 2 clusters
+idxssi = cluster(gm, mappedX);
+
+
+%Report the mean infos for each cluster
+per_cluster=[];
+for ii_k=1:no_clusters
+    these_ssi_all_info_lane1=ssi_all_info_lane1(idxssi==ii_k);
+    these_ssi_all_info_lane4=ssi_all_info_lane4(idxssi==ii_k);
+    these_ssi_all_info_both_lanes=ssi_all_info_both_lanes(idxssi==ii_k);
+    mean_lane1=mean(these_ssi_all_info_lane1(~isnan(these_ssi_all_info_lane1)));
+    per_cluster.cluster(ii_k).mean_lane1=mean_lane1;
+    per_cluster.cluster(ii_k).these_ssi_all_info_lane1=these_ssi_all_info_lane1(~isnan(these_ssi_all_info_lane1));
+    mean_lane4=mean(these_ssi_all_info_lane4(~isnan(these_ssi_all_info_lane4)));
+    per_cluster.cluster(ii_k).mean_lane4=mean_lane4;
+    per_cluster.cluster(ii_k).these_ssi_all_info_lane4=these_ssi_all_info_lane4(~isnan(these_ssi_all_info_lane4));
+    mean_both=mean(these_ssi_all_info_both_lanes(~isnan(these_ssi_all_info_both_lanes)));
+    per_cluster.cluster(ii_k).mean_both=mean_both;
+    per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes=these_ssi_all_info_both_lanes(~isnan(these_ssi_all_info_both_lanes));
+
+    fprintf(1, ['\nMean SSI for cluster ' num2str(ii_k) ' lane1, lane 4, both: '...
+        num2str(mean_lane1) ' ' num2str(mean_lane4) ' ' num2str(mean_both) '\n'])
+end
+
+% Step 3: Plot the results
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+for ii_k=1:no_clusters
+    switch ii_k
+        case 1
+            plot(mappedX(idxssi==ii_k,1),mappedX(idxssi==ii_k,2),'.','MarkerFaceColor',[230/255 159/255 0/255],'MarkerEdgeColor',[230/255 159/255 0/255]);
+        case 2
+            plot(mappedX(idxssi==ii_k,1),mappedX(idxssi==ii_k,2),'.','MarkerFaceColor',[86/255 180/255 233/255],'MarkerEdgeColor',[86/255 180/255 233/255]);
+        case 3
+            plot(mappedX(idxssi==ii_k,1),mappedX(idxssi==ii_k,2),'.','MarkerFaceColor',[0/255 158/255 115/255],'MarkerEdgeColor',[0/255 158/255 115/255]);
+            % case 4
+            % plot(mappedX(idxssi==ii_k,1),mappedX(idxssi==ii_k,2),'.','MarkerFaceColor',[204/255 121/255 167/255],'MarkerEdgeColor',[204/255 121/255 167/255]);
+    end
+end
+
+text(-55,20,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(-55,10,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(-55,0,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+xlabel('t-SNE Component 1');
+ylabel('t-SNE Component 2');
+title(['t-SNE for SSI for xy and dFF for each lane vs both lanes' ]);
+
+%Plot cumulative histograms for SSIs
+for ii_k=1:no_clusters
+    %SSIs
+    figureNo=figureNo+1;
+    try
+        close(figureNo)
+    catch
+    end
+    hFig=figure(figureNo);
+    hold on
+
+    ax=gca;ax.LineWidth=3;
+    set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+    [f_aic,x_aic] = drg_ecdf(these_ssis);
+    plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
+
+    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+    [f_aic,x_aic] = drg_ecdf(these_ssis); %xy x bindFF for lane 4
+    plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
+
+    % these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes;
+    % [f_aic,x_aic] = drg_ecdf(these_ssis);   %xy x bindFF x lane
+    % plot(x_aic,f_aic,'Color',[213/255 94/255 0/255],'LineWidth',3)
+
+    plot([3 3],[0 1],'-k','LineWidth',2)
+
+    title(['SSIs for Cluster ' num2str(ii_k)])
+    ylabel('Cumulative probability')
+    xlabel('SSI')
+
+    text(5,0.4,'Lane 1','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
+    text(5,0.3,'Lane 4','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
+    % text(10,0.2,'SSI MI xy x bindFF both lanes','Color',[213/255 94/255 0/255],'FontWeight','bold','FontSize',16)
+    xlim([-5 15])
+end
+% 
+% %Plot cumulative histograms for SSI lane 1
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% for ii_k=1:no_clusters
+%     %SSIs
+% 
+%     switch ii_k
+%         case 1
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+%         case 2
+% 
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+%         case 3
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+%     end
+% 
+% 
+% end
+% 
+% text(10,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+% text(10,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+% text(10,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+% 
+% title(['SSI for lane 1'])
+% ylabel('Cumulative probability')
+% xlabel('SSI')
+% xlim([-5 35])
+% 
+% 
+% %Plot cumulative histograms for SSI lane 4
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% for ii_k=1:no_clusters
+%     %SSIs
+% 
+%     switch ii_k
+%         case 1
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+%         case 2
+% 
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+%         case 3
+%             these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+%             [f_aic,x_aic] = drg_ecdf(these_ssis);
+%             plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+%     end
+% 
+% 
+% end
+% 
+% text(10,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+% text(10,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+% text(10,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+% 
+% title(['SSI for lane 4'])
+% ylabel('Cumulative probability')
+% xlabel('SSI')
+% xlim([-5 35])
+
+
+%Plot cumulative histograms for SSI both lanes
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+for ii_k=1:no_clusters
+    %SSIs
+
+    switch ii_k
+        case 1
+            these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes;
+            [f_aic,x_aic] = drg_ecdf(these_ssis);
+            plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+        case 2
+
+            these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes;
+            [f_aic,x_aic] = drg_ecdf(these_ssis);
+            plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+        case 3
+            these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes;
+            [f_aic,x_aic] = drg_ecdf(these_ssis);
+            plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+    end
+
 
 end
+
+
+text(10,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(10,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(10,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+title(['SSI for both lanes'])
+ylabel('Cumulative probability')
+xlabel('SSI')
+xlim([-5 35])
+
+%Difference in SSIs
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+for ii_k=1:no_clusters
+    
+  
+
+    these_ssis_lane1=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+    these_ssis_lane4=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+
+    switch ii_k
+        case 1
+            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1);
+            plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+        case 2
+            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1); %xy x bindFF for lane 4
+            plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+        case 3
+            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1);   %xy x bindFF x lane
+            plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+    end
+
+    
+end
+plot([0 0],[0 1],'-k')
+title(['SSI4 -SSI1'])
+ylabel('Cumulative probability')
+xlabel('Delta SSI')
+xlim([-15 15])
+
+text(5,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(5,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(5,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+
+
+%Load correlations, etc
+load([save_PathPredImp save_FilePredImp])
+
+%Correlations
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+for ii_k=1:no_clusters
+    
+  
+
+    these_rhos=imps.all_spatial_rhol1l4(idxssi==ii_k);
+    these_rhos=these_rhos(~isnan(these_rhos));
+
+    switch ii_k
+        case 1
+            [f_aic,x_aic] = drg_ecdf(these_rhos);
+            plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+        case 2
+            [f_aic,x_aic] = drg_ecdf(these_rhos); %xy x bindFF for lane 4
+            plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+        case 3
+            [f_aic,x_aic] = drg_ecdf(these_rhos);   %xy x bindFF x lane
+            plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+    end
+
+    
+end
+plot([0 0],[0 1],'-k')
+title(['rho lane 1 vs lane 4'])
+ylabel('Cumulative probability')
+xlabel('rho')
+xlim([-0.5 1])
+
+text(0.1,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(0.1,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(0.1,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+%Center of mass
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+for ii_k=1:no_clusters
+    
+these_dcoms=imps.all_delta_center_of_mass(idxssi==ii_k);
+    these_dcoms=these_dcoms(~isnan(these_dcoms));
+    switch ii_k
+        case 1
+            [f_aic,x_aic] = drg_ecdf(these_dcoms);
+            plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+        case 2
+            [f_aic,x_aic] = drg_ecdf(these_dcoms); %xy x bindFF for lane 4
+            plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+        case 3
+            [f_aic,x_aic] = drg_ecdf(these_dcoms);   %xy x bindFF x lane
+            plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+    end
+
+    
+end
+plot([0 0],[0 1],'-k')
+title(['Distance of center of mass'])
+ylabel('Cumulative probability')
+xlabel('Distance (mm)')
+xlim([0 400])
+
+text(100,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(100,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(100,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+%Plot histograms for spatial correlation and distance for the center of
+%mass
+
+%Spatial correlation
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+these_rhos=imps.all_spatial_rhol1l4;
+these_rhos=these_rhos(~isnan(these_rhos));
+
+edges=[-0.5:0.1:1];
+histogram(these_rhos,edges)
+title('Histogram for spatial correlation')
+xlabel('Spatial correlation')
+ylabel('Count')
+
+
+%Distance center of mass
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+these_dcoms=imps.all_delta_center_of_mass;
+these_dcoms=these_dcoms(~isnan(these_dcoms));
+
+edges=[0:20:500];
+histogram(these_dcoms,edges)
+title('Histogram for distance between center of mass')
+xlabel('Distance (mm)')
+ylabel('Count')
+
+
+
+% for ii_ROI=1:length(ii_all_ROIs)
+%     if (~isnan(ssi_all_info_lane1(ii_ROI)))&(~isnan(ssi_all_info_lane4(ii_ROI)))&(~isnan(ssi_all_info_both_lanes(ii_ROI)))
+%         if (ssi_all_info_both_lanes(ii_ROI)>7)&(abs(ssi_all_info_lane1(ii_ROI)-ssi_all_info_lane4(ii_ROI))<1)
+%             plot(mappedX(not_nan_ii_allROIs(ii_ROI),1),mappedX(not_nan_ii_allROIs(ii_ROI),2),'.','MarkerFaceColor',[0/255 0/255 0/255],'MarkerEdgeColor',[0/255 0/255 0/255]);
+%         end
+%     end
+% end
+
+%Plot the cumulative histograms for the normalized SSIs
+% 
+% %Fraction of correlated spatial patterns
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% bar_offset=0;
+% rho_thr=0.3;
+% 
+% %predictive importance for x
+% for ii_k=1:3
+%     these_rhos=imps.all_spatial_rhol1l4(idxssi==ii_k);
+%     these_rhos=these_rhos(~isnan(these_rhos));
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,sum(these_rhos>rho_thr)/length(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%         case 2
+%             bar(bar_offset+1,sum(these_rhos>rho_thr)/length(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%         case 3
+%             bar(bar_offset+2,sum(these_rhos>rho_thr)/length(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%     end
+% end
+% 
+% 
+% %Fraction of high SSI
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% bar_offset=0;
+% 
+% SSI_both_thr=5;
+% SSI_lane_thr=3;
+% 
+% %Fraction of place cells
+% for ii_k=1:3
+%     these_pos=(ssi_all_info_both_lanes>SSI_both_thr)&(abs(ssi_all_info_lane1-ssi_all_info_lane4)<1);
+%     these_pos=these_pos( (~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+%     these_pos=these_pos&(idxssi==ii_k);
+%     this_frac=sum(these_pos)/sum(idxssi==ii_k);
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%         case 2
+%             bar(bar_offset+1,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%         case 3
+%             bar(bar_offset+2,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%     end
+% end
+% 
+% bar_offset=bar_offset+4;
+% 
+% %Fraction of lane 1 place cells
+% for ii_k=1:3
+%     these_pos=(ssi_all_info_lane1>SSI_lane_thr)&((ssi_all_info_lane1-ssi_all_info_lane4)>0.5)&(ssi_all_info_both_lanes<SSI_both_thr);
+%     these_pos=these_pos( (~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+%     these_pos=these_pos&(idxssi==ii_k);
+%     this_frac=sum(these_pos)/sum(idxssi==ii_k);
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%         case 2
+%             bar(bar_offset+1,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%         case 3
+%             bar(bar_offset+2,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%     end
+% end
+% 
+% bar_offset=bar_offset+4;
+% 
+% %Fraction of lane 4 place cells
+% for ii_k=1:3
+%     these_pos=(ssi_all_info_lane4>SSI_lane_thr)&((ssi_all_info_lane4-ssi_all_info_lane1)>0.5)&(ssi_all_info_both_lanes<SSI_both_thr);
+%     these_pos=these_pos( (~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+%     these_pos=these_pos&(idxssi==ii_k);
+%     this_frac=sum(these_pos)/sum(idxssi==ii_k);
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%         case 2
+%             bar(bar_offset+1,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%         case 3
+%             bar(bar_offset+2,this_frac,'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%     end
+% end
+% 
+% text(7,0.28,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+% text(7,0.25,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+% text(7,0.22,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+% 
+% % xlabel('Fraction of ROIs');
+% xticks([1 5 9])
+% xticklabels({'Place cells','Place cells l1','Place cells l4'})
+% ylabel('Fraction of ROIs');
+% title(['Fraction of ROIs in each t-SNE cluster' ]);
+% 
+% %Spatial correlations of the spatial pattern
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% bar_offset=0;
+% edges=[0:0.05:1];
+% rand_offset=0.5;
+% 
+% %predictive importance for x
+% for ii_k=1:3
+%     these_rhos=imps.all_spatial_rhol1l4(idxssi==ii_k);
+%     these_rhos=these_rhos(~isnan(these_rhos));
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,mean(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_rhos...
+%                 ,edges,bar_offset,rand_offset,'k','k',1);
+%         case 2
+%             bar(bar_offset+1,mean(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_rhos...
+%                 ,edges,bar_offset+1,rand_offset,'k','k',1);
+%         case 3
+%             bar(bar_offset+2,mean(these_rhos),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_rhos...
+%                 ,edges,bar_offset+2,rand_offset,'k','k',1);
+%     end
+% 
+% 
+% 
+% end
+% 
+% 
+% 
+% 
+% % 
+% % text(4,0.7,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+% % text(4,0.62,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+% % text(4,0.54,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+% 
+% xticks([0 1 2])
+% xticklabels({'Cluster 1','Cluster 2','Cluster 3'})
+% xtickangle(45)
+% 
+% title(['Spatial correlation for the different clusters'])
+% ylabel('Rho')
+% ylim([-1 1])
+% xlim([-1 3])
+% 
+% 
+% %Center of mass distances of the spatial pattern
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% bar_offset=0;
+% edges=[0:25:500];
+% rand_offset=0.5;
+% 
+% %predictive importance for x
+% for ii_k=1:3
+%     these_dcoms=imps.all_delta_center_of_mass(idxssi==ii_k);
+%     these_dcoms=these_dcoms(~isnan(these_dcoms));
+%     switch ii_k
+%         case 1
+%             bar(bar_offset,mean(these_dcoms),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_dcoms...
+%                 ,edges,bar_offset,rand_offset,'k','k',1);
+%         case 2
+%             bar(bar_offset+1,mean(these_dcoms),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_dcoms...
+%                 ,edges,bar_offset+1,rand_offset,'k','k',1);
+%         case 3
+%             bar(bar_offset+2,mean(these_dcoms),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+%             %Violin plot
+%             [mean_out, CIout,violin_x]=drgViolinPoint(these_dcoms...
+%                 ,edges,bar_offset+2,rand_offset,'k','k',1);
+%     end
+% 
+% 
+% 
+% end
+% 
+% % 
+% % text(4,0.7,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+% % text(4,0.62,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+% % text(4,0.54,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+% 
+% xticks([0 1 2])
+% xticklabels({'Cluster 1','Cluster 2','Cluster 3'})
+% xtickangle(45)
+% 
+% title(['Difference in the center of mass'])
+% ylabel('delta com')
+% ylim([0 350])
+% xlim([-1 3])
+
+
+%Plot histograms
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+hold on
+
+[f_aic,x_aic] = drg_ecdf(all_info_both_lanes);
+plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(all_all_info_both_lanes_sh);
+plot(x_aic,f_aic,'-.','Color',[230/255 159/255 0/255],'LineWidth',3)
+
+
+[f_aic,x_aic] = drg_ecdf(all_info_op_bin); %xy x bindFF for lane 4
+plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(all_all_info_op_bin_sh);
+plot(x_aic,f_aic,'-.','Color',[86/255 180/255 233/255],'LineWidth',3)
+
+
+[f_aic,x_aic] = drg_ecdf(all_info_mutual_xy_op_bin);  
+plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(all_all_info_mutual_xy_op_bin_sh);  
+plot(x_aic,f_aic,'-.','Color',[0/255 158/255 115/255],'LineWidth',3)
+
+
+[f_aic,x_aic] = drg_ecdf(all_info_mutual_info_dFFbin_xy_op_bin);
+plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
+
+[f_aic,x_aic] = drg_ecdf(all_all_info_mutual_info_dFFbin_xy_op_bin_sh);
+plot(x_aic,f_aic,'-.','Color',[0/255 114/255 178/255],'LineWidth',3)
+
+
+these_ylim=ylim;
+these_xlim=xlim;
+text(0.45,0.4,'MI xy x bindFF both lanes','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(0.45,0.35,'MI op x bindFF','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(0.45,0.30,'MI op x xy','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+text(0.45,0.25,'MI op x bindFF x xy','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.20,'MI op x bindFF','Color',[0/255 114/255 178/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.15,'MI op x bindFF x xy','Color',[213/255 94/255 0/255],'FontWeight','bold','FontSize',16)
+% text(0.3,0.10,'MI op x xy','Color',[204/255 121/255 167/255],'FontWeight','bold','FontSize',16)
+
+title('Cumulative histograms for mutual information')
+xlabel('Information bits')
+ylabel('Cumulative fraction')
+
 
 %Plot histograms
 figureNo=figureNo+1;
@@ -1515,7 +2353,7 @@ for ii_k=1:3
         case 3
             plot(mappedX(idx==ii_k,1),mappedX(idx==ii_k,2),'.','MarkerFaceColor',[0/255 158/255 115/255],'MarkerEdgeColor',[0/255 158/255 115/255]);
             % case 4
-            % plot(mappedX(idx==ii_k,1),mappedX(idx==ii_k,2),'.','MarkerFaceColor',[240/255 228/255 66/255],'MarkerEdgeColor',[240/255 228/255 66/255]);
+            % plot(mappedX(idx==ii_k,1),mappedX(idx==ii_k,2),'.','MarkerFaceColor',[204/255 121/255 167/255],'MarkerEdgeColor',[204/255 121/255 167/255]);
     end
 end
 
@@ -3594,7 +4432,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 1, SI= ' num2str(all_info_lane1(ii_ROI_all))];
+                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_lane1(ii_ROI_all))];
                 if sig_all_info_lane1(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -3641,7 +4479,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 4, SI= ' num2str(all_info_lane4(ii_ROI_all))];
+                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_lane4(ii_ROI_all))];
                 if sig_all_info_lane4(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -3673,7 +4511,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 4, SI= ' num2str(all_info_lane4(ii_ROI_all))];
+                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_lane4(ii_ROI_all))];
                 if sig_all_info_lane4(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -3716,7 +4554,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 1, SI= ' num2str(all_info_lane1(ii_ROI_all))];
+                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_lane1(ii_ROI_all))];
                 if sig_all_info_lane1(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -3724,29 +4562,29 @@ for fileNo=1:length(handles_conc.arena_file)
             end
 
 
-            sgt_legend=['dFF map file  No ' num2str(fileNo) ' ROI No ' num2str(ii_ROI) ' MI= ' num2str(all_info_mutual_info14(ii_ROI_all))];
+            sgt_legend=['dFF map file  No ' num2str(fileNo) ' ROI No ' num2str(ii_ROI) ' SSI both= ' num2str(ssi_all_info_both_lanes(ii_ROI_all))...
+                ' rho= ' num2str(imps.all_spatial_rhol1l4(ii_ROI_all)) ' dCOM= ' num2str(imps.all_delta_center_of_mass(ii_ROI_all)) ' mm '...
+                'SSIop= ' num2str(ssi_all_info_op_bin(ii_ROI_all))];
 
 
+            % 
+            % if sig_all_info_mutual_info14(ii_ROI_all)==1
+            %     sgt_legend=[sgt_legend ' S']; %MI is significant
+            % end
 
+            % if sum(ii_ROI==imps.file(fileNo).ROIs_conc)>0
+            %     sgt_legend=[sgt_legend ' odor '];
+            % end
+            % 
+            % if sum(ii_ROI==imps.file(fileNo).ROIs_x)>0
+            %     sgt_legend=[sgt_legend ' x '];
+            % end
+            % 
+            % if sum(ii_ROI==imps.file(fileNo).ROIs_y)>0
+            %     sgt_legend=[sgt_legend ' y '];
+            % end
 
-
-            if sig_all_info_mutual_info14(ii_ROI_all)==1
-                sgt_legend=[sgt_legend ' S']; %MI is significant
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_conc)>0
-                sgt_legend=[sgt_legend ' odor '];
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_x)>0
-                sgt_legend=[sgt_legend ' x '];
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_y)>0
-                sgt_legend=[sgt_legend ' y '];
-            end
-
-            switch idx(ii_ROI_all)
+            switch idxssi(ii_ROI_all)
                 case 1
                     sgt_legend=[sgt_legend ' cl1 '];
                 case 2
@@ -3756,6 +4594,15 @@ for fileNo=1:length(handles_conc.arena_file)
             end
 
             sgtitle(sgt_legend)
+
+            switch idxssi(ii_ROI_all)
+                case 1
+                    pffft=1;
+                case 2
+                    pffft=1;
+                case 3
+                    pffft=1;
+            end
 
             %Now do glm
             tbl = table(glm_div.data',glm_div.trial_type',glm_div.time',...
@@ -3799,6 +4646,20 @@ for fileNo=1:length(handles_conc.arena_file)
             if (fileNo==14)&(ii_ROI==8)
                 pffft=1;
             end
+
+            if (ssi_all_info_both_lanes(ii_ROI_all)>15)&(imps.all_spatial_rhol1l4(ii_ROI_all)>0.7)
+                pffft=1;
+            end
+
+             if (ssi_all_info_both_lanes(ii_ROI_all)>15)&(imps.all_spatial_rhol1l4(ii_ROI_all)<0.3)
+                pffft=1;
+            end
+
+
+            if ssi_all_info_op_bin(ii_ROI_all)>3
+                pffft=1;
+            end
+   
 
         end
     end

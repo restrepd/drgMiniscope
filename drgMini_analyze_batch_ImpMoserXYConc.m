@@ -747,7 +747,10 @@ for fileNo=1:length(handles_conc.arena_file)
         load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
         trials=handles_out.trials;
         no_neurons=handles_out.no_neurons;
-
+   
+        if fileNo==20
+            pffft=1;
+        end
 
         angle_file=handles_Angle.arena_file{fileNo};
         %load the ouptut file
@@ -761,377 +764,381 @@ for fileNo=1:length(handles_conc.arena_file)
         place_cells=[];
         no_lane_trial_cells=0;
         lane_trial_cells=[];
+      
         for ii_ROI=1:length(these_important_ROIs)
+            
+                this_ROI=these_important_ROIs(ii_ROI);
+                spatial_rhol1l4=imps.file(fileNo).spatial_rhol1l4;
+                delta_center_of_mass=imps.file(fileNo).delta_center_of_mass;
+                SSI=imps.file(fileNo).information_content;
+                SSIl1=imps.file(fileNo).information_contentl1;
+                SSIl4=imps.file(fileNo).information_contentl4;
+                sparsity=imps.file(fileNo).sparsity;
 
-            this_ROI=these_important_ROIs(ii_ROI);
-            spatial_rhol1l4=imps.file(fileNo).spatial_rhol1l4;
-            delta_center_of_mass=imps.file(fileNo).delta_center_of_mass;
-            SSI=imps.file(fileNo).information_content;
-            SSIl1=imps.file(fileNo).information_contentl1;
-            SSIl4=imps.file(fileNo).information_contentl4;
-            sparsity=imps.file(fileNo).sparsity;
+                %Initialize variables
+                this_dFF_activity=zeros(10,10);
+                this_dFF_activity_n=zeros(10,10);
+                sum_dFF_activity=0;
 
-            %Initialize variables
-            this_dFF_activity=zeros(10,10);
-            this_dFF_activity_n=zeros(10,10);
-            sum_dFF_activity=0;
+                this_dFFl1_activity=zeros(10,10);
+                this_dFFl1_activity_n=zeros(10,10);
+                sum_dFFl1_activity=0;
 
-            this_dFFl1_activity=zeros(10,10);
-            this_dFFl1_activity_n=zeros(10,10);
-            sum_dFFl1_activity=0;
-
-            this_dFFl4_activity=zeros(10,10);
-            this_dFFl4_activity_n=zeros(10,10);
-            sum_dFFl4_activity=0;
+                this_dFFl4_activity=zeros(10,10);
+                this_dFFl4_activity_n=zeros(10,10);
+                sum_dFFl4_activity=0;
 
 
-            for trNo=1:trials.odor_trNo
-                these_x=trials.trial(trNo).XYtest(:,1);
-                these_y=trials.trial(trNo).XYtest(:,2);
-                these_dFF=trials.trial(trNo).XdFFtest(:,these_important_ROIs(ii_ROI));
+                for trNo=1:trials.odor_trNo
+                    these_x=trials.trial(trNo).XYtest(:,1);
+                    these_y=trials.trial(trNo).XYtest(:,2);
+                    these_dFF=trials.trial(trNo).XdFFtest(:,these_important_ROIs(ii_ROI));
 
-                for ii_t=1:length(these_x)
-                    this_x_ii=ceil(these_x(ii_t)/50);
-                    if this_x_ii==11
-                        this_x_ii=10;
+                    for ii_t=1:length(these_x)
+                        this_x_ii=ceil(these_x(ii_t)/50);
+                        if this_x_ii==11
+                            this_x_ii=10;
+                        end
+
+                        this_y_ii=ceil(these_y(ii_t)/48);
+                        if this_y_ii==11
+                            this_y_ii=10;
+                        end
+
+                        this_dFF_activity(this_x_ii,this_y_ii)=this_dFF_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
+                        sum_dFF_activity=sum_dFF_activity+these_dFF(ii_t);
+
+                        if trials.lane_per_trial(trNo)==1
+                            this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                            this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
+                            sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+                        else
+                            this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                            this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
+                            sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        end
                     end
+                end
 
-                    this_y_ii=ceil(these_y(ii_t)/48);
-                    if this_y_ii==11
-                        this_y_ii=10;
+                for ii_x=1:10
+                    for ii_y=1:10
+                        if this_dFF_activity_n(ii_x,ii_y)~=0
+                            this_dFF_activity(ii_x,ii_y)=this_dFF_activity(ii_x,ii_y)/this_dFF_activity_n(ii_x,ii_y);
+                        end
                     end
+                end
 
-                    this_dFF_activity(this_x_ii,this_y_ii)=this_dFF_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                    this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
-                    sum_dFF_activity=sum_dFF_activity+these_dFF(ii_t);
+                for ii_x=1:10
+                    for ii_y=1:10
+                        if this_dFFl1_activity_n(ii_x,ii_y)~=0
+                            this_dFFl1_activity(ii_x,ii_y)=this_dFFl1_activity(ii_x,ii_y)/this_dFFl1_activity_n(ii_x,ii_y);
+                        end
+                    end
+                end
 
-                    if trials.lane_per_trial(trNo)==1
-                        this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
-                        sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+                for ii_x=1:10
+                    for ii_y=1:10
+                        if this_dFFl4_activity_n(ii_x,ii_y)~=0
+                            this_dFFl4_activity(ii_x,ii_y)=this_dFFl4_activity(ii_x,ii_y)/this_dFFl4_activity_n(ii_x,ii_y);
+                        end
+                    end
+                end
+
+                %Plot the space activity maps
+                try
+                    close(figNo)
+                catch
+                end
+
+
+                hFig = figure(figNo);
+                set(hFig, 'units','normalized','position',[.1 .1 .75 .75])
+
+
+
+                % %Plot dFF timecourses
+                % subplot(2,3,1:3)
+                % hold on
+                % ii_plot=0;
+
+                %Find turn points and time vectors
+                all_ii_turns=zeros(1,trials.odor_trNo);
+                all_ii_ends=zeros(1,trials.odor_trNo);
+                include_trial=zeros(1,trials.odor_trNo);
+                for trNo=1:trials.odor_trNo
+                    this_ii_last_turn=find(angles.trial(trNo).delta_x>=100,1,'last');
+                    if ~isempty(this_ii_last_turn)
+                        all_ii_turns(trNo)=angles.trial(trNo).ii_turns(this_ii_last_turn);
+                        all_ii_ends(trNo)= size(trials.trial(trNo).XYtest,1);
+                        include_trial(trNo)=1;
                     else
-                        this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
-                        sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        pffft=1;
                     end
                 end
-            end
 
-            for ii_x=1:10
-                for ii_y=1:10
-                    if this_dFF_activity_n(ii_x,ii_y)~=0
-                        this_dFF_activity(ii_x,ii_y)=this_dFF_activity(ii_x,ii_y)/this_dFF_activity_n(ii_x,ii_y);
+                delta_below_zero_ii=max(all_ii_turns(include_trial==1));
+                delta_above_zero_ii=max(all_ii_ends(include_trial==1)-all_ii_turns(include_trial==1));
+                time_bins=handles_XY.dt*([1:delta_below_zero_ii+delta_above_zero_ii]-delta_below_zero_ii);
+
+                hit1_dFF=[];
+                ii_hit1=0;
+                miss1_dFF=[];
+                ii_miss1=0;
+                hit4_dFF=[];
+                ii_hit4=0;
+                miss4_dFF=[];
+                ii_miss4=0;
+
+                for trNo=1:trials.odor_trNo
+                    if include_trial(trNo)==1
+                        these_dFF=trials.trial(trNo).XdFFtest(:,these_important_ROIs(ii_ROI));
+                        %Okabe_Ito colors
+                        switch trials.odor_trial_type(trNo)
+                            case 1
+                                %Lane 1 hits vermillion
+                                ii_hit1=ii_hit1+1;
+                                hit1_dFF(ii_hit1,1:length(time_bins))=min(these_dFF);
+                                hit1_dFF(ii_hit1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+                            case 2
+                                %Lane 1 miss orange
+                                ii_miss1=ii_miss1+1;
+                                miss1_dFF(ii_miss1,1:length(time_bins))=min(these_dFF);
+                                miss1_dFF(ii_miss1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+                            case 3
+                                %Lane 4 hit blue
+                                ii_hit4=ii_hit4+1;
+                                hit4_dFF(ii_hit4,1:length(time_bins))=min(these_dFF);
+                                hit4_dFF(ii_hit4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+                            case 4
+                                %Lane 4 miss sky blue
+                                ii_miss4=ii_miss4+1;
+                                miss4_dFF(ii_miss4,1:length(time_bins))=min(these_dFF);
+                                miss4_dFF(ii_miss4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
+                        end
                     end
                 end
-            end
 
-            for ii_x=1:10
-                for ii_y=1:10
-                    if this_dFFl1_activity_n(ii_x,ii_y)~=0
-                        this_dFFl1_activity(ii_x,ii_y)=this_dFFl1_activity(ii_x,ii_y)/this_dFFl1_activity_n(ii_x,ii_y);
+                %Plot dFFs for lane 1 and 4
+                y_gap=2;
+                hit_miss_1=zeros(size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
+                hit_miss_1(size(miss1_dFF,1)+y_gap+1:size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,:)=hit1_dFF;
+                hit_miss_1(1:size(miss1_dFF,1),:)=miss1_dFF;
+
+                y_trials1=[1:size(hit_miss_1,1)];
+
+                hit_miss_4=zeros(size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
+                hit_miss_4(size(miss4_dFF,1)+y_gap+1:size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,:)=hit4_dFF;
+                hit_miss_4(1:size(miss4_dFF,1),:)=miss4_dFF;
+
+                y_trials4=[1:size(hit_miss_4,1)];
+
+                y_trials_end=max([y_trials1(end) y_trials4(end)])
+
+                %Plot dFF for lane 1
+                subplot(2, 6, [1 2 3]);
+                hold on
+
+                drg_pcolor(repmat(time_bins,length(y_trials1),1),repmat(y_trials1,length(time_bins),1)',hit_miss_1)
+                colormap(this_cmap)
+                clim([0 max(hit_miss_1(:))])
+                shading flat
+                plot([0 0],[y_trials1(1) y_trials1(end)+1],'-w','LineWidth',3)
+
+                %y_trials1=1 to 2 is the first miss
+                %size(miss1_dFF,1) to size(miss1_dFF,1) + 1 is the last miss,
+                %size(miss1_dFF,1)+1 to size(miss1_dFF,1)+1+y_gap is the in between miss
+                %and hit
+                %size(miss1_dFF,1)+1+y_gap to size(miss1_dFF,1)+1+y_gap+size(hit1_dFF,1) is
+                %hit
+
+                rectangle('Position', [time_bins(1), size(miss1_dFF,1)+1, 1.03*(time_bins(end)-time_bins(1)), y_gap], ... % [x, y, width, height]
+                    'FaceColor', 'white', ...    % Fill color (white)
+                    'EdgeColor', 'none');        % No border for the rectangle
+
+                ylim([0 y_trials_end+2])
+                xlim([time_bins(1)-0.05*(time_bins(end)-time_bins(1)) time_bins(end)+0.05*(time_bins(end)-time_bins(1)) ])
+                xlabel('Time (sec)')
+                yticks([1+(size(miss1_dFF,1)/2) size(miss1_dFF,1)+1+y_gap+(size(hit1_dFF,1)/2)])
+                yticklabels({'Misses','Hits'})
+                title(['Lane 1 dFF'])
+
+                %Plot dFF for lane 4
+                subplot(2, 6, [4 5 6]);
+                hold on
+
+                drg_pcolor(repmat(time_bins,length(y_trials4),1),repmat(y_trials4,length(time_bins),1)',hit_miss_4)
+                colormap(this_cmap)
+                clim([0 max(hit_miss_4(:))])
+                shading flat
+                plot([0 0],[y_trials4(1) y_trials4(end)+1],'-w','LineWidth',3)
+
+                rectangle('Position', [time_bins(1), size(miss4_dFF,1)+1, 1.03*(time_bins(end)-time_bins(1)), y_gap], ... % [x, y, width, height]
+                    'FaceColor', 'white', ...    % Fill color (white)
+                    'EdgeColor', 'none');        % No border for the rectangle
+                ylim([0 y_trials_end+2])
+                xlim([time_bins(1)-0.05*(time_bins(end)-time_bins(1)) time_bins(end)+0.05*(time_bins(end)-time_bins(1)) ])
+                xlabel('Time (sec)')
+                yticks([1+(size(miss4_dFF,1)/2) size(miss4_dFF,1)+1+y_gap+(size(hit4_dFF,1)/2)])
+                yticklabels({'Misses','Hits'})
+                title(['Lane 4 dFF'])
+
+                %Plot space activity maps as in Moser https://doi.org/10.1126/science.1114037
+                max_this_dFF_activity=max(this_dFF_activity(:));
+                max_this_dFFl4_activity=max(this_dFFl4_activity(:));
+                max_this_dFFl1_activity=max(this_dFFl1_activity(:));
+
+                colormap fire
+                this_cmap=colormap;
+                this_cmap(1,:)=[0.3 0.3 0.3];
+
+                if max_this_dFFl1_activity>max_this_dFFl4_activity
+                    %Lane 1
+                    subplot(2, 6, [7 8]);
+                    max_activity=max_this_dFFl1_activity;
+                    delta_ac=max_activity/255;
+                    if delta_ac==0
+                        delta_ac=0.000001;
                     end
-                end
-            end
+                    this_masked_dFFl1_activity=this_dFFl1_activity;
+                    this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
 
-            for ii_x=1:10
-                for ii_y=1:10
-                    if this_dFFl4_activity_n(ii_x,ii_y)~=0
-                        this_dFFl4_activity(ii_x,ii_y)=this_dFFl4_activity(ii_x,ii_y)/this_dFFl4_activity_n(ii_x,ii_y);
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 1, SSI= ' num2str(SSIl1(this_ROI))])
+
+                    %Lane 4 normalized to lane 1
+                    subplot(2, 6, [9 10]);
+                    max_activity=max_this_dFFl1_activity;
+                    this_masked_dFFl4_activity=this_dFFl4_activity;
+                    this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
+
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 4'])
+
+                    %Lane 4 normalized to lane 4
+                    subplot(2, 6, [11 12]);
+                    max_activity=max_this_dFFl4_activity;
+                    delta_ac=max_activity/255;
+                    if delta_ac==0
+                        delta_ac=0.000001;
                     end
-                end
-            end
+                    this_masked_dFFl4_activity=this_dFFl4_activity;
+                    this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
 
-            %Plot the space activity maps
-            try
-                close(figNo)
-            catch
-            end
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 4, SSI= ' num2str(SSIl4(this_ROI))])
 
-
-            hFig = figure(figNo);
-            set(hFig, 'units','normalized','position',[.1 .1 .75 .75])
-
-
-
-            % %Plot dFF timecourses
-            % subplot(2,3,1:3)
-            % hold on
-            % ii_plot=0;
-
-            %Find turn points and time vectors
-            all_ii_turns=zeros(1,trials.odor_trNo);
-            all_ii_ends=zeros(1,trials.odor_trNo);
-            include_trial=zeros(1,trials.odor_trNo);
-            for trNo=1:trials.odor_trNo
-                this_ii_last_turn=find(angles.trial(trNo).delta_x>=100,1,'last');
-                if ~isempty(this_ii_last_turn)
-                    all_ii_turns(trNo)=angles.trial(trNo).ii_turns(this_ii_last_turn);
-                    all_ii_ends(trNo)= size(trials.trial(trNo).XYtest,1);
-                    include_trial(trNo)=1;
                 else
+
+
+                    %Lane 4 normalized to lane 4
+                    subplot(2, 6, [7 8]);
+                    max_activity=max_this_dFFl4_activity;
+                    delta_ac=max_activity/255;
+                    if delta_ac==0
+                        delta_ac=0.000001;
+                    end
+                    this_masked_dFFl4_activity=this_dFFl4_activity;
+                    this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
+
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 4, SSI= ' num2str(SSIl4(this_ROI))])
+
+                    %Lane 1 normalized to lane 4
+                    subplot(2, 6, [9 10]);
+                    max_activity=max_this_dFFl4_activity;
+                    this_masked_dFFl1_activity=this_dFFl1_activity;
+                    this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
+
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 1'])
+
+                    %Lane 1 normalized to lane 1
+                    subplot(2, 6, [11 12]);
+                    max_activity=max_this_dFFl1_activity;
+                    delta_ac=max_activity/255;
+                    if delta_ac==0
+                        delta_ac=0.00001;
+                    end
+                    this_masked_dFFl1_activity=this_dFFl1_activity;
+                    this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                    drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                    colormap(this_cmap)
+                    clim([-1.5*delta_ac max_activity])
+                    shading interp
+                    set(gca, 'YDir', 'reverse');
+
+                    yticks(0:48:480)
+                    xticks(0:50:500)
+                    xlabel('x (mm)')
+                    ylabel('y (mm)')
+                    title(['Lane 1, SSI= ' num2str(SSIl1(this_ROI))])
+                end
+
+
+                sgt_legend=['dFF map file  No ' num2str(fileNo) ' ROI No ' num2str(this_ROI) ', rho ' ...
+                    num2str(spatial_rhol1l4(this_ROI)) ', dcm ' num2str(delta_center_of_mass(this_ROI)),...
+                    ', SSI ' num2str(SSI(this_ROI)),', PI = '];
+
+                if sum(this_ROI==imps.file(fileNo).ROIs_conc)>0
+                    sgt_legend=[sgt_legend ' odor '];
+                end
+
+                if sum(this_ROI==imps.file(fileNo).ROIs_x)>0
+                    sgt_legend=[sgt_legend ' x '];
+                end
+
+                if sum(this_ROI==imps.file(fileNo).ROIs_y)>0
+                    sgt_legend=[sgt_legend ' y '];
+                end
+
+                sgtitle(sgt_legend)
+   
+                if fileNo==20
                     pffft=1;
                 end
-            end
-
-            delta_below_zero_ii=max(all_ii_turns(include_trial==1));
-            delta_above_zero_ii=max(all_ii_ends(include_trial==1)-all_ii_turns(include_trial==1));
-            time_bins=handles_XY.dt*([1:delta_below_zero_ii+delta_above_zero_ii]-delta_below_zero_ii);
-
-            hit1_dFF=[];
-            ii_hit1=0;
-            miss1_dFF=[];
-            ii_miss1=0;
-            hit4_dFF=[];
-            ii_hit4=0;
-            miss4_dFF=[];
-            ii_miss4=0;
-
-            for trNo=1:trials.odor_trNo
-                if include_trial(trNo)==1
-                    these_dFF=trials.trial(trNo).XdFFtest(:,these_important_ROIs(ii_ROI));
-                    %Okabe_Ito colors
-                    switch trials.odor_trial_type(trNo)
-                        case 1
-                            %Lane 1 hits vermillion
-                            ii_hit1=ii_hit1+1;
-                            hit1_dFF(ii_hit1,1:length(time_bins))=min(these_dFF);
-                            hit1_dFF(ii_hit1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
-                        case 2
-                            %Lane 1 miss orange
-                            ii_miss1=ii_miss1+1;
-                            miss1_dFF(ii_miss1,1:length(time_bins))=min(these_dFF);
-                            miss1_dFF(ii_miss1,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
-                        case 3
-                            %Lane 4 hit blue
-                            ii_hit4=ii_hit4+1;
-                            hit4_dFF(ii_hit4,1:length(time_bins))=min(these_dFF);
-                            hit4_dFF(ii_hit4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
-                        case 4
-                            %Lane 4 miss sky blue
-                            ii_miss4=ii_miss4+1;
-                            miss4_dFF(ii_miss4,1:length(time_bins))=min(these_dFF);
-                            miss4_dFF(ii_miss4,delta_below_zero_ii-all_ii_turns(trNo)+1:delta_below_zero_ii+(all_ii_ends(trNo)-all_ii_turns(trNo)))=these_dFF;
-                    end
-                end
-            end
-
-            %Plot dFFs for lane 1 and 4
-            y_gap=2;
-            hit_miss_1=zeros(size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
-            hit_miss_1(size(miss1_dFF,1)+y_gap+1:size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,:)=hit1_dFF;
-            hit_miss_1(1:size(miss1_dFF,1),:)=miss1_dFF;
-
-            y_trials1=[1:size(hit_miss_1,1)];
-
-            hit_miss_4=zeros(size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
-            hit_miss_4(size(miss4_dFF,1)+y_gap+1:size(hit4_dFF,1)+size(miss4_dFF,1)+y_gap,:)=hit4_dFF;
-            hit_miss_4(1:size(miss4_dFF,1),:)=miss4_dFF;
-
-            y_trials4=[1:size(hit_miss_4,1)];
-
-            y_trials_end=max([y_trials1(end) y_trials4(end)])
-
-            %Plot dFF for lane 1
-            subplot(2, 6, [1 2 3]);
-            hold on
+                pffft=1;
             
-            drg_pcolor(repmat(time_bins,length(y_trials1),1),repmat(y_trials1,length(time_bins),1)',hit_miss_1)
-            colormap(this_cmap)
-            clim([0 max(hit_miss_1(:))])
-            shading flat
-            plot([0 0],[y_trials1(1) y_trials1(end)+1],'-w','LineWidth',3)
-
-            %y_trials1=1 to 2 is the first miss
-            %size(miss1_dFF,1) to size(miss1_dFF,1) + 1 is the last miss,
-            %size(miss1_dFF,1)+1 to size(miss1_dFF,1)+1+y_gap is the in between miss
-            %and hit
-            %size(miss1_dFF,1)+1+y_gap to size(miss1_dFF,1)+1+y_gap+size(hit1_dFF,1) is
-            %hit
-
-            rectangle('Position', [time_bins(1), size(miss1_dFF,1)+1, 1.03*(time_bins(end)-time_bins(1)), y_gap], ... % [x, y, width, height]
-                'FaceColor', 'white', ...    % Fill color (white)
-                'EdgeColor', 'none');        % No border for the rectangle
-
-            ylim([0 y_trials_end+2])
-            xlim([time_bins(1)-0.05*(time_bins(end)-time_bins(1)) time_bins(end)+0.05*(time_bins(end)-time_bins(1)) ])
-            xlabel('Time (sec)')
-            yticks([1+(size(miss1_dFF,1)/2) size(miss1_dFF,1)+1+y_gap+(size(hit1_dFF,1)/2)])
-            yticklabels({'Misses','Hits'})
-            title(['Lane 1 dFF'])
-
-            %Plot dFF for lane 4
-            subplot(2, 6, [4 5 6]);
-            hold on
-            
-            drg_pcolor(repmat(time_bins,length(y_trials4),1),repmat(y_trials4,length(time_bins),1)',hit_miss_4)
-            colormap(this_cmap)
-            clim([0 max(hit_miss_4(:))])
-            shading flat
-            plot([0 0],[y_trials4(1) y_trials4(end)+1],'-w','LineWidth',3)
-
-            rectangle('Position', [time_bins(1), size(miss4_dFF,1)+1, 1.03*(time_bins(end)-time_bins(1)), y_gap], ... % [x, y, width, height]
-                'FaceColor', 'white', ...    % Fill color (white)
-                'EdgeColor', 'none');        % No border for the rectangle
-            ylim([0 y_trials_end+2])
-            xlim([time_bins(1)-0.05*(time_bins(end)-time_bins(1)) time_bins(end)+0.05*(time_bins(end)-time_bins(1)) ])
-            xlabel('Time (sec)')
-            yticks([1+(size(miss4_dFF,1)/2) size(miss4_dFF,1)+1+y_gap+(size(hit4_dFF,1)/2)])
-            yticklabels({'Misses','Hits'})
-            title(['Lane 4 dFF'])
-
-            %Plot space activity maps as in Moser https://doi.org/10.1126/science.1114037
-            max_this_dFF_activity=max(this_dFF_activity(:));
-            max_this_dFFl4_activity=max(this_dFFl4_activity(:));
-            max_this_dFFl1_activity=max(this_dFFl1_activity(:));
-
-            colormap fire
-            this_cmap=colormap;
-            this_cmap(1,:)=[0.3 0.3 0.3];
-
-            if max_this_dFFl1_activity>max_this_dFFl4_activity
-                %Lane 1
-                subplot(2, 6, [7 8]);
-                max_activity=max_this_dFFl1_activity;
-                delta_ac=max_activity/255;
-                if delta_ac==0
-                    delta_ac=0.000001;
-                end
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 1, SSI= ' num2str(SSIl1(this_ROI))])
-
-                %Lane 4 normalized to lane 1
-                subplot(2, 6, [9 10]);
-                max_activity=max_this_dFFl1_activity;
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 4'])
-
-                %Lane 4 normalized to lane 4
-                subplot(2, 6, [11 12]);
-                max_activity=max_this_dFFl4_activity;
-                delta_ac=max_activity/255;
-                if delta_ac==0
-                    delta_ac=0.000001;
-                end
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 4, SSI= ' num2str(SSIl4(this_ROI))])
-
-            else
-
-
-                %Lane 4 normalized to lane 4
-                subplot(2, 6, [7 8]);
-                max_activity=max_this_dFFl4_activity;
-                delta_ac=max_activity/255;
-                if delta_ac==0
-                    delta_ac=0.000001;
-                end
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 4, SSI= ' num2str(SSIl4(this_ROI))])
-
-                %Lane 1 normalized to lane 4
-                subplot(2, 6, [9 10]);
-                max_activity=max_this_dFFl4_activity;
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 1'])
-
-                %Lane 1 normalized to lane 1
-                subplot(2, 6, [11 12]);
-                max_activity=max_this_dFFl1_activity;
-                delta_ac=max_activity/255;
-                if delta_ac==0
-                    delta_ac=0.00001;
-                end
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
-                colormap(this_cmap)
-                clim([-1.5*delta_ac max_activity])          
-                shading interp
-                set(gca, 'YDir', 'reverse');
-
-                yticks(0:48:480)
-                xticks(0:50:500)
-                xlabel('x (mm)')
-                ylabel('y (mm)')
-                title(['Lane 1, SSI= ' num2str(SSIl1(this_ROI))])
-            end
-
-
-            sgt_legend=['dFF map file  No ' num2str(fileNo) ' ROI No ' num2str(this_ROI) ', rho ' ...
-                num2str(spatial_rhol1l4(this_ROI)) ', dcm ' num2str(delta_center_of_mass(this_ROI)),...
-                ', SSI ' num2str(SSI(this_ROI)),', PI = '];
-
-            if sum(this_ROI==imps.file(fileNo).ROIs_conc)>0
-                sgt_legend=[sgt_legend ' odor '];
-            end
-
-            if sum(this_ROI==imps.file(fileNo).ROIs_x)>0
-                sgt_legend=[sgt_legend ' x '];
-            end
-
-            if sum(this_ROI==imps.file(fileNo).ROIs_y)>0
-                sgt_legend=[sgt_legend ' y '];
-            end
-
-            sgtitle(sgt_legend)
-      
-            pffft=1;
-
         end
     end
 end

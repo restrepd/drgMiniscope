@@ -1,6 +1,8 @@
-%drgMini_batch_DecodeLane
+%drgMini_batch_DecodeOdorPlumev2
 close all
 clear all
+
+run_slurm=1;
 
 algo_name{1}='SVZ';
 algo_name{2}='NN';
@@ -14,7 +16,12 @@ training_labels{1}='all';
 training_labels{2}='hits';
 training_labels{3}='misses';
 
-[choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniLanePredChoices_*.m'},'Select the .m file with all the choices for analysis');
+if run_slurm==1
+    choiceBatchPathName='/pl/active/restrepo-lab/PreProcessed/';
+    choiceFileName='drgMiniOPPredChoices_03052025.m';
+else
+    [choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniOPPredChoices_*.m'},'Select the .m file with all the choices for analysis');
+end
 
 
 fprintf(1, ['\ndrgMini_batch_dFFPrediction run for ' choiceFileName '\n\n']);
@@ -77,6 +84,11 @@ end
 %Now run the decoder for all files and all choices of algorithms
 tic
 ii_run=1;
+%Note: Shut down of Alpine results in corrupt files being saved
+%To solve this problem I will save the file in two versions
+file_suffix{1}='1.mat';
+file_suffix{2}='2.mat';
+current_suffix=1;
 if all_files_present==1
 
     if ~exist(handles.save_path(1:end-1),'dir')
@@ -84,8 +96,60 @@ if all_files_present==1
     end
 
     if handles.resume_processing==1
-        load([handles.save_path handles.save_file])
-        first_file=length(all_handles.file); 
+        %Note: I had to use two filees because slurm-run programs would
+        %sometimes corrupt the output files when they ended
+
+        file1_success=0;
+        try
+            current_suffix=1;
+            save_file1=[handles.save_file_prefix file_suffix{current_suffix}];
+            file1_info = dir(save_file1);
+            load([handles.save_path save_file1])
+            file1_success=1;
+            pfft=1;
+        catch
+        end
+
+        file2_success=0;
+        try
+            current_suffix=2;
+            save_file2=[handles.save_file_prefix file_suffix{current_suffix}];
+            file2_info = dir(save_file2);
+            load([handles.save_path save_file2])
+            file2_success=1;
+            pffft=1;
+        catch
+        end
+
+        if (file1_success==1)&(file2_success==1)
+            %If both files are not corrupted take the last file saved
+            file1_time = datetime(file1_info.datenum, 'ConvertFrom', 'datenum');
+            file2_time = datetime(file2_info.datenum, 'ConvertFrom', 'datenum');
+
+            if file1_time>file2_time
+                current_suffix=1;
+                save_file=[handles.save_file_prefix file_suffix{current_suffix}];
+                load([handles.save_path save_file])
+            else
+                current_suffix=2;
+                save_file=[handles.save_file_prefix file_suffix{current_suffix}];
+                load([handles.save_path save_file])
+            end
+
+        else
+            if file1_success==1
+                current_suffix=1;
+                save_file=[handles.save_file_prefix file_suffix{current_suffix}];
+                load([handles.save_path save_file])
+            else
+                current_suffix=2;
+                save_file=[handles.save_file_prefix file_suffix{current_suffix}];
+                load([handles.save_path save_file])
+            end
+        end
+
+ 
+        first_file=length(all_handles.file);
         resume_processing=1;
     else
         all_handles=[];
@@ -175,7 +239,7 @@ if all_files_present==1
                 %5 glm
                 %6 linear
                 %7 NN parameter optimized
-                for which_training_range=first_training_range:3
+                for which_training_range=first_training_range:2
                     %1 all trials
                     %hits
                     %misses
@@ -237,14 +301,22 @@ if all_files_present==1
                             this_combination(1,:)=all_combinations(ii_comb,:);
                             handles_choices.neurons_included=this_combination;
                             handles_choices.is_gpu=handles.is_gpu;
+                            handles_choices.handles_conc=handles_conc;
+                            handles_choices.fileNo=fileNo;
 
-                            handles_out2=drgMini_DecodeLaneOdorArenav8(handles_choices);
+                            handles_out2=drgMini_DecodeOdorPlume(handles_choices);
 
                             all_handles.file(fileNo).ml_algo(which_ml_algo).training(which_training_range).subset(ii_subset).ROI_combination(ii_comb).handles_out2=handles_out2;
                             all_mean_hit_after=[all_mean_hit_after handles_out2.mean_accuracy_hit_after];
                             all_mean_miss_after=[all_mean_miss_after handles_out2.mean_accuracy_miss_after];
 
-                            save([handles.save_path handles.save_file],'all_handles')
+                            save_file=[handles.save_file_prefix file_suffix{current_suffix}];
+                            if current_suffix==1
+                                current_suffix=2;
+                            else
+                                current_suffix=1;
+                            end
+                            save([handles.save_path save_file],'all_handles','-v7.3')
                         end
                         [max_hit, max_ii]=max(all_mean_hit_after);
 
@@ -286,6 +358,6 @@ if all_files_present==1
 
 end
 
-
+fprintf(1, ['\nAll done\n\n']);
 
 pffft=1;

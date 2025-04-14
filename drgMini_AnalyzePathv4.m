@@ -20,10 +20,22 @@ if exist('handles_choices')==0
     % arena_file='20220729_FCM22withodor_odorarena_L4_sync.mat';
 
     %
-    % %First troubleshooting files
-    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
-    dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
-    arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+    % % %First troubleshooting files
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220804_FCM22/';
+    % dFF_file='20220804_FCM22_withodor_miniscope_sync_L1andL4_ncorre_ext.mat';
+    % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync_mm.mat';
+
+    % %File 3 for troubleshooting 
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220727_FCM19/';
+    % dFF_file='20220727_FCM19_withodor_miniscope_sync_L1andL4_ncorre_ext_nonneg.mat';
+    % arena_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm.mat';
+    % 
+    % handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
+
+    %20221117_FCM22_lanes_1_4 for first figure in manuscript 
+    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+    dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
+    arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
 
     handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
 
@@ -721,7 +733,7 @@ for trNo=1:trials.odor_trNo
             end
         end
     end
-
+ 
     if handles_choices.display_figures==1
         text(100,100,['End angle ' num2str(angles.trial(trNo).end_angle)])
         text(100,130,['Mean end angle ' num2str(angles.trial(trNo).mean_end_angle)])

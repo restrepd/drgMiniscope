@@ -2,23 +2,34 @@
 close all
 clear all
 
-is_sphgpu=0;
+is_sphgpu=0; %0=Mac
 
 switch is_sphgpu
     case 0
+        %Mac
 
-        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc12192024/';
-        choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_12192024.m';
+        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc12192024/';
+        % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_12192024.m';
 
-        save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput12192024/';
-        choiceXYFileName='drgOdorArenaChoices_Fabio_Good_12192024.m';
+        %Trained with hits only
+        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
+        choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+
+        % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput12192024/';
+        % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_12192024.m';
+
+        %This one has the dFF per trial
+        save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
+        choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
         save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
         choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
 
-        choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        % fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
+        % choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/CurrentChoices/';
+        fileID = fopen([choiceBatchPathName 'pathAngle_stats.txt'],'w');
 
+        addpath('/Users/restrepd/Dropbox/m new/Chi Squared')
     case 1
         fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_stats.txt','w');
         addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
@@ -30,6 +41,10 @@ end
 %These are used to classify angle approach
 low_angle=-130;
 high_angle=-50;
+
+y_lane1=430;
+y_lane4=70;
+hit_radius=100;
 
 figNo=0;
 
@@ -55,139 +70,61 @@ eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
 
-figureNo=0;
-%Exclude one file with high fraction_other_angle
-%We will exclude fraction_other_angle>thr_froa
-thr_froa=0.2;
-
-%Calculate fraction of horizontal angle approach for each file
-fraction_other_angle=[];
-all_meanAngles=[];
-for fileNo=1:length(handles_conc.arena_file)
-    % if sum(handles_conc.group(fileNo)==these_groups)>0
-        angle_file=handles_Angle.arena_file{fileNo};
-        %load the ouptut file
-        load([save_PathAngle angle_file(1:end-4) handles_Angle.save_tag '.mat'])
-        trials=handles_out.trials; 
-
-        meanAngles=[];
-        for trNo=1:length(handles_out.angles.trial)
-            if ~isempty(handles_out.angles.trial(trNo).mean_end_angle)
-                meanAngles(trNo)=handles_out.angles.trial(trNo).mean_end_angle;
-            else
-                meanAngles(trNo)=0; %I need to fix this
-            end
-            all_meanAngles=[all_meanAngles meanAngles(trNo)];
-        end
-
-        no_hit90=0;
-        no_hito=0;
-        for trNo=1:trials.odor_trNo
+figNo=0;
 
 
-            %Okabe_Ito colors
-            switch trials.odor_trial_type(trNo)
-                case 1
-                    %Hit 90 degrees
-                    if (meanAngles(trNo)<=high_angle)&(meanAngles(trNo)>=low_angle)
-                        no_hit90=no_hit90+1;
-                    end
-
-                    %Horizontal hit
-                    if (meanAngles(trNo)>high_angle)|(meanAngles(trNo)<low_angle)
-                        no_hito=no_hito+1;
-                    end
-
-                case 3
-                  
-                       %Hit 90 degrees
-                    if (meanAngles(trNo)<=high_angle)&(meanAngles(trNo)>=low_angle)
-                        no_hit90=no_hit90+1;
-                    end
-
-                    %Horizontal hit
-                    if (meanAngles(trNo)>high_angle)|(meanAngles(trNo)<low_angle)
-                        no_hito=no_hito+1;
-                    end
-            end
-            
-        end
-
-        fraction_other_angle=[fraction_other_angle no_hito/(no_hito+no_hit90)];
-        
-    % end
-end
-
-%Exclude files with p value for R1_all_trials > 0.05
-thr_rho=0.05;
-
-%Now calculate p values for conc R1 all files
 ii_run=1;
-ii_for_corr=0;
-R1_all_trials_pre=[];
-P_rho_all_trials_pre=[];
-these_fileNos_pre=[];
+these_groups=[1 5];
 
+%Determine which files will be included
+%Find which files are included in the analysis
+files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc);
 
+%Calculate percent correct behavior
+behavior_analysis=[];
+behavior_analysis.files_included=[];
+percent_correct=[];
 for fileNo=1:length(handles_conc.arena_file)
-    
-        op_all_trials=[];
-        op_decod_all_trials=[];
-        
-
+    if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
+        behavior_analysis.files_included=[behavior_analysis.files_included fileNo];
         %Load conc data
         arena_file=handles_conc.arena_file{fileNo};
         %load the ouptut file
         load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
         trials=handles_out.trials;
-        odor_plume_template=handles_out.odor_plume_template;
-        op_predicted=handles_out.op_predicted;
 
-        no_conv_points=11;
-        % conv_win=ones(1,no_conv_points)/no_conv_points;
-        conv_win_gauss = gausswin(no_conv_points);
-        conv_win_gauss=conv_win_gauss/sum(conv_win_gauss);
-
-        op_predicted_conv=conv(op_predicted,conv_win_gauss,'same');
-
-        %Now limit the x and y to max and min
-        minop=min(odor_plume_template);
-        op_predicted_conv(op_predicted_conv<minop)=minop;
-        maxop=max(odor_plume_template);
-        op_predicted_conv(op_predicted_conv>maxop)=maxop;
-
-        last_op_predictedend=1;
-        
-
-        for trNo=1:trials.odor_trNo
-
-            op_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
-            op_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
-            if op_predictedend>length(odor_plume_template)
-                op_predictedend=length(odor_plume_template);
-            end
-
-            op_all_trials=[op_all_trials; odor_plume_template(op_predictedstart:op_predictedend)'];
-            op_decod_all_trials=[op_decod_all_trials; op_predicted_conv(op_predictedstart:op_predictedend)];
+        behavior_analysis.file(fileNo).percent_correct=100*(sum(trials.hit4)+sum(trials.hit1))/length(trials.hit4);
+        percent_correct=[percent_correct behavior_analysis.file(fileNo).percent_correct];
+        behavior_analysis.file(fileNo).percent_correct1=100*(sum(trials.hit1))/(sum(trials.hit1)+sum(trials.miss1));
+        behavior_analysis.file(fileNo).percent_correct4=100*(sum(trials.hit4))/(sum(trials.hit4)+sum(trials.miss4));
+        fprintf(1,['\nFor file No ' num2str(fileNo) '\n'])
+        fprintf(1,['percent correct ' num2str(behavior_analysis.file(fileNo).percent_correct) '\n'])
+        fprintf(1,['percent correct lane 1 ' num2str(behavior_analysis.file(fileNo).percent_correct1) '\n'])
+         fprintf(1,['percent correct lane 4 ' num2str(behavior_analysis.file(fileNo).percent_correct4) '\n'])
 
 
-        end
+        [p_hit_miss_between_lanes, Q]= chi2test([sum(trials.hit1), sum(trials.miss1); sum(trials.hit4), sum(trials.miss4)]);
+        fprintf(1,['Chi squared testing difference in hit vs miss between lane 1 and 4 ' num2str(p_hit_miss_between_lanes) '\n'])
 
-        if ~isempty(op_all_trials)
-            [R1,this_P_rho_all_trials]=corrcoef(op_all_trials,op_decod_all_trials);
-            R1_all_trials_pre(fileNo)=R1(1,2);
-            P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials(1,2);
-        else
-            R1_all_trials_pre(fileNo)=NaN;
-        end
+        [p_hit_miss_lane1_vs_random, Q]= chi2test([sum(trials.hit1), sum(trials.miss1); (sum(trials.hit1)+sum(trials.miss1))/2, (sum(trials.hit1)+sum(trials.miss1))/2]);
+        fprintf(1,['Chi squared testing hit/miss vs random for lane 1 ' num2str(p_hit_miss_lane1_vs_random) '\n'])
+
+        [p_hit_miss_lane4_vs_random, Q]= chi2test([sum(trials.hit4), sum(trials.miss4); (sum(trials.hit4)+sum(trials.miss4))/2, (sum(trials.hit4)+sum(trials.miss4))/2]);
+        fprintf(1,['Chi squared testing hit/miss vs random for lane 4 ' num2str(p_hit_miss_lane4_vs_random) '\n'])
+
+        [p_hit_miss_both_lanes_vs_random, Q]= chi2test([sum(trials.hit1)+sum(trials.hit4), sum(trials.miss1)+sum(trials.miss4); length(trials.hit4)/2, length(trials.hit4)/2]);
+        fprintf(1,['Chi squared testing hit/miss vs random for both lanes ' num2str(p_hit_miss_both_lanes_vs_random) '\n'])
+
+        fprintf(1,['\n\n'])
+
+    end
 end
+
 
 %Now plot pseudocolor locations for last turn angles, start and end points,
 %etc
 
 %First make point maps
-ii_run=1;
-these_groups=[1 5];
 ii_for_corr=0;
 
 y_length=480;
@@ -214,10 +151,50 @@ lane1_miss_end_positions=zeros(10,10);
 lane4_hit_end_positions=zeros(10,10);
 lane4_miss_end_positions=zeros(10,10);
 
+dt_spout_hits=[];
+dt_spout_miss=[];
+per_session_dt_spout_hits=[];
+per_session_dt_spout_miss=[];
+
+speed_before_turn_hits=[];
+speed_after_turn_hits=[];
+speed_before_turn_misses=[];
+speed_after_turn_misses=[];
+average_speed=[];
+
+normalized_speed_before_turn_hits=[];
+normalized_speed_after_turn_hits=[];
+normalized_speed_before_turn_misses=[];
+normalized_speed_after_turn_misses=[];
+
+per_session_normalized_speed_before_turn_hits=[];
+per_session_normalized_speed_after_turn_hits=[];
+per_session_normalized_speed_before_turn_misses=[];
+per_session_normalized_speed_after_turn_misses=[];
+
+glm_speed=[];
+glm_speed_ii=0;
+
+id_speed_ii=0;
+input_speed_data=[];
+for ii=1:4
+    input_speed_data(ii).data=[];
+end
+input_speed_data(1).description='Speed before turn, hits';
+input_speed_data(2).description='Speed after turn, hits';
+input_speed_data(3).description='Speed before turn, misses';
+input_speed_data(4).description='Speed after turn, misses';
+
+
+input_norm_speed_data(1).description='Speed before turn, hits';
+input_norm_speed_data(2).description='Speed after turn, hits';
+input_norm_speed_data(3).description='Speed before turn, misses';
+input_norm_speed_data(4).description='Speed after turn, misses';
 
 for fileNo=1:length(handles_conc.arena_file)
-    if (sum(handles_conc.group(fileNo)==these_groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
-       
+    % if (sum(handles_conc.group(fileNo)==these_groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+      if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
+     
         %Load angle file
         angle_file=handles_Angle.arena_file{fileNo};
         %load the ouptut file
@@ -254,6 +231,14 @@ for fileNo=1:length(handles_conc.arena_file)
         y_predicted_sh=handles_out.y_predicted_sh(:,1); %Note: all sh are identical
         XYtest=handles_out.XYtest;
 
+        this_file_speed_before_turn_hits=[];
+        this_file_speed_after_turn_hits=[];
+        this_file_speed_before_turn_misses=[];
+        this_file_speed_after_turn_misses=[];
+
+        this_file_dt_spout_hits=[];
+        this_file_dt_spout_miss=[];
+
         for trNo=1:trials.odor_trNo
 
 
@@ -269,11 +254,12 @@ for fileNo=1:length(handles_conc.arena_file)
                 if ii_predictedend>size(XYtest,1)
                     ii_predictedend=size(XYtest,1);
                 end
-                ii_end=trials.odor_ii_end(trNo)
+                ii_end=trials.odor_ii_end(trNo);
                 if ii_end>size(XYtest,1)
                     ii_end=size(XYtest,1);
                 end
 
+                ii_start=trials.odor_ii_start(trNo);
 
                 %Find positions for start points
                 this_start_x=XYtest(trials.odor_ii_start(trNo),1);
@@ -337,6 +323,36 @@ for fileNo=1:length(handles_conc.arena_file)
                     ii_ap_y=10;
                 end
 
+                %How long does the animal linger around the water spout after the angle
+                %turn?
+                this_ii_dt_spout=0;
+                for ii=this_ap_ii:ii_predictedend
+                    if trials.lane_per_trial(trNo)==1
+                        %lane 1
+                        spout_d=sqrt((XYtest(ii,1))^2+(XYtest(ii,2)-y_lane1)^2);
+                    else
+                        spout_d=sqrt((XYtest(ii,1))^2+(XYtest(ii,2)-y_lane4)^2);
+                    end
+                    if spout_d<=hit_radius
+                        this_ii_dt_spout=this_ii_dt_spout+1;
+                    end
+                end
+                behavior_analysis.file(fileNo).trial(trNo).dt_spout=this_ii_dt_spout*handles_XY.dt;
+                behavior_analysis.file(fileNo).trial(trNo).odor_trial_type=trials.odor_trial_type(trNo);
+
+                %Calculate speed before and after turn
+                these_before_speeds=[];
+                for ii=ii_start:this_ap_ii-1
+                    delta_d=sqrt((XYtest(ii,1)-XYtest(ii+1,1))^2+(XYtest(ii,2)-XYtest(ii+1,2))^2);
+                    these_before_speeds=[these_before_speeds delta_d/handles_XY.dt];
+                end
+                
+                these_after_speeds=[];
+                for ii=this_ap_ii:ii_end-1
+                    delta_d=sqrt((XYtest(ii,1)-XYtest(ii+1,1))^2+(XYtest(ii,2)-XYtest(ii+1,2))^2);
+                    these_after_speeds=[these_after_speeds delta_d/handles_XY.dt];
+                end
+
                 %Okabe_Ito colors
                 switch trials.odor_trial_type(trNo)
                     case 1
@@ -344,30 +360,154 @@ for fileNo=1:length(handles_conc.arena_file)
                         lane1_hit_turn_angle_positions(ii_ap_x,ii_ap_y)=lane1_hit_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane1_hit_start_positions(ii_start_x,ii_start_y)=lane1_hit_start_positions(ii_start_x,ii_start_y)+1;
                         lane1_hit_end_positions(ii_end_x,ii_end_y)=lane1_hit_end_positions(ii_end_x,ii_end_y)+1;
-                        pfft=1;
+                        dt_spout_hits=[dt_spout_hits this_ii_dt_spout*handles_XY.dt];
+                        this_file_dt_spout_hits=[this_file_dt_spout_hits this_ii_dt_spout*handles_XY.dt];
+                        
+                        speed_before_turn_hits=[speed_before_turn_hits mean(these_before_speeds)];
+                        speed_after_turn_hits=[speed_after_turn_hits mean(these_after_speeds)];
+
+                        this_file_speed_before_turn_hits=[this_file_speed_before_turn_hits mean(these_before_speeds)];
+                        this_file_speed_after_turn_hits=[this_file_speed_after_turn_hits mean(these_after_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_before_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=0;
+                        glm_speed.hit_miss(glm_speed_ii+1)=0;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(1).data=[input_speed_data(1).data mean(these_before_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_after_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=1;
+                        glm_speed.hit_miss(glm_speed_ii+1)=0;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(2).data=[input_speed_data(2).data mean(these_after_speeds)];
+                      
                     case 2
                         %Lane 1 miss orange
                         lane1_miss_turn_angle_positions(ii_ap_x,ii_ap_y)=lane1_miss_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane1_miss_start_positions(ii_start_x,ii_start_y)=lane1_miss_start_positions(ii_start_x,ii_start_y)+1;
                         lane1_miss_end_positions(ii_end_x,ii_end_y)=lane1_miss_end_positions(ii_end_x,ii_end_y)+1;
+                        dt_spout_miss=[dt_spout_miss this_ii_dt_spout*handles_XY.dt];
+                        this_file_dt_spout_miss=[this_file_dt_spout_miss this_ii_dt_spout*handles_XY.dt];
+
+                        speed_before_turn_misses=[speed_before_turn_misses mean(these_before_speeds)];
+                        speed_after_turn_misses=[speed_after_turn_misses mean(these_after_speeds)];
+
+                        this_file_speed_before_turn_misses=[this_file_speed_before_turn_misses mean(these_before_speeds)];
+                        this_file_speed_after_turn_misses=[this_file_speed_after_turn_misses mean(these_after_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_before_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=0;
+                        glm_speed.hit_miss(glm_speed_ii+1)=1;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(3).data=[input_speed_data(3).data mean(these_before_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_after_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=1;
+                        glm_speed.hit_miss(glm_speed_ii+1)=1;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(4).data=[input_speed_data(4).data mean(these_after_speeds)];
                     case 3
                         %Lane 4 hit blue
                         lane4_hit_turn_angle_positions(ii_ap_x,ii_ap_y)=lane4_hit_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane4_hit_start_positions(ii_start_x,ii_start_y)=lane4_hit_start_positions(ii_start_x,ii_start_y)+1;
                         lane4_hit_end_positions(ii_end_x,ii_end_y)=lane4_hit_end_positions(ii_end_x,ii_end_y)+1;
-                        pfft=1;
+                        dt_spout_hits=[dt_spout_hits this_ii_dt_spout*handles_XY.dt];
+                        this_file_dt_spout_hits=[this_file_dt_spout_hits this_ii_dt_spout*handles_XY.dt];
+
+                        speed_before_turn_hits=[speed_before_turn_hits mean(these_before_speeds)];
+                        speed_after_turn_hits=[speed_after_turn_hits mean(these_after_speeds)];
+
+                        this_file_speed_before_turn_hits=[this_file_speed_before_turn_hits mean(these_before_speeds)];
+                        this_file_speed_after_turn_hits=[this_file_speed_after_turn_hits mean(these_after_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_before_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=0;
+                        glm_speed.hit_miss(glm_speed_ii+1)=0;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(1).data=[input_speed_data(1).data mean(these_before_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_after_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=1;
+                        glm_speed.hit_miss(glm_speed_ii+1)=0;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(2).data=[input_speed_data(2).data mean(these_after_speeds)];
                     case 4
                         %Lane 4 miss sky blue
                         lane4_miss_turn_angle_positions(ii_ap_x,ii_ap_y)=lane4_miss_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane4_miss_start_positions(ii_start_x,ii_start_y)=lane4_miss_start_positions(ii_start_x,ii_start_y)+1;
                         lane4_miss_end_positions(ii_end_x,ii_end_y)=lane4_miss_end_positions(ii_end_x,ii_end_y)+1;
+                        dt_spout_miss=[dt_spout_miss this_ii_dt_spout*handles_XY.dt];
+                        this_file_dt_spout_miss=[this_file_dt_spout_miss this_ii_dt_spout*handles_XY.dt];
+
+                        speed_before_turn_misses=[speed_before_turn_misses mean(these_before_speeds)];
+                        speed_after_turn_misses=[speed_after_turn_misses mean(these_after_speeds)];
+
+                        this_file_speed_before_turn_misses=[this_file_speed_before_turn_misses mean(these_before_speeds)];
+                        this_file_speed_after_turn_misses=[this_file_speed_after_turn_misses mean(these_after_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_before_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=0;
+                        glm_speed.hit_miss(glm_speed_ii+1)=1;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(3).data=[input_speed_data(3).data mean(these_before_speeds)];
+
+                        glm_speed.data(glm_speed_ii+1)=mean(these_after_speeds);
+                        glm_speed.before_after(glm_speed_ii+1)=1;
+                        glm_speed.hit_miss(glm_speed_ii+1)=1;
+                        glm_speed_ii=glm_speed_ii+1;
+                        input_speed_data(4).data=[input_speed_data(4).data mean(these_after_speeds)];
                 end
             end
 
         end
-        pfft=1;
-    end
+        this_file_speed_before_turn_misses=this_file_speed_before_turn_misses(~isnan(this_file_speed_before_turn_misses));
+        this_file_speed_after_turn_misses=this_file_speed_after_turn_misses(~isnan(this_file_speed_after_turn_misses));
+        this_file_speed_before_turn_hits=this_file_speed_before_turn_hits(~isnan(this_file_speed_before_turn_hits));
+        this_file_speed_after_turn_hits=this_file_speed_after_turn_hits(~isnan(this_file_speed_after_turn_hits));
+
+        average_speed=[average_speed mean([this_file_speed_before_turn_misses this_file_speed_after_turn_misses...
+            this_file_speed_before_turn_hits])];
+        normalized_speed_before_turn_hits=[normalized_speed_before_turn_hits this_file_speed_before_turn_hits/average_speed(end)];
+        normalized_speed_after_turn_hits=[normalized_speed_after_turn_hits this_file_speed_after_turn_hits/average_speed(end)];
+        normalized_speed_before_turn_misses=[normalized_speed_before_turn_misses this_file_speed_before_turn_misses/average_speed(end)];
+        normalized_speed_after_turn_misses=[normalized_speed_after_turn_misses this_file_speed_after_turn_misses/average_speed(end)];
+
+        per_session_normalized_speed_before_turn_hits=[per_session_normalized_speed_before_turn_hits mean(this_file_speed_before_turn_hits/average_speed(end))];
+        per_session_normalized_speed_after_turn_hits=[per_session_normalized_speed_after_turn_hits mean(this_file_speed_after_turn_hits/average_speed(end))];
+        per_session_normalized_speed_before_turn_misses=[per_session_normalized_speed_before_turn_misses mean(this_file_speed_before_turn_misses/average_speed(end))];
+        per_session_normalized_speed_after_turn_misses=[per_session_normalized_speed_after_turn_misses mean(this_file_speed_after_turn_misses/average_speed(end))];
+
+        per_session_dt_spout_hits=[per_session_dt_spout_hits mean(this_file_dt_spout_hits)];
+        per_session_dt_spout_miss=[per_session_dt_spout_miss mean(this_file_dt_spout_miss)];
+      end
 end
+
+
+%Perform the glm mouse speed
+fprintf(1, ['\nglm for mouse speed\n'])
+fprintf(fileID, ['\nglm for mouse speed\n']);
+
+
+tbl = table(glm_speed.data',glm_speed.before_after',glm_speed.hit_miss',...
+    'VariableNames',{'speed','before_after','hit_miss'});
+mdl = fitglm(tbl,'speed~before_after+hit_miss+before_after*hit_miss'...
+    ,'CategoricalVars',[2,3])
+
+txt = evalc('mdl');
+txt=regexp(txt,'<strong>','split');
+txt=cell2mat(txt);
+txt=regexp(txt,'</strong>','split');
+txt=cell2mat(txt);
+
+fprintf(fileID,'%s\n', txt);
+
+
+%Do the ranksum/t-test
+fprintf(1, ['\n\nRanksum or t-test p values for mouse speed\n'])
+fprintf(fileID, ['\n\nRanksum or t-test p values for mouse speed\n']);
+
+
+[output_data] = drgMutiRanksumorTtest(input_speed_data, fileID,0);
 
 %Normalize
 lane1_hit_turn_angle_positions=lane1_hit_turn_angle_positions/sum(lane1_hit_turn_angle_positions(:));
@@ -385,7 +525,18 @@ lane1_miss_end_positions=lane1_miss_end_positions/sum(lane1_miss_end_positions(:
 lane4_hit_end_positions=lane4_hit_end_positions/sum(lane4_hit_end_positions(:));
 lane4_miss_end_positions=lane4_miss_end_positions/sum(lane4_miss_end_positions(:));
 
+% colormap fire
+colormap gray
+this_cmap=colormap;
+this_cmap(1,:)=[0.2 0.2 0.2];
+mult_cmax=0.35;
+
+
 %Plot turn points
+minC=0;
+maxC=max([max(lane1_hit_turn_angle_positions(:)) max(lane1_miss_turn_angle_positions(:)) max(lane4_hit_turn_angle_positions(:)) max(lane4_miss_turn_angle_positions(:))]);
+
+
 %Lane 1 hits
 figNo=figNo+1;
 try
@@ -398,7 +549,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_hit_turn_angle_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -409,8 +560,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_hit_turn_angle_positions(:));
+% minC=0;
+% maxC=max(lane1_hit_turn_angle_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -430,7 +581,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_miss_turn_angle_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -441,8 +592,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_miss_turn_angle_positions(:));
+% minC=0;
+% maxC=max(lane1_miss_turn_angle_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -462,7 +613,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_hit_turn_angle_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -473,8 +624,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_hit_turn_angle_positions(:));
+% minC=0;
+% maxC=max(lane4_hit_turn_angle_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -494,7 +645,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_miss_turn_angle_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -505,8 +656,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_miss_turn_angle_positions(:));
+% minC=0;
+% maxC=max(lane4_miss_turn_angle_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -516,6 +667,9 @@ yticklabels({'lane 4','100','200','300','400','lane 1'})
 title('Lane 4 miss last turn positions')
 
 %Plot start points
+minC=0;
+maxC=max([max(lane1_hit_start_positions(:)) max(lane1_miss_start_positions(:)) max(lane4_hit_start_positions(:)) max(lane4_miss_start_positions(:))]);
+
 %Lane 1 hits
 figNo=figNo+1;
 try
@@ -528,7 +682,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_hit_start_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -539,8 +693,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_hit_start_positions(:));
+% minC=0;
+% maxC=max(lane1_hit_start_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -560,7 +714,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_miss_start_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -571,8 +725,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_miss_start_positions(:));
+% minC=0;
+% maxC=max(lane1_miss_start_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -592,7 +746,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_hit_start_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -603,8 +757,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_hit_start_positions(:));
+% minC=0;
+% maxC=max(lane4_hit_start_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -624,7 +778,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_miss_start_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -635,8 +789,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_miss_start_positions(:));
+% minC=0;
+% maxC=max(lane4_miss_start_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -646,6 +800,9 @@ yticklabels({'lane 4','100','200','300','400','lane 1'})
 title('Lane 4 miss start positions')
 
 %Plot end points
+minC=0;
+maxC=max([max(lane1_hit_end_positions(:)) max(lane1_miss_end_positions(:)) max(lane4_hit_end_positions(:)) max(lane4_miss_end_positions(:))]);
+
 %Lane 1 hits
 figNo=figNo+1;
 try
@@ -658,7 +815,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_hit_end_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -669,8 +826,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_hit_end_positions(:));
+% minC=0;
+% maxC=max(lane1_hit_end_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -690,7 +847,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_miss_end_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -701,8 +858,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_miss_end_positions(:));
+% minC=0;
+% maxC=max(lane1_miss_end_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -722,7 +879,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_hit_end_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -733,8 +890,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_hit_end_positions(:));
+% minC=0;
+% maxC=max(lane4_hit_end_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -754,7 +911,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_miss_end_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -765,8 +922,8 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_miss_end_positions(:));
+% minC=0;
+% maxC=max(lane4_miss_end_positions(:));
 caxis([minC maxC]);
 
 yticks([50 100 200 300 400 430])
@@ -803,7 +960,8 @@ lane4_miss_after_positions=zeros(10,10);
 
 
 for fileNo=1:length(handles_conc.arena_file)
-    if (sum(handles_conc.group(fileNo)==these_groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+    % if (sum(handles_conc.group(fileNo)==these_groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+        if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
 
         %Load angle file
         angle_file=handles_Angle.arena_file{fileNo};
@@ -856,7 +1014,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 if ii_predictedend>size(XYtest,1)
                     ii_predictedend=size(XYtest,1);
                 end
-                ii_end=trials.odor_ii_end(trNo)
+                ii_end=trials.odor_ii_end(trNo);
                 if ii_end>size(XYtest,1)
                     ii_end=size(XYtest,1);
                 end
@@ -983,7 +1141,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_hit_before_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1015,7 +1173,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_miss_before_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1047,7 +1205,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_hit_before_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1079,7 +1237,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_miss_before_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1101,6 +1259,9 @@ yticklabels({'lane 4','100','200','300','400','lane 1'})
 title('Lane 4 miss trajectories before turn')
 
 %Plot after points
+minC=0;
+maxC=max([max(lane4_hit_after_positions(:)) max(lane1_miss_after_positions(:)) max(lane4_miss_after_positions(:)) max(lane1_hit_after_positions(:))]);
+
 %Lane 1 hits
 figNo=figNo+1;
 try
@@ -1113,7 +1274,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_hit_after_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1124,14 +1285,14 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_hit_after_positions(:));
-caxis([minC 0.35*maxC]);
+% minC=0;
+% maxC=max(lane1_hit_after_positions(:));
+caxis([minC mult_cmax*maxC]);
 
 yticks([50 100 200 300 400 430])
 yticklabels({'lane 4','100','200','300','400','lane 1'})
 
-title('Lane 1 hit trejectories after turn')
+title('Lane 1 hit trajectories after turn')
 
 %Lane 1 miss
 figNo=figNo+1;
@@ -1145,7 +1306,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane1_miss_after_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1156,9 +1317,9 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane1_miss_after_positions(:));
-caxis([minC 0.35*maxC]);
+% minC=0;
+% maxC=max(lane1_miss_after_positions(:));
+caxis([minC mult_cmax*maxC]);
 
 yticks([50 100 200 300 400 430])
 yticklabels({'lane 4','100','200','300','400','lane 1'})
@@ -1177,7 +1338,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_hit_after_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1188,14 +1349,14 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_hit_after_positions(:));
-caxis([minC 0.35*maxC]);
+% minC=0;
+% maxC=max(lane4_hit_after_positions(:));
+caxis([minC mult_cmax*maxC]);
 
 yticks([50 100 200 300 400 430])
 yticklabels({'lane 4','100','200','300','400','lane 1'})
 
-title('Lane 4 hit trejectories after turn')
+title('Lane 4 hit trajectories after turn')
 
 %Lane 4 miss
 figNo=figNo+1;
@@ -1209,7 +1370,7 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
 drg_pcolor(repmat(x_values,10,1)',repmat(y_values,10,1),lane4_miss_after_positions)
-colormap fire
+colormap(this_cmap)
 shading interp
 
 set(gca, 'YDir', 'reverse');
@@ -1220,9 +1381,9 @@ set(gca, 'YDir', 'reverse');
 xlabel('x (mm)')
 ylabel('y (mm)')
 
-minC=0;
-maxC=max(lane4_miss_after_positions(:));
-caxis([minC 0.35*maxC]);
+% minC=0;
+% maxC=max(lane4_miss_after_positions(:));
+caxis([minC mult_cmax*maxC]);
 
 yticks([50 100 200 300 400 430])
 yticklabels({'lane 4','100','200','300','400','lane 1'})
@@ -1230,6 +1391,322 @@ yticklabels({'lane 4','100','200','300','400','lane 1'})
 
 title('Lane 4 miss trejectories after turn')
 
-% fclose(fileID);
+
+%Plot the dt_spout graph
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+bar_offset=0;
+
+edges=[0:0.25:6];
+rand_offset=0.5;
+
+%Plot the different dt_spouts
+bar(bar_offset,mean(dt_spout_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(dt_spout_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+
+bar(bar_offset,mean(dt_spout_miss),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(dt_spout_miss...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+
+for ii=1:length(per_session_dt_spout_hits)
+    plot([bar_offset-1 bar_offset],[per_session_dt_spout_hits(ii),per_session_dt_spout_miss(ii)],...
+        'o-','Color',[0.7 0.7 0.7],'MarkerEdgeColor',[0.7 0.7 0.7],'MarkerFaceColor',[0.7 0.7 0.7],'markerSize',8,'LineWidth',2)
+end
+
+
+% x_pos=-0.5;
+% text(x_pos,5,'Hits','Color',[230/255 159/255 0/255])
+% text(x_pos,4.5,'Misses','Color',[86/255 180/255 233/255])
+% 
+
+xticks([0 1])
+xticklabels({'Hits','Misses'})
+
+
+title(['Time at the water spout'])
+ylabel('Time (sec)')
+ylim([-0.5 6])
+xlim([-0.75 1.75])
+
+[h,p]=ttest2(dt_spout_hits,dt_spout_miss);
+
+ fprintf(1,['\np value for For file No ' num2str(fileNo) '\n'])
+
+
+
+%Plot the speed graph
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+bar_offset=0;
+
+edges=[0:20:400];
+rand_offset=0.5;
+
+
+
+speed_before_turn_hits=speed_before_turn_hits(~isnan(speed_before_turn_hits))/10;
+speed_after_turn_hits=speed_after_turn_hits(~isnan(speed_after_turn_hits))/10;
+speed_before_turn_misses=speed_before_turn_misses(~isnan(speed_before_turn_misses))/10;
+speed_after_turn_misses=speed_after_turn_misses(~isnan(speed_after_turn_misses))/10;
+
+%Speed before turn hits
+bar(bar_offset,mean(speed_before_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(speed_before_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn hits
+bar(bar_offset,mean(speed_after_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(speed_after_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+2;
+
+%Speed before turn miss
+bar(bar_offset,mean(speed_before_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(speed_before_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn miss
+bar(bar_offset,mean(speed_after_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(speed_after_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+
+x_pos=-0.5;
+text(x_pos,45,'Hits','Color',[230/255 159/255 0/255])
+text(x_pos,40,'Misses','Color',[86/255 180/255 233/255])
+
+
+xticks([0 1 3 4])
+xticklabels({'Before','After','Before','After'})
+
+
+title(['Mouse speed'])
+ylabel('Speed (cm/sec)')
+ylim([0 50])
+xlim([-1 5])
+
+
+
+%Plot the normalized speed graph
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+bar_offset=0;
+
+edges=[0:20:400];
+rand_offset=0.5;
+
+normalized_speed_before_turn_hits=mean(average_speed)*normalized_speed_before_turn_hits/10;
+normalized_speed_after_turn_hits=mean(average_speed)*normalized_speed_after_turn_hits/10;
+normalized_speed_before_turn_misses=mean(average_speed)*normalized_speed_before_turn_misses/10;
+normalized_speed_after_turn_misses=mean(average_speed)*normalized_speed_after_turn_misses/10;
+
+per_session_normalized_speed_before_turn_hits=mean(average_speed)*per_session_normalized_speed_before_turn_hits/10;
+per_session_normalized_speed_after_turn_hits=mean(average_speed)*per_session_normalized_speed_after_turn_hits/10;
+per_session_normalized_speed_before_turn_misses=mean(average_speed)*per_session_normalized_speed_before_turn_misses/10;
+per_session_normalized_speed_after_turn_misses=mean(average_speed)*per_session_normalized_speed_after_turn_misses/10;
+
+speed_before_turn_hits=speed_before_turn_hits(~isnan(speed_before_turn_hits))/10;
+speed_after_turn_hits=speed_after_turn_hits(~isnan(speed_after_turn_hits))/10;
+speed_before_turn_misses=speed_before_turn_misses(~isnan(speed_before_turn_misses))/10;
+speed_after_turn_misses=speed_after_turn_misses(~isnan(speed_after_turn_misses))/10;
+
+%Speed before turn hits
+bar(bar_offset,mean(normalized_speed_before_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_before_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn hits
+bar(bar_offset,mean(normalized_speed_after_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_after_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+2;
+
+%Speed before turn miss
+bar(bar_offset,mean(normalized_speed_before_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_before_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn miss
+bar(bar_offset,mean(normalized_speed_after_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_after_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+for ii=1:length(per_session_normalized_speed_before_turn_hits)
+    plot([0 1],[per_session_normalized_speed_before_turn_hits(ii),per_session_normalized_speed_after_turn_hits(ii)],...
+        'o-','Color',[0.7 0.7 0.7],'MarkerEdgeColor',[0.7 0.7 0.7],'MarkerFaceColor',[0.7 0.7 0.7],'markerSize',8,'LineWidth',2)
+
+    plot([3 4],[per_session_normalized_speed_before_turn_misses(ii),per_session_normalized_speed_after_turn_misses(ii)],...
+        'o-','Color',[0.7 0.7 0.7],'MarkerEdgeColor',[0.7 0.7 0.7],'MarkerFaceColor',[0.7 0.7 0.7],'markerSize',8,'LineWidth',2)
+end
+
+x_pos=-0.5;
+text(x_pos,45,'Hits','Color',[230/255 159/255 0/255])
+text(x_pos,40,'Misses','Color',[86/255 180/255 233/255])
+
+
+xticks([0 1 3 4])
+xticklabels({'Before','After','Before','After'})
+
+
+title(['Mouse speed'])
+ylabel('Speed (cm/sec)')
+ylim([0 80])
+xlim([-1 5])
+
+glm_norm_speed=[];
+glm_norm_speed_ii=0;
+
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=normalized_speed_before_turn_hits;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=0;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=0;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_before_turn_hits);
+
+input_norm_speed_data(1).data=normalized_speed_before_turn_hits;
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=normalized_speed_after_turn_hits;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=1;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=0;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_after_turn_hits);
+
+input_norm_speed_data(2).data=normalized_speed_after_turn_hits;
+
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=normalized_speed_before_turn_misses;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=0;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=1;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_before_turn_misses);
+
+input_norm_speed_data(3).data=normalized_speed_before_turn_misses;
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=normalized_speed_after_turn_misses;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=1;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=1;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_after_turn_misses);
+
+input_norm_speed_data(4).data=normalized_speed_after_turn_misses;
+
+
+
+%Perform the glm mouse normalized speed
+fprintf(1, ['\nglm for mouse normalized speed\n'])
+fprintf(fileID, ['\nglm for mouse normalized speed\n']);
+
+
+tbl = table(glm_norm_speed.data',glm_norm_speed.before_after',glm_norm_speed.hit_miss',...
+    'VariableNames',{'speed','before_after','hit_miss'});
+mdl = fitglm(tbl,'speed~before_after+hit_miss+before_after*hit_miss'...
+    ,'CategoricalVars',[2,3])
+
+txt = evalc('mdl');
+txt=regexp(txt,'<strong>','split');
+txt=cell2mat(txt);
+txt=regexp(txt,'</strong>','split');
+txt=cell2mat(txt);
+
+fprintf(fileID,'%s\n', txt);
+
+
+%Do the ranksum/t-test
+fprintf(1, ['\n\nRanksum or t-test p values for mouse speed\n'])
+fprintf(fileID, ['\n\nRanksum or t-test p values for mouse speed\n']);
+
+
+[output_data] = drgMutiRanksumorTtest(input_norm_speed_data, fileID,0);
+
+
+%Plot the percent correct graph
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+bar_offset=0;
+
+edges=[0:2:100];
+rand_offset=0.5;
+
+%Plot the different dt_spouts
+bar(bar_offset,mean(percent_correct),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(percent_correct...
+    ,edges,bar_offset,rand_offset,'k','k',8);
+bar_offset=bar_offset+1;
+
+
+title(['Percent correct'])
+ylabel('Percent correct')
+ylim([0 100])
+
+xticks([0])
+xticklabels({''})
+
+[h,p]=ttest(percent_correct-50);
+
+fprintf(1,['\np value for percent corect ' num2str(p) '\n'])
+
+fclose(fileID);
 
 pffft=1;

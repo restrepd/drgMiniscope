@@ -11,15 +11,15 @@ close all
 %it saves with m4v suffix, change the suffix to mp4
 
 %mp4 path
-this_mp4_path='/data2/SFTP/PreProcessed/20221028_FCM22_1/';
+this_mp4_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Fabio New Data/20220929_FCM22_withodor_farfromfloor/';
 
 % mp4_file='20220713_arena01_session001_topCam-0000conv.mp4' %Note: I had to open with VLC and file convert/stream saved as mp4
-mp4_file='20221028_arena01_session004_topCam-0000_conv.mp4';
+mp4_file='20220929_arena01_session001_topCam-0000_conv.mp4';
 
 this_arena_path=this_mp4_path;
 
 % arena_file='20220713_FCM6withodor_odorarena_L1andL4_syn.mat';
-arena_file='20221028_FCM22_1withodor_odorarena_L1andL4_sync.mat';
+arena_file='20220929_FCM22withtodor_farfromfloor_odorarena_L1andL4_sync.mat';
 
 %Enter the crop values from the metadata yaml file
 %These are the first and thrid crop values in the file
@@ -38,13 +38,13 @@ cropy=3;
 
 %If the mouse is at the corner obstructing the click change this to a
 %different value
-numImagesToRead=100;
+numImagesToRead=1000;
 
 %Odor arena size
 y_length=480; %mm
 x_length=500; %mm
 
-is_sphgpu=1;
+is_sphgpu=0;
 
 if is_sphgpu==1
     this_path='/data/SFTP/PreProcessedDR/Undistortion_odorarena/';

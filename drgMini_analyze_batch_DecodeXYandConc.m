@@ -55,6 +55,7 @@ eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 
 figureNo=0;
 
+try
 %Let's look at dependence of correlation on bins before for all 2 cm files
 figureNo = figureNo + 1;
 try
@@ -81,7 +82,7 @@ for ii_run=1:length(handles_conc.bins_before)
         if handles_conc.group(fileNo)==this_group
             arena_file=handles_conc.arena_file{fileNo};
             %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run_conc} '.mat'])
             these_R1s=[these_R1s handles_out.R1.all_trials];
         end
     end
@@ -92,6 +93,8 @@ for ii_run=1:length(handles_conc.bins_before)
 end
 
 plot(bins_before,meanR1_conc,'o-','MarkerSize',10,'MarkerEdgeColor',[0.9 0.6 0],'MarkerFaceColor',[0.9 0.6 0],'Color',[0.9 0.6 0])
+catch
+end
 
 %R1 for XY all trials
 meanR1_XY=[];
@@ -141,12 +144,12 @@ rand_offset=1;
 
 %R1 for conc all trials
 R1_conc=[];
-
+ii_run_conc=1;
 for fileNo=1:length(handles_conc.arena_file)
     if handles_conc.group(fileNo)==this_group
         arena_file=handles_conc.arena_file{fileNo};
         %load the ouptut file
-        load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+        load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run_conc} '.mat'])
         R1_conc=[R1_conc handles_out.R1.all_trials];
     end
 end
@@ -220,7 +223,7 @@ for ii_group=1:3
             arena_file=handles_conc.arena_file{fileNo};
             if handles_conc.group(fileNo)==this_group
                 %load the ouptut file
-                load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+                load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run_conc} '.mat'])
                 eval(['these_R1s=[these_R1s handles_out.R1.' R1type{ii_R1type} '];'])
                 % these_R1s=[these_R1s handles_out.R1.all_trials];
             end
@@ -312,7 +315,7 @@ for ii_R1type=1:length(R1type)
         arena_file=handles_conc.arena_file{fileNo};
         if sum(handles_conc.group(fileNo)==these_groups)>0
             %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run_conc} '.mat'])
             eval(['these_R1s=[these_R1s handles_out.R1.' R1type{ii_R1type} '];'])
             % these_R1s=[these_R1s handles_out.R1.all_trials];
         end
@@ -425,7 +428,7 @@ for this_group=1:5
             arena_file=handles_conc.arena_file{fileNo};
 
             %Get predictor importance for conc decoding
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run_conc} '.mat'])
             all_conc_imps=[];
             for trNo=1:length(handles_out.imp.trial)
                 these_imps=handles_out.imp.trial(trNo).imp;

@@ -1,9 +1,8 @@
-%drgMini_analyze_batch_DecodeCorrXYConc
+%drgMini_analyze_batch_DecodeLaneAndOdorPlume
 close all
 clear all
 
-is_sphgpu=0;
-is_pearson=1; %If this is 1 Pearson correlation is calculated, otherwise Spearman
+is_sphgpu=0; %0=Mac, 1=sphgpu
 
 switch is_sphgpu
     case 0
@@ -30,9 +29,8 @@ switch is_sphgpu
         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_02232025.m'
 
         %Trained with hit only using new drgMini_DecodeOdorConcv4.m code
-         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc02242025/';
+        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc02242025/';
         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_02242025.m'
-
 
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01062025.m';
@@ -41,7 +39,11 @@ switch is_sphgpu
         choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
 
         choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
+        fileID = fopen([choiceBatchPathName 'decode_lane_and_op_stats.txt'],'w');
+
+        %Lane decoding output
+        save_PathLane='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        choiceLaneDecodeFileName='drgMiniLanePredChoices_02262025.m';
 
     case 1
         fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_stats.txt','w');
@@ -51,25 +53,6 @@ switch is_sphgpu
         addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
 end
 
-%These are used to classify angle approach
-low_angle=-130;
-high_angle=-50;
-
-
-%Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4, 2 cm from floor
-%Group 2 is rewarded, with odor lane 4, no odor in lane 1
-%Group 3 is rewarded, with odor lane 1, no odor in lane 4
-%Group 4 is rewarded, with no odor in lane 1 and lane 4
-%Group 5 is rewarded, with ISO1 in both lane 1 and lane 4, 1 cm from floor
-
-group_label{1}='Odor both lanes 2 cm';
-group_label{2}='Odor lane 4';
-group_label{3}='Odor lane 1';
-group_label{4}='No odor';
-group_label{5}='Odor both lanes 1 cm';
-
-run_label{1}='0 bins before';
-run_label{5}='16 bins before';
 
 % handles.bins_before=[0 0 0 0 0 0 0 0 1 2 4];
 
@@ -77,8 +60,13 @@ addpath(choiceBatchPathName)
 eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
+eval(['handles_Lane=' choiceLaneDecodeFileName(1:end-2) ';'])
 
 figureNo=0;
+
+%Show accuracy for hit-trained data
+load([save_PathLane handles_Lane.save_file])
+
 %Exclude one file with high fraction_other_angle
 %We will exclude fraction_other_angle>thr_froa
 thr_froa=0.2;

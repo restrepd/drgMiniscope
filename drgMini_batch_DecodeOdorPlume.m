@@ -1,6 +1,8 @@
-%drgMini_batch_DecodeLane
+%drgMini_batch_DecodeOdorPlume
 close all
 clear all
+
+run_slurm=1;
 
 algo_name{1}='SVZ';
 algo_name{2}='NN';
@@ -14,7 +16,11 @@ training_labels{1}='all';
 training_labels{2}='hits';
 training_labels{3}='misses';
 
-[choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniLanePredChoices_*.m'},'Select the .m file with all the choices for analysis');
+if run_slurm==1
+    
+else
+    [choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniOPPredChoices_*.m'},'Select the .m file with all the choices for analysis');
+end
 
 
 fprintf(1, ['\ndrgMini_batch_dFFPrediction run for ' choiceFileName '\n\n']);
@@ -237,8 +243,9 @@ if all_files_present==1
                             this_combination(1,:)=all_combinations(ii_comb,:);
                             handles_choices.neurons_included=this_combination;
                             handles_choices.is_gpu=handles.is_gpu;
+                            handles_choices.handles_conc=handles_conc;
 
-                            handles_out2=drgMini_DecodeLaneOdorArenav8(handles_choices);
+                            handles_out2=drgMini_DecodeOdorPlume(handles_choices);
 
                             all_handles.file(fileNo).ml_algo(which_ml_algo).training(which_training_range).subset(ii_subset).ROI_combination(ii_comb).handles_out2=handles_out2;
                             all_mean_hit_after=[all_mean_hit_after handles_out2.mean_accuracy_hit_after];

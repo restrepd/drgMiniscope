@@ -453,6 +453,11 @@ for trNo=1:trials.odor_trNo
 
     XYtrain=pos_binned(this_training_range,:);
 
+
+    trials.trial(trNo).XYtest=pos_binned(logical(this_test_range),:);
+    trials.trial(trNo).XdFFtest=XdFFtest;
+
+
     %Use gpu
     XdFFtrain_gpu=gpuArray(XdFFtrain);
     XdFFtest_gpu=gpuArray(XdFFtest);
