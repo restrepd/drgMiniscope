@@ -108,7 +108,7 @@ if all_files_present==1
                 fprintf(1,'\n\nProcessing time for file No %d is %d hours\n\n',fileNo,(toc-first_toc)/(60*60));
 
             else
-                fprintf(1, ['Overwrite on and file number %d  exists\n'],fileNo);
+                fprintf(1, ['Overwrite off and file number %d  exists\n'],fileNo);
             end
     end
     fprintf(1, 'Total processing time %d hours\n',toc/(60*60));

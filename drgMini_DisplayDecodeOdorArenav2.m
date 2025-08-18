@@ -1,4 +1,4 @@
-function drgDisplayDecodeOdorArenav2
+function drgMini_DisplayDecodeOdorArenav2
 %Does decoding following Glaser et al, 2020 https://doi.org/10.1523/ENEURO.0506-19.2020
 close all
 clear all
@@ -17,7 +17,7 @@ y_predicted=handles_out.y_predicted;
 XYtest=handles_out.XYtest;
 trials=handles_out.trials;
 
-which_training_algorithm=handles_choices.which_training_algorithm;
+% which_training_algorithm=handles_choices.which_training_algorithm;
 dt=handles_choices.dt;
 dt_miniscope=handles_choices.dt_miniscope;
 n_shuffle=handles_choices.n_shuffle;
@@ -25,14 +25,14 @@ n_shuffle=handles_choices.n_shuffle;
 x_predictedstart=1;
 x_predictedend=length(x_predicted(:,1));
 
-switch which_training_algorithm
-    case 1
-        fprintf(1,['\nTrained with data for the entire session\n\n'])
-    case 2
-        fprintf(1,['\nTrained with within trial data\n\n'])
-    case 3
-        fprintf(1,['\nTrained with between trial data\n\n'])
-end
+% switch which_training_algorithm
+%     case 1
+%         fprintf(1,['\nTrained with data for the entire session\n\n'])
+%     case 2
+fprintf(1,['\nTrained with within trial data\n\n'])
+%     case 3
+%         fprintf(1,['\nTrained with between trial data\n\n'])
+% end
 
 figNo=0;
 
@@ -106,14 +106,14 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 plot(x_predicted_conv(x_predictedstart:x_predictedend,1),y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1.5)
 plot(XYtest(x_predictedstart:x_predictedend,1),XYtest(x_predictedstart:x_predictedend,2),'-b','LineWidth',1.5)
-switch which_training_algorithm
-    case 1
-        title('xy for neural network convolved (trained per session)')
-    case 2
-        title('xy for neural network convolved (trained per trial)')
-    case 3
-        title('xy for neural network convolved (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('xy for neural network convolved (trained per session)')
+%     case 2
+title('xy for neural network convolved (trained per trial)')
+%     case 3
+%         title('xy for neural network convolved (trained between)')
+% end
 
 figNo=figNo+1;
 try
@@ -140,14 +140,14 @@ for trNo=1:trials.odor_trNo
 end
 
 
-switch which_training_algorithm
-    case 1
-        title('x for nn, b:original, r:predicted (trained per session)')
-    case 2
-        title('x for nn, b:original, r:predicted (trained per trial)')
-    case 3
-        title('x for nn, b:original, r:predicted (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('x for nn, b:original, r:predicted (trained per session)')
+%     case 2
+title('x for nn, b:original, r:predicted (trained per trial)')
+%     case 3
+%         title('x for nn, b:original, r:predicted (trained between)')
+% end
 
 figNo=figNo+1;
 try
@@ -166,14 +166,14 @@ plot(XYtest(x_predictedstart:x_predictedend,1),x_predicted_conv(x_predictedstart
 xlabel('Actual x')
 ylabel('Decoded x')
 
-switch which_training_algorithm
-    case 1
-        title('x for nn (trained per session)')
-    case 2
-        title('x for nn (trained per trial)')
-    case 3
-        title('x for nn (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('x for nn (trained per session)')
+%     case 2
+title('x for nn (trained per trial)')
+%     case 3
+%         title('x for nn (trained between)')
+% end
 
 figNo=figNo+1;
 try
@@ -197,14 +197,14 @@ for trNo=1:trials.odor_trNo
 end
 
 
-switch which_training_algorithm
-    case 1
-        title('y for nn, b:original, r:predicted (trained per session)')
-    case 2
-        title('y for nn, b:original, r:predicted (trained per trial)')
-    case 3
-        title('y for nn, b:original, r:predicted (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('y for nn, b:original, r:predicted (trained per session)')
+%     case 2
+title('y for nn, b:original, r:predicted (trained per trial)')
+%     case 3
+%         title('y for nn, b:original, r:predicted (trained between)')
+% end
 
 
 figNo=figNo+1;
@@ -223,14 +223,14 @@ plot(XYtest(x_predictedstart:x_predictedend,2),y_predicted_conv(x_predictedstart
 xlabel('Actual y')
 ylabel('Decoded y')
 
-switch which_training_algorithm
-    case 1
-        title('y for nn(trained per session)')
-    case 2
-        title('y for nn (trained per trial)')
-    case 3
-        title('y for nn (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('y for nn(trained per session)')
+%     case 2
+title('y for nn (trained per trial)')
+%     case 3
+%         title('y for nn (trained between)')
+% end
 
 
 %Keep track of the per trial decoding
@@ -295,40 +295,40 @@ for trNo=1:trials.odor_trNo
             %Lane 1 hits
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-r','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-c','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-b','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
            %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
     end
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 
 
 end
 
-switch which_training_algorithm
-    case 1
-        title('y for nn, permuted b:original, r:predicted (trained per session)')
-    case 2
-        title('y for nn, permuted b:original, r:predicted (trained per trial)')
-    case 3
-        title('y for nn, permuted b:original, r:predicted (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('y for nn, permuted b:original, r:predicted (trained per session)')
+%     case 2
+title('y for nn, permuted b:original, r:predicted (trained per trial)')
+%     case 3
+%         title('y for nn, permuted b:original, r:predicted (trained between)')
+% end
 
 
 %Plot the per trial results for y
@@ -360,46 +360,46 @@ for trNo=1:trials.odor_trNo
 
     %Plot accuracy per trial
     ii_end=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))-1;
-
+ 
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-r','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[230/255 159/255 0/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[86/255 180/255 233/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-b','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[213/255 94/255 0/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
            %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,2),'Color',[0/255 158/255 115/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',y_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
     end
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 
 
 end
 
-switch which_training_algorithm
-    case 1
-        title('y for nn per trial, b:original, r:predicted (trained per session)')
-    case 2
-        title('y for nn per trial, b:original, r:predicted (trained per trial)')
-    case 3
-        title('y for nn per trial, b:original, r:predicted (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('y for nn per trial, b:original, r:predicted (trained per session)')
+%     case 2
+title('y for nn per trial, b:original, r:predicted (trained per trial)')
+%     case 3
+%         title('y for nn per trial, b:original, r:predicted (trained between)')
+% end
 
 %Plot the per trial results for x
 figNo=figNo+1;
@@ -434,40 +434,40 @@ for trNo=1:trials.odor_trNo
     switch trials.odor_trial_type(trNo)
         case 1
             %Lane 1 hits
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-r','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[230/255 159/255 0/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-c','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[86/255 180/255 233/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-b','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[213/255 94/255 0/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
            %Lane 4 hit
-            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
+            plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'Color',[0/255 158/255 115/255],'LineWidth',3)
             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
     end
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 end
 
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained per session)')
-    case 2
-        title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained per trial)')
-    case 3
-        title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained per session)')
+%     case 2
+title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained per trial)')
+%     case 3
+%         title('x for nn per trial, r: hit1, c: mis1, b: hit4, m: miss4 (trained between)')
+% end
 
 %Plot the per trial results for x with nn trained with permuted input
 figNo=figNo+1;
@@ -512,38 +512,38 @@ for trNo=1:trials.odor_trNo
             %Lane 1 hits
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-r','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 2
             %Lane 1 miss
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-c','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 3
             %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-b','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
         case 4
            %Lane 4 hit
             plot(dt*[ii_start:ii_end]',XYtest(x_predictedstart:x_predictedend,1),'-m','LineWidth',3)
 %             plot(dt*[ii_start:ii_end]',x_predicted_conv(x_predictedstart:x_predictedend,1),'-k','LineWidth',1)
-            plot(dt*[ii_start+10 ii_start+10],[0 250],'-k')
-            plot(dt*[ii_end-15 ii_end-15],[0 250],'-k')
+            plot(dt*[ii_start+10 ii_start+10],[0 480],'-k')
+            plot(dt*[ii_end-15 ii_end-15],[0 480],'-k')
     end
     ii_start=ii_start+length(XYtest(x_predictedstart:x_predictedend,2))+20;
 end
 
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained per session)')
-    case 2
-        title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained per trial)')
-    case 3
-        title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained per session)')
+%     case 2
+title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained per trial)')
+%     case 3
+%         title('x for nn per trial permuted, r: hit1, c: mis1, b: hit4, m: miss4 (trained between)')
+% end
 
 
 % fprintf(1, 'R2 nn conv x, y per trial run: %d %d\n',drgGetR2(x_all_trials,x_decod_all_trials),drgGetR2(y_all_trials,y_decod_all_trials));
@@ -581,14 +581,14 @@ hold on
 plot(x_all_trials,x_decod_all_trials,'.b')
 xlabel('x')
 ylabel('x decoded')
-switch which_training_algorithm
-    case 1
-        title('x for nn per trial(trained per session)')
-    case 2
-        title('x for nn per trial (trained per trial)')
-    case 3
-        title('x for nn per trial (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('x for nn per trial(trained per session)')
+%     case 2
+title('x for nn per trial (trained per trial)')
+%     case 3
+%         title('x for nn per trial (trained between)')
+% end
 
 %Plot y vs decoded
 figNo=figNo+1;
@@ -609,13 +609,13 @@ xlabel('y')
 ylabel('y decoded')
 
 
-switch which_training_algorithm
-    case 1
-        title('y for nn per trial (trained per session)')
-    case 2
-        title('y for nn per trial (trained per trial)')
-    case 3
-        title('y for nn per trial (trained between)')
-end
+% switch which_training_algorithm
+%     case 1
+%         title('y for nn per trial (trained per session)')
+%     case 2
+title('y for nn per trial (trained per trial)')
+%     case 3
+%         title('y for nn per trial (trained between)')
+% end
 
 pffft=1;

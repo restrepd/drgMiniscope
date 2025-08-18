@@ -8,17 +8,17 @@ clear all
 
 
 %20220727_FCM19 file 3 to troubleshoot
-this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220727_FCM19/';
-% dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
-arena_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm.mat';
-angle_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm_aangle.mat';
-
-
-% %20221117_FCM22_lanes_1_4 for first figure in manuscript
-% this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+% this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20220727_FCM19/';
 % % dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
-% arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
-% angle_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm_aangle.mat';
+% arena_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm.mat';
+% angle_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm_aangle.mat';
+
+
+%20221117_FCM22_lanes_1_4 for first figure in manuscript
+this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+% dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
+arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
+angle_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm_aangle.mat';
 
 % %20221117_FCM22_lanes_1_4 for first figure in manuscript
 % this_path='/data2/SFTP/20221117_FCM22_lanes_1_4/';
@@ -28,6 +28,7 @@ angle_file='20220727_FCM19withodor_odorarena_L1andL4_sync_mm_aangle.mat';
 
 %definition of variables
 dt=0.1; %Time bins for decoding, this was 0.2
+air_flow_speed=50; %mm/sec
 dt_miniscope=1/30;
 figNo=0;
 trial_start_offset=-15;
@@ -70,6 +71,9 @@ trim_factor=no_time_bins/no_time_points;
 
 %Now plot per trial trajectories
 mean_end_angles=[];
+ii_first_odor_encounter=[];
+dt_first_odor_encounter=[];
+dt_turn_to_odor_encounter=[];
 for trNo=1:trials.odor_trNo
     
         figNo=figNo+1;
@@ -98,6 +102,21 @@ for trNo=1:trials.odor_trNo
 
     x = pos_binned(ii_predictedstart:ii_predictedend,1);
     y = pos_binned(ii_predictedstart:ii_predictedend,2);
+
+    %find first odor encounter
+    ii_delta_start=1-trial_start_offset;
+    odor_detected=0;
+    ii_first_odor_encounter(trNo)=ii_delta_start;
+    dt_first_odor_encounter(trNo)=ii_delta_start*dt;
+    for ii=ii_delta_start+1:length(x)
+        x_on=ii*dt*air_flow_speed;
+        if (odor_detected==0)&(x(ii)<=x_on)
+            odor_detected=1;
+            ii_first_odor_encounter(trNo)=ii;
+            dt_first_odor_encounter(trNo)=ii*dt;
+        end
+    end
+
 
     % plot(arena.xsync(ii_predictedstart*(53707/17902):ii_predictedend*(53707/17902)),arena.ysync(ii_predictedstart*(53707/17902):ii_predictedend*(53707/17902)),'-k')
     % set(gca, 'YDir', 'reverse');
@@ -128,15 +147,24 @@ for trNo=1:trials.odor_trNo
     
 
 
-    %Plot the points of turns towards the spout
+    %Find the last turn
     ii_turns=length(angles.trial(trNo).delta_x);
+    last_turn_ii=1;
+    last_turn_found=0;
     for ii_t=1:ii_turns
         if angles.trial(trNo).delta_x(ii_t)>100
             this_ii_turn=angles.trial(trNo).ii_turns(ii_t);
-            plot(x(this_ii_turn),y(this_ii_turn),'or','MarkerSize',10,'MarkerEdgeColor','r','MarkerFaceColor','k')
+            last_turn_ii=this_ii_turn;
+            last_turn_found=1;
         end
     end
 
+    if last_turn_found==1
+        plot(x(last_turn_ii),y(last_turn_ii),'or','MarkerSize',10,'MarkerEdgeColor','k','MarkerFaceColor','k')
+    end
+    dt_turn_to_odor_encounter(trNo)=(ii_first_odor_encounter(trNo)-last_turn_ii)*dt;
+
+    plot(x(ii_first_odor_encounter(trNo)),y(ii_first_odor_encounter(trNo)),'oy','MarkerSize',10,'MarkerEdgeColor','k','MarkerFaceColor','y')
 
     text(100,100,['End angle ' num2str(angles.trial(trNo).end_angle)])
     text(100,130,['Mean end angle ' num2str(angles.trial(trNo).mean_end_angle)])
@@ -148,8 +176,10 @@ for trNo=1:trials.odor_trNo
 
     yticks([50 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
-
+ 
 
     pffft1=1;
 
 end
+
+pffft=1;

@@ -1,4 +1,4 @@
-%drgMini_information_contentv2
+%drgMini_information_contentv3
 close all
 clear all
 
@@ -20,8 +20,8 @@ switch is_sphgpu
         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01062025.m';
 
          %Trained with hits only
-         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
+         choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m';
 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
         % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01062025.m';
@@ -30,8 +30,13 @@ switch is_sphgpu
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
-        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
-        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+        %Angle file
+        % save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
+        % choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+
+        %This one has the odor encounter
+        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
+        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
 
         % save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser12212024/';
         % choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_12192024.m';
@@ -46,14 +51,14 @@ switch is_sphgpu
 
         %The imps file with predictive importance values is be saved here
         save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FilePredImp='outputPredictionImportance.mat';
+        save_FilePredImp='outputPredictionImportancev2.mat';
 
         %The output of drgMini_information_contentv2 is saved here
         save_PathIC='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FileIC='outputPerROIInformationContent.mat';
+        save_FileIC='outputPerROIInformationContentHitMiss.mat';
 
     case 1
-        fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_stats.txt','w');
+        fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_hitmiss_stats.txt','w');
         addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
         addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
         addpath('/home/restrepd/Documents/MATLAB/drgMaster')
@@ -147,12 +152,12 @@ y=24:48:456;
 all_info_ii=0;
 all_info_fileNo=[];
 all_info_ii_ROI=[];
-all_info_lane1=[];
-all_info_lane4=[];
+all_info_hit=[];
+all_info_miss=[];
 all_info_mutual_info14=[];
 
-all_info_lane1_sh=[];
-all_info_lane4_sh=[];
+all_info_hit_sh=[];
+all_info_miss_sh=[];
 all_info_mutual_info14_sh=[];
 
 all_info_op_bin=[];
@@ -205,9 +210,9 @@ for fileNo=1:length(handles_conc.arena_file)
             cum_lane=zeros(1,2);
             cum_bindFF=zeros(1,2);
 
-            cum_xy_bindFF_Lane1=zeros(2,10*10);
-            cum_xy_bindFF_Lane4=zeros(2,10*10);
-            cum_xy_bindFF_BothLanes=zeros(2,10*10);
+            cum_xy_bindFF_hi=zeros(2,10*10);
+            cum_xy_bindFF_miss=zeros(2,10*10);
+            cum_xy_bindFF_BothHitAndMiss=zeros(2,10*10);
 
             cum_xy_bindFF_lane=zeros(2,10*10,2);
             
@@ -215,16 +220,16 @@ for fileNo=1:length(handles_conc.arena_file)
             include_op=zeros(1,2*10*10);
 
 
-            cum_xy_Lane1=zeros(1,10*10);
-            cum_xy_Lane4=zeros(1,10*10);
-            cum_xy_BothLanes=zeros(1,10*10);
+            cum_xy_hi=zeros(1,10*10);
+            cum_xy_miss=zeros(1,10*10);
+            cum_xy_BothHitAndMiss=zeros(1,10*10);
             
             cum_lane_bindFF=zeros(2,2);
             
 
-            cum_bindFF_Lane1=zeros(1,2);
-            cum_bindFF_Lane4=zeros(1,2);
-            cum_bindFF_BothLanes=zeros(1,2);
+            cum_bindFF_hi=zeros(1,2);
+            cum_bindFF_miss=zeros(1,2);
+            cum_bindFF_BothHitAndMiss=zeros(1,2);
 
             % cum_op=zeros(1,2*10*10); %Added op
             % cum_xy_bindFF_op=zeros(2,10*10,2*10*10); %Added op
@@ -242,7 +247,7 @@ for fileNo=1:length(handles_conc.arena_file)
             all_these_x=[];
             all_these_y=[];
             all_these_dFF=[];
-            all_lanes=[];
+            all_hit_vs_miss=[];
 
  
             for trNo=1:trials.odor_trNo
@@ -253,7 +258,12 @@ for fileNo=1:length(handles_conc.arena_file)
                 all_these_x=[all_these_x; these_x];
                 all_these_y=[all_these_y; these_y];
                 all_these_dFF=[all_these_dFF; these_dFF];
-                all_lanes=[all_lanes; trials.lane_per_trial(trNo)*ones(length(these_x),1)];
+                if (trials.hit1(trNo)==1)||(trials.hit4(trNo)==1)
+                    is_this_hit=1;
+                else
+                    is_this_hit=0;
+                end
+                all_hit_vs_miss=[all_hit_vs_miss; is_this_hit*ones(length(these_x),1)];
 
                 for ii_t=1:length(these_x)
                     this_x_ii=ceil(these_x(ii_t)/50);
@@ -273,25 +283,25 @@ for fileNo=1:length(handles_conc.arena_file)
                     %Tally info
                     this_bin_dFF=(these_dFF(ii_t)>0)+1;
                     cum_bindFF(this_bin_dFF)=cum_bindFF(this_bin_dFF)+1;
-                    cum_bindFF_BothLanes(this_bin_dFF)=cum_bindFF_BothLanes(this_bin_dFF)+1;
+                    cum_bindFF_BothHitAndMiss(this_bin_dFF)=cum_bindFF_BothHitAndMiss(this_bin_dFF)+1;
                     this_xy_ii=this_x_ii+10*(this_y_ii-1);
                     include_xy(this_xy_ii)=1;
                     include_op(this_xy_ii)=1;
                     include_op(this_xy_ii+100)=1;
 
                     cum_xy(this_xy_ii)=cum_xy(this_xy_ii)+1;
-                    cum_xy_bindFF_BothLanes(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothLanes(this_bin_dFF,this_xy_ii)+1;
-                    cum_xy_BothLanes(this_xy_ii)=cum_xy_BothLanes(this_xy_ii)+1;
+                    cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)+1;
+                    cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
-                    if trials.lane_per_trial(trNo)==1
+                    if (trials.hit1(trNo)==1)||(trials.hit4(trNo)==1)
                         % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
                         % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
                         % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF,1)=cum_lane_bindFF(this_bin_dFF,1)+1;
-                        cum_xy_bindFF_Lane1(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane1(this_bin_dFF,this_xy_ii)+1;
+                        cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)+1;
-                        cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
-                        cum_bindFF_Lane1(this_bin_dFF)=cum_bindFF_Lane1(this_bin_dFF)+1;
+                        cum_xy_hi(this_xy_ii)=cum_xy_hi(this_xy_ii)+1;
+                        cum_bindFF_hi(this_bin_dFF)=cum_bindFF_hi(this_bin_dFF)+1;
                         cum_lane(1)=cum_lane(1)+1;
 
                         switch handles_conc.group(fileNo)
@@ -332,10 +342,10 @@ for fileNo=1:length(handles_conc.arena_file)
                         % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
                         % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF,2)=cum_lane_bindFF(this_bin_dFF,2)+1;
-                        cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)+1;
+                        cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)+1;
-                        cum_xy_Lane4(this_xy_ii)=cum_xy_Lane4(this_xy_ii)+1;
-                        cum_bindFF_Lane4(this_bin_dFF)=cum_bindFF_Lane4(this_bin_dFF)+1;
+                        cum_xy_miss(this_xy_ii)=cum_xy_miss(this_xy_ii)+1;
+                        cum_bindFF_miss(this_bin_dFF)=cum_bindFF_miss(this_bin_dFF)+1;
                         cum_lane(2)=cum_lane(2)+1;
 
                         switch handles_conc.group(fileNo)
@@ -385,33 +395,33 @@ for fileNo=1:length(handles_conc.arena_file)
 
             p_lane_bindFF=cum_lane_bindFF/sum(cum_lane_bindFF(:));
 
-            included_cum_xy_bindFF_Lane1=cum_xy_bindFF_Lane1(:,logical(include_xy));
-            p_xy_bindFF_Lane1=included_cum_xy_bindFF_Lane1/sum(included_cum_xy_bindFF_Lane1(:));
+            included_cum_xy_bindFF_hi=cum_xy_bindFF_hi(:,logical(include_xy));
+            p_xy_bindFF_hi=included_cum_xy_bindFF_hi/sum(included_cum_xy_bindFF_hi(:));
 
-            included_cum_xy_bindFF_Lane4=cum_xy_bindFF_Lane4(:,logical(include_xy));
-            p_xy_bindFF_Lane4=included_cum_xy_bindFF_Lane4/sum(included_cum_xy_bindFF_Lane4(:));
+            included_cum_xy_bindFF_miss=cum_xy_bindFF_miss(:,logical(include_xy));
+            p_xy_bindFF_miss=included_cum_xy_bindFF_miss/sum(included_cum_xy_bindFF_miss(:));
 
-            included_cum_xy_bindFF_BothLanes=cum_xy_bindFF_BothLanes(:,logical(include_xy));
-            p_xy_bindFF_BothLanes=included_cum_xy_bindFF_BothLanes/sum(included_cum_xy_bindFF_BothLanes(:));
+            included_cum_xy_bindFF_BothHitAndMiss=cum_xy_bindFF_BothHitAndMiss(:,logical(include_xy));
+            p_xy_bindFF_BothHitAndMiss=included_cum_xy_bindFF_BothHitAndMiss/sum(included_cum_xy_bindFF_BothHitAndMiss(:));
 
             included_cum_xy_bindFF_lane=cum_xy_bindFF_lane(:,logical(include_xy),:);
             p_xy_bindFF_lane=included_cum_xy_bindFF_lane/sum(included_cum_xy_bindFF_lane(:));
             
 
-            included_cum_xy_Lane1=cum_xy_Lane1(1,logical(include_xy));
-            p_xy_Lane1=included_cum_xy_Lane1/sum(included_cum_xy_Lane1(:));
+            included_cum_xy_hi=cum_xy_hi(1,logical(include_xy));
+            p_xy_hi=included_cum_xy_hi/sum(included_cum_xy_hi(:));
 
-            included_cum_xy_Lane4=cum_xy_Lane4(1,logical(include_xy));
-            p_xy_Lane4=included_cum_xy_Lane4/sum(included_cum_xy_Lane4(:));
+            included_cum_xy_miss=cum_xy_miss(1,logical(include_xy));
+            p_xy_miss=included_cum_xy_miss/sum(included_cum_xy_miss(:));
 
-            included_cum_xy_BothLanes=cum_xy_BothLanes(1,logical(include_xy));
-            p_xy_BothLanes=included_cum_xy_BothLanes/sum(included_cum_xy_BothLanes(:));
+            included_cum_xy_BothHitAndMiss=cum_xy_BothHitAndMiss(1,logical(include_xy));
+            p_xy_BothHitAndMiss=included_cum_xy_BothHitAndMiss/sum(included_cum_xy_BothHitAndMiss(:));
 
-            p_bindFF_Lane1=cum_bindFF_Lane1/sum(cum_bindFF_Lane1(:));
+            p_bindFF_hi=cum_bindFF_hi/sum(cum_bindFF_hi(:));
 
-            p_bindFF_Lane4=cum_bindFF_Lane4/sum(cum_bindFF_Lane4(:));
+            p_bindFF_miss=cum_bindFF_miss/sum(cum_bindFF_miss(:));
 
-            p_bindFF_BothLanes=cum_bindFF_BothLanes/sum(cum_bindFF_BothLanes(:));
+            p_bindFF_BothHitAndMiss=cum_bindFF_BothHitAndMiss/sum(cum_bindFF_BothHitAndMiss(:));
 
             % p_op=cum_op(logical(include_op))/sum(cum_op(logical(include_op)));
             % 
@@ -439,8 +449,8 @@ for fileNo=1:length(handles_conc.arena_file)
             handles_outic.fileNo(all_info_ii)=fileNo;
             handles_outic.ii_ROI(all_info_ii)=ii_ROI;
 
-            all_info_lane1(all_info_ii)=0;
-            all_info_lane4(all_info_ii)=0;
+            all_info_hit(all_info_ii)=0;
+            all_info_miss(all_info_ii)=0;
             all_info_both_lanes(all_info_ii)=0;
             all_info_mutual_info14(all_info_ii)=0;
 
@@ -455,36 +465,36 @@ for fileNo=1:length(handles_conc.arena_file)
             all_info_mutual_xy_op_bin(all_info_ii)=0;
 
             %Calculate info for lane 1
-            for ii_xy=1:size(p_xy_bindFF_Lane1,2)
-                % if sum(p_xy_bindFF_Lane1(:,ii_xy))>0
+            for ii_xy=1:size(p_xy_bindFF_hi,2)
+                % if sum(p_xy_bindFF_hi(:,ii_xy))>0
                     for ii_bin_dFF=1:2
-                        if p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)~=0
-                            all_info_lane1(all_info_ii)=all_info_lane1(all_info_ii)+p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)*...
-                                log2(p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)/(p_xy_Lane1(ii_xy)*p_bindFF_Lane1(ii_bin_dFF)));
+                        if p_xy_bindFF_hi(ii_bin_dFF,ii_xy)~=0
+                            all_info_hit(all_info_ii)=all_info_hit(all_info_ii)+p_xy_bindFF_hi(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_hi(ii_bin_dFF,ii_xy)/(p_xy_hi(ii_xy)*p_bindFF_hi(ii_bin_dFF)));
                         end
                     end
                 % end
             end
 
             %Calculate info for lane 4
-            for ii_xy=1:size(p_xy_bindFF_Lane4,2)
-                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            for ii_xy=1:size(p_xy_bindFF_miss,2)
+                % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_bin_dFF=1:2
-                        if p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)~=0
-                            all_info_lane4(all_info_ii)=all_info_lane4(all_info_ii)+p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)*...
-                                log2(p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)/(p_xy_Lane4(ii_xy)*p_bindFF_Lane4(ii_bin_dFF)));
+                        if p_xy_bindFF_miss(ii_bin_dFF,ii_xy)~=0
+                            all_info_miss(all_info_ii)=all_info_miss(all_info_ii)+p_xy_bindFF_miss(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_miss(ii_bin_dFF,ii_xy)/(p_xy_miss(ii_xy)*p_bindFF_miss(ii_bin_dFF)));
                         end
                     end
                 % end
             end
 
             %Calculate info for both lanes
-            for ii_xy=1:size(p_xy_bindFF_BothLanes,2)
-                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            for ii_xy=1:size(p_xy_bindFF_BothHitAndMiss,2)
+                % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_bin_dFF=1:2
-                        if p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)~=0
-                            all_info_both_lanes(all_info_ii)=all_info_both_lanes(all_info_ii)+p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)*...
-                                log2(p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothLanes(ii_bin_dFF)));
+                        if p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)~=0
+                            all_info_both_lanes(all_info_ii)=all_info_both_lanes(all_info_ii)+p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothHitAndMiss(ii_bin_dFF)));
                         end
                     end
                 % end
@@ -492,7 +502,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
             %Calculate mutual info between lanes 1 and 4
             for ii_xy=1:size(p_xy_bindFF_lane,2)
-                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_lane=1:2
                         for ii_bin_dFF=1:2
                             if p_xy_bindFF_lane(ii_bin_dFF,ii_xy,ii_lane)~=0
@@ -526,7 +536,7 @@ for fileNo=1:length(handles_conc.arena_file)
             % 
             % %Calculate mutual info with op
             % for ii_xy=1:size(p_xy_bindFF_op,2)
-            %     % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+            %     % if sum(p_xy_bindFF_miss(:,ii_xy))>0
             %         for ii_op=1:size(p_xy_bindFF_op,3)
             %             for ii_bin_dFF=1:2
             %                 if p_xy_bindFF_op(ii_bin_dFF,ii_xy,ii_op)~=0
@@ -551,7 +561,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
             %Calculate mutual info with op_bin
             for ii_xy=1:size(p_xy_bindFF_op_bin,2)
-                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_op=1:2
                         for ii_bin_dFF=1:2
                             if p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)~=0
@@ -566,7 +576,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
             %Calculate mutual info with xy x op_bin
             for ii_xy=1:size(p_xy_op_bin,1)
-                % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                 for ii_op=1:2
                     if p_xy_op_bin(ii_xy,ii_op)~=0
                         delta_info=p_xy_op_bin(ii_xy,ii_op)*...
@@ -623,21 +633,21 @@ for fileNo=1:length(handles_conc.arena_file)
                 cum_lane=zeros(1,2);
                 cum_bindFF=zeros(1,2);
 
-                cum_xy_bindFF_Lane1=zeros(2,10*10);
-                cum_xy_bindFF_Lane4=zeros(2,10*10);
-                cum_xy_bindFF_BothLanes=zeros(2,10*10);
+                cum_xy_bindFF_hi=zeros(2,10*10);
+                cum_xy_bindFF_miss=zeros(2,10*10);
+                cum_xy_bindFF_BothHitAndMiss=zeros(2,10*10);
 
                 cum_xy_bindFF_lane=zeros(2,10*10,2);
 
-                cum_xy_Lane1=zeros(1,10*10);
-                cum_xy_Lane4=zeros(1,10*10);
-                cum_xy_BothLanes=zeros(1,10*10);
+                cum_xy_hi=zeros(1,10*10);
+                cum_xy_miss=zeros(1,10*10);
+                cum_xy_BothHitAndMiss=zeros(1,10*10);
 
                 cum_lane_bindFF=zeros(2,2);
 
-                cum_bindFF_Lane1=zeros(1,2);
-                cum_bindFF_Lane4=zeros(1,2);
-                cum_bindFF_BothLanes=zeros(1,2);
+                cum_bindFF_hi=zeros(1,2);
+                cum_bindFF_miss=zeros(1,2);
+                cum_bindFF_BothHitAndMiss=zeros(1,2);
 
                 % cum_op=zeros(1,2*10*10); %Added op
                 % cum_xy_bindFF_op=zeros(2,10*10,2*10*10); %Added op
@@ -682,7 +692,7 @@ for fileNo=1:length(handles_conc.arena_file)
                     %Tally info
                     this_bin_dFF_rev=(all_these_dFF_reversed(ii_t)>0)+1;
                     cum_bindFF(this_bin_dFF_rev)=cum_bindFF(this_bin_dFF_rev)+1;
-                    cum_bindFF_BothLanes(this_bin_dFF_rev)=cum_bindFF_BothLanes(this_bin_dFF_rev)+1;
+                    cum_bindFF_BothHitAndMiss(this_bin_dFF_rev)=cum_bindFF_BothHitAndMiss(this_bin_dFF_rev)+1;
                     this_xy_ii=this_x_ii+10*(this_y_ii-1);
                     this_xy_ii_rev=this_x_ii_rev+10*(this_y_ii_rev-1);
                     include_xy(this_xy_ii)=1;
@@ -691,18 +701,18 @@ for fileNo=1:length(handles_conc.arena_file)
 
 
                     cum_xy(this_xy_ii)=cum_xy(this_xy_ii)+1;
-                    cum_xy_bindFF_BothLanes(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_BothLanes(this_bin_dFF_rev,this_xy_ii)+1;
-                    cum_xy_BothLanes(this_xy_ii)=cum_xy_BothLanes(this_xy_ii)+1;
+                    cum_xy_bindFF_BothHitAndMiss(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_BothHitAndMiss(this_bin_dFF_rev,this_xy_ii)+1;
+                    cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
-                    if all_lanes(ii_t)==1
+                    if all_hit_vs_miss(ii_t)==1
                         % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
                         % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
                         % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF_rev,1)=cum_lane_bindFF(this_bin_dFF_rev,1)+1;
-                        cum_xy_bindFF_Lane1(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_Lane1(this_bin_dFF_rev,this_xy_ii)+1;
+                        cum_xy_bindFF_hi(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF_rev,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)+1;
-                        cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
-                        cum_bindFF_Lane1(this_bin_dFF_rev)=cum_bindFF_Lane1(this_bin_dFF_rev)+1;
+                        cum_xy_hi(this_xy_ii)=cum_xy_hi(this_xy_ii)+1;
+                        cum_bindFF_hi(this_bin_dFF_rev)=cum_bindFF_hi(this_bin_dFF_rev)+1;
                         cum_lane(1)=cum_lane(1)+1;
 
                         switch handles_conc.group(fileNo)
@@ -745,10 +755,10 @@ for fileNo=1:length(handles_conc.arena_file)
                         % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
                         % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF_rev,2)=cum_lane_bindFF(this_bin_dFF_rev,2)+1;
-                        cum_xy_bindFF_Lane4(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_Lane4(this_bin_dFF_rev,this_xy_ii)+1;
+                        cum_xy_bindFF_miss(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF_rev,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)+1;
-                        cum_xy_Lane4(this_xy_ii)=cum_xy_Lane4(this_xy_ii)+1;
-                        cum_bindFF_Lane4(this_bin_dFF_rev)=cum_bindFF_Lane4(this_bin_dFF_rev)+1;
+                        cum_xy_miss(this_xy_ii)=cum_xy_miss(this_xy_ii)+1;
+                        cum_bindFF_miss(this_bin_dFF_rev)=cum_bindFF_miss(this_bin_dFF_rev)+1;
                         cum_lane(2)=cum_lane(2)+1;
 
                         switch handles_conc.group(fileNo)
@@ -799,33 +809,33 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 p_lane_bindFF=cum_lane_bindFF/sum(cum_lane_bindFF(:));
 
-                included_cum_xy_bindFF_Lane1=cum_xy_bindFF_Lane1(:,logical(include_xy));
-                p_xy_bindFF_Lane1=included_cum_xy_bindFF_Lane1/sum(included_cum_xy_bindFF_Lane1(:));
+                included_cum_xy_bindFF_hi=cum_xy_bindFF_hi(:,logical(include_xy));
+                p_xy_bindFF_hi=included_cum_xy_bindFF_hi/sum(included_cum_xy_bindFF_hi(:));
 
-                included_cum_xy_bindFF_Lane4=cum_xy_bindFF_Lane4(:,logical(include_xy));
-                p_xy_bindFF_Lane4=included_cum_xy_bindFF_Lane4/sum(included_cum_xy_bindFF_Lane4(:));
+                included_cum_xy_bindFF_miss=cum_xy_bindFF_miss(:,logical(include_xy));
+                p_xy_bindFF_miss=included_cum_xy_bindFF_miss/sum(included_cum_xy_bindFF_miss(:));
 
-                included_cum_xy_bindFF_BothLanes=cum_xy_bindFF_BothLanes(:,logical(include_xy));
-                p_xy_bindFF_BothLanes=included_cum_xy_bindFF_BothLanes/sum(included_cum_xy_bindFF_BothLanes(:));
+                included_cum_xy_bindFF_BothHitAndMiss=cum_xy_bindFF_BothHitAndMiss(:,logical(include_xy));
+                p_xy_bindFF_BothHitAndMiss=included_cum_xy_bindFF_BothHitAndMiss/sum(included_cum_xy_bindFF_BothHitAndMiss(:));
 
                 included_cum_xy_bindFF_lane=cum_xy_bindFF_lane(:,logical(include_xy),:);
                 p_xy_bindFF_lane=included_cum_xy_bindFF_lane/sum(included_cum_xy_bindFF_lane(:));
 
 
-                included_cum_xy_Lane1=cum_xy_Lane1(1,logical(include_xy));
-                p_xy_Lane1=included_cum_xy_Lane1/sum(included_cum_xy_Lane1(:));
+                included_cum_xy_hi=cum_xy_hi(1,logical(include_xy));
+                p_xy_hi=included_cum_xy_hi/sum(included_cum_xy_hi(:));
 
-                included_cum_xy_Lane4=cum_xy_Lane4(1,logical(include_xy));
-                p_xy_Lane4=included_cum_xy_Lane4/sum(included_cum_xy_Lane4(:));
+                included_cum_xy_miss=cum_xy_miss(1,logical(include_xy));
+                p_xy_miss=included_cum_xy_miss/sum(included_cum_xy_miss(:));
 
-                included_cum_xy_BothLanes=cum_xy_BothLanes(1,logical(include_xy));
-                p_xy_BothLanes=included_cum_xy_BothLanes/sum(included_cum_xy_BothLanes(:));
+                included_cum_xy_BothHitAndMiss=cum_xy_BothHitAndMiss(1,logical(include_xy));
+                p_xy_BothHitAndMiss=included_cum_xy_BothHitAndMiss/sum(included_cum_xy_BothHitAndMiss(:));
 
-                p_bindFF_Lane1=cum_bindFF_Lane1/sum(cum_bindFF_Lane1(:));
+                p_bindFF_hi=cum_bindFF_hi/sum(cum_bindFF_hi(:));
 
-                p_bindFF_Lane4=cum_bindFF_Lane4/sum(cum_bindFF_Lane4(:));
+                p_bindFF_miss=cum_bindFF_miss/sum(cum_bindFF_miss(:));
 
-                p_bindFF_BothLanes=cum_bindFF_BothLanes/sum(cum_bindFF_BothLanes(:));
+                p_bindFF_BothHitAndMiss=cum_bindFF_BothHitAndMiss/sum(cum_bindFF_BothHitAndMiss(:));
 
                 % p_op=cum_op(logical(include_op))/sum(cum_op(logical(include_op)));
 
@@ -843,8 +853,8 @@ for fileNo=1:length(handles_conc.arena_file)
                 included_cum_xy_bindFF_op_bin=cum_xy_bindFF_op_bin(:,logical(include_xy),:);
                 p_xy_bindFF_op_bin=included_cum_xy_bindFF_op_bin/sum(included_cum_xy_bindFF_op_bin(:));
 
-                all_info_lane1_sh(all_info_ii,ii_sh)=0;
-                all_info_lane4_sh(all_info_ii,ii_sh)=0;
+                all_info_hit_sh(all_info_ii,ii_sh)=0;
+                all_info_miss_sh(all_info_ii,ii_sh)=0;
                 all_info_both_lanes_sh(all_info_ii,ii_sh)=0;
                 all_info_mutual_info14_sh(all_info_ii,ii_sh)=0;
 
@@ -858,36 +868,36 @@ for fileNo=1:length(handles_conc.arena_file)
                 all_info_mutual_info_dFFbin_xy_op_bin_sh(all_info_ii,ii_sh)=0;
 
                 %Calculate info for lane 1
-                for ii_xy=1:size(p_xy_bindFF_Lane1,2)
-                    if sum(p_xy_bindFF_Lane1(:,ii_xy))>0
+                for ii_xy=1:size(p_xy_bindFF_hi,2)
+                    if sum(p_xy_bindFF_hi(:,ii_xy))>0
                         for ii_bin_dFF=1:2
-                            if p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)~=0
-                                all_info_lane1_sh(all_info_ii,ii_sh)=all_info_lane1_sh(all_info_ii,ii_sh)+p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)*...
-                                    log2(p_xy_bindFF_Lane1(ii_bin_dFF,ii_xy)/(p_xy_Lane1(ii_xy)*p_bindFF_Lane1(ii_bin_dFF)));
+                            if p_xy_bindFF_hi(ii_bin_dFF,ii_xy)~=0
+                                all_info_hit_sh(all_info_ii,ii_sh)=all_info_hit_sh(all_info_ii,ii_sh)+p_xy_bindFF_hi(ii_bin_dFF,ii_xy)*...
+                                    log2(p_xy_bindFF_hi(ii_bin_dFF,ii_xy)/(p_xy_hi(ii_xy)*p_bindFF_hi(ii_bin_dFF)));
                             end
                         end
                     end
                 end
 
                 %Calculate info for lane 4
-                for ii_xy=1:size(p_xy_bindFF_Lane4,2)
-                    if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                for ii_xy=1:size(p_xy_bindFF_miss,2)
+                    if sum(p_xy_bindFF_miss(:,ii_xy))>0
                         for ii_bin_dFF=1:2
-                            if p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)~=0
-                                all_info_lane4_sh(all_info_ii,ii_sh)=all_info_lane4_sh(all_info_ii,ii_sh)+p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)*...
-                                    log2(p_xy_bindFF_Lane4(ii_bin_dFF,ii_xy)/(p_xy_Lane4(ii_xy)*p_bindFF_Lane4(ii_bin_dFF)));
+                            if p_xy_bindFF_miss(ii_bin_dFF,ii_xy)~=0
+                                all_info_miss_sh(all_info_ii,ii_sh)=all_info_miss_sh(all_info_ii,ii_sh)+p_xy_bindFF_miss(ii_bin_dFF,ii_xy)*...
+                                    log2(p_xy_bindFF_miss(ii_bin_dFF,ii_xy)/(p_xy_miss(ii_xy)*p_bindFF_miss(ii_bin_dFF)));
                             end
                         end
                     end
                 end
 
                 %Calculate info for both lanes
-                for ii_xy=1:size(p_xy_bindFF_BothLanes,2)
-                    % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                for ii_xy=1:size(p_xy_bindFF_BothHitAndMiss,2)
+                    % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_bin_dFF=1:2
-                        if p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)~=0
-                            all_info_both_lanes_sh(all_info_ii,ii_sh)=all_info_both_lanes_sh(all_info_ii,ii_sh)+p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)*...
-                                log2(p_xy_bindFF_BothLanes(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothLanes(ii_bin_dFF)));
+                        if p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)~=0
+                            all_info_both_lanes_sh(all_info_ii,ii_sh)=all_info_both_lanes_sh(all_info_ii,ii_sh)+p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)*...
+                                log2(p_xy_bindFF_BothHitAndMiss(ii_bin_dFF,ii_xy)/(p_xy(ii_xy)*p_bindFF_BothHitAndMiss(ii_bin_dFF)));
                         end
                     end
                     % end
@@ -930,7 +940,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 %Calculate mutual info with xy, dFFbin, op bin
                 for ii_xy=1:size(p_xy_bindFF_op_bin,2)
-                    % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                    % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_op=1:2
                         for ii_bin_dFF=1:2
                             if p_xy_bindFF_op_bin(ii_bin_dFF,ii_xy,ii_op)~=0
@@ -944,7 +954,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
                      %Calculate mutual info with op
                 for ii_xy=1:size(p_xy_op_bin,1)
-                    % if sum(p_xy_bindFF_Lane4(:,ii_xy))>0
+                    % if sum(p_xy_bindFF_miss(:,ii_xy))>0
                     for ii_op=1:2
                         % for ii_bin_dFF=1:2
                             if p_xy_op_bin(ii_xy,ii_op)~=0
@@ -1117,8 +1127,8 @@ end
 
 
 %Now calculate 3xSD for the shuffled distributions
-sd_all_info_lane1_sh=zeros(all_info_ii,1);
-sd_all_info_lane4_sh=zeros(all_info_ii,1);
+sd_all_info_hit_sh=zeros(all_info_ii,1);
+sd_all_info_miss_sh=zeros(all_info_ii,1);
 sd_all_info_both_lanes_sh=zeros(all_info_ii,1);
 sd_all_info_mutual_info14_sh=zeros(all_info_ii,1);
 sd_all_info_lane_sh=zeros(all_info_ii,1);
@@ -1126,8 +1136,8 @@ sd_all_info_op_bin=zeros(all_info_ii,1);
 sd_all_info_mutual_info_dFFbin_xy_op_bin=zeros(all_info_ii,1);
 sd_all_info_mutual_xy_op_bin=zeros(all_info_ii,1);
 
-mean_all_info_lane1_sh=zeros(all_info_ii,1);
-mean_all_info_lane4_sh=zeros(all_info_ii,1);
+mean_all_info_hit_sh=zeros(all_info_ii,1);
+mean_all_info_miss_sh=zeros(all_info_ii,1);
 mean_all_info_both_lanes_sh=zeros(all_info_ii,1);
 mean_all_info_mutual_info14_sh=zeros(all_info_ii,1);
 mean_all_info_lane_sh=zeros(all_info_ii,1);
@@ -1135,8 +1145,8 @@ mean_all_info_op_bin_sh=zeros(all_info_ii,1);
 mean_all_info_mutual_info_dFFbin_xy_op_bin_sh=zeros(all_info_ii,1);
 mean_all_info_mutual_xy_op_bin_sh=zeros(all_info_ii,1);
 
-all_all_info_lane1_sh=[];
-all_all_info_lane4_sh=[];
+all_all_info_hit_sh=[];
+all_all_info_miss_sh=[];
 all_all_info_both_lanes_sh=[];
 all_all_info_mutual_info14_sh=[];
 all_all_info_lane_sh=[];
@@ -1144,8 +1154,8 @@ all_all_info_op_bin_sh=[];
 all_all_info_mutual_info_dFFbin_xy_op_bin_sh=[];
 all_all_info_mutual_xy_op_bin_sh=[];
 
-ssi_all_info_lane1=zeros(all_info_ii,1);
-ssi_all_info_lane4=zeros(all_info_ii,1);
+ssi_all_info_hit=zeros(all_info_ii,1);
+ssi_all_info_miss=zeros(all_info_ii,1);
 ssi_all_info_both_lanes=zeros(all_info_ii,1);
 ssi_all_info_mutual_info14=zeros(all_info_ii,1);
 ssi_all_info_lane=zeros(all_info_ii,1);
@@ -1158,10 +1168,10 @@ for ii_ROI=1:all_info_ii
 
     this_ii_ROI=ii_ROI
 
-    this_all_info_lane1_sh=zeros(1,n_shuffle_SI);
-    this_all_info_lane1_sh(1,:)=all_info_lane1_sh(ii_ROI,:);
-    this_all_info_lane4_sh=zeros(1,n_shuffle_SI);
-    this_all_info_lane4_sh(1,:)=all_info_lane4_sh(ii_ROI,:);
+    this_all_info_hit_sh=zeros(1,n_shuffle_SI);
+    this_all_info_hit_sh(1,:)=all_info_hit_sh(ii_ROI,:);
+    this_all_info_miss_sh=zeros(1,n_shuffle_SI);
+    this_all_info_miss_sh(1,:)=all_info_miss_sh(ii_ROI,:);
     this_all_info_both_lanes_sh=zeros(1,n_shuffle_SI);
     this_all_info_both_lanes_sh(1,:)=all_info_both_lanes_sh(ii_ROI,:);
     this_all_info_mutual_info14_sh=zeros(1,n_shuffle_SI);
@@ -1174,8 +1184,8 @@ for ii_ROI=1:all_info_ii
     this_all_info_mutual_info_dFFbin_xy_op_bin_sh(1,:)=all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI,:);
     this_all_info_mutual_xy_op_bin_sh(1,:)=all_info_mutual_xy_op_bin_sh(ii_ROI,:);
 
-    all_all_info_lane1_sh=[all_all_info_lane1_sh this_all_info_lane1_sh];
-    all_all_info_lane4_sh=[all_all_info_lane4_sh this_all_info_lane4_sh];
+    all_all_info_hit_sh=[all_all_info_hit_sh this_all_info_hit_sh];
+    all_all_info_miss_sh=[all_all_info_miss_sh this_all_info_miss_sh];
     all_all_info_both_lanes_sh=[all_all_info_both_lanes_sh this_all_info_both_lanes_sh];
     all_all_info_mutual_info14_sh=[all_all_info_mutual_info14_sh this_all_info_mutual_info14_sh];
     all_all_info_lane_sh=[all_all_info_lane_sh this_all_info_lane_sh];
@@ -1187,9 +1197,9 @@ for ii_ROI=1:all_info_ii
     for jj=1:8
         switch jj
             case 1
-                data=this_all_info_lane1_sh;
+                data=this_all_info_hit_sh;
             case 2
-                data=this_all_info_lane4_sh;
+                data=this_all_info_miss_sh;
             case 3
                 data=this_all_info_mutual_info14_sh;
             case 4
@@ -1221,9 +1231,9 @@ for ii_ROI=1:all_info_ii
         estimated_std = mean(bootstrap_std);
         switch jj
             case 1
-                sd_all_info_lane1_sh(ii_ROI)=estimated_std;
+                sd_all_info_hit_sh(ii_ROI)=estimated_std;
             case 2
-                sd_all_info_lane4_sh(ii_ROI)=estimated_std;
+                sd_all_info_miss_sh(ii_ROI)=estimated_std;
             case 3
                 sd_all_info_mutual_info14_sh(ii_ROI)=estimated_std;
             case 4
@@ -1239,8 +1249,8 @@ for ii_ROI=1:all_info_ii
         end
     end
 
-    mean_all_info_lane1_sh(ii_ROI)=mean(this_all_info_lane1_sh);
-    mean_all_info_lane4_sh(ii_ROI)=mean(this_all_info_lane4_sh);
+    mean_all_info_hit_sh(ii_ROI)=mean(this_all_info_hit_sh);
+    mean_all_info_miss_sh(ii_ROI)=mean(this_all_info_miss_sh);
     mean_all_info_both_lanes_sh(ii_ROI)=mean(this_all_info_both_lanes_sh);
     mean_all_info_mutual_info14_sh(ii_ROI)=mean(this_all_info_mutual_info14_sh);
     mean_all_info_lane_sh(ii_ROI)=mean(this_all_info_lane_sh);
@@ -1248,8 +1258,8 @@ for ii_ROI=1:all_info_ii
     mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI)=mean(this_all_info_lane_sh);
     mean_all_info_mutual_xy_op_bin_sh(ii_ROI)=mean(this_all_info_mutual_xy_op_bin_sh);
 
-    ssi_all_info_lane1(ii_ROI)=(all_info_lane1(ii_ROI)-mean_all_info_lane1_sh(ii_ROI))/sd_all_info_lane1_sh(ii_ROI);
-    ssi_all_info_lane4(ii_ROI)=(all_info_lane4(ii_ROI)-mean_all_info_lane4_sh(ii_ROI))/sd_all_info_lane4_sh(ii_ROI);
+    ssi_all_info_hit(ii_ROI)=(all_info_hit(ii_ROI)-mean_all_info_hit_sh(ii_ROI))/sd_all_info_hit_sh(ii_ROI);
+    ssi_all_info_miss(ii_ROI)=(all_info_miss(ii_ROI)-mean_all_info_miss_sh(ii_ROI))/sd_all_info_miss_sh(ii_ROI);
     ssi_all_info_both_lanes(ii_ROI)=(all_info_both_lanes(ii_ROI)-mean_all_info_both_lanes_sh(ii_ROI))/sd_all_info_both_lanes_sh(ii_ROI);
     ssi_all_info_mutual_info14(ii_ROI)=(all_info_mutual_info14(ii_ROI)-mean_all_info_mutual_info14_sh(ii_ROI))/sd_all_info_mutual_info14_sh(ii_ROI);
     ssi_all_info_lane(ii_ROI)=(all_info_lane(ii_ROI)-mean_all_info_lane_sh(ii_ROI))/sd_all_info_lane_sh(ii_ROI);
@@ -1257,8 +1267,8 @@ for ii_ROI=1:all_info_ii
     ssi_all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)=(all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)-mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI);
     ssi_all_info_mutual_xy_op_bin(ii_ROI)=(all_info_mutual_xy_op_bin(ii_ROI)-mean_all_info_mutual_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_xy_op_bin_sh(ii_ROI);
 
-    handles_outic.ssi_all_info_lane1(ii_ROI)=ssi_all_info_lane1(ii_ROI);
-    handles_outic.ssi_all_info_lane4(ii_ROI)=ssi_all_info_lane4(ii_ROI);
+    handles_outic.ssi_all_info_hit(ii_ROI)=ssi_all_info_hit(ii_ROI);
+    handles_outic.ssi_all_info_miss(ii_ROI)=ssi_all_info_miss(ii_ROI);
     handles_outic.ssi_all_info_both_lanes(ii_ROI)=ssi_all_info_both_lanes(ii_ROI);
     handles_outic.ssi_all_info_mutual_info14(ii_ROI)=ssi_all_info_mutual_info14(ii_ROI);
     handles_outic.ssi_all_info_lane(ii_ROI)=ssi_all_info_lane(ii_ROI);
@@ -1319,10 +1329,10 @@ hFig=figure(figureNo);
 set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 
-[f_aic,x_aic] = drg_ecdf(ssi_all_info_lane1);
+[f_aic,x_aic] = drg_ecdf(ssi_all_info_hit);
 plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
 
-[f_aic,x_aic] = drg_ecdf(ssi_all_info_lane4); %xy x bindFF for lane 4
+[f_aic,x_aic] = drg_ecdf(ssi_all_info_miss); %xy x bindFF for lane 4
 plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
 
 [f_aic,x_aic] = drg_ecdf(ssi_all_info_both_lanes);   %xy x bindFF x lane
@@ -1357,36 +1367,36 @@ ylabel('Cumulative fraction')
     
 
 %Now do tsne analysis with SSI for place cells
-% ssi_all_info_lane1_no_nan=ssi_all_info_lane1((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
-% ssi_all_info_lane4_no_nan=ssi_all_info_lane4((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
-% ssi_all_info_both_lanes_no_nan=ssi_all_info_both_lanes((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+% ssi_all_info_hit_no_nan=ssi_all_info_hit((~isnan(ssi_all_info_hit))&(~isnan(ssi_all_info_miss))&(~isnan(ssi_all_info_both_lanes)));
+% ssi_all_info_miss_no_nan=ssi_all_info_miss((~isnan(ssi_all_info_hit))&(~isnan(ssi_all_info_miss))&(~isnan(ssi_all_info_both_lanes)));
+% ssi_all_info_both_lanes_no_nan=ssi_all_info_both_lanes((~isnan(ssi_all_info_hit))&(~isnan(ssi_all_info_miss))&(~isnan(ssi_all_info_both_lanes)));
 
-datassi = [ssi_all_info_lane1'; ssi_all_info_lane4'; ssi_all_info_both_lanes'];
+datassi = [ssi_all_info_hit'; ssi_all_info_miss'; ssi_all_info_both_lanes'];
 
 %Load correlations, etc
 load([save_PathPredImp save_FilePredImp])
 
-ii_all_ROIs=1:length(ssi_all_info_lane1);
-not_nan_ii_allROIs=ii_all_ROIs((~isnan(ssi_all_info_lane1))&(~isnan(ssi_all_info_lane4))&(~isnan(ssi_all_info_both_lanes)));
+ii_all_ROIs=1:length(ssi_all_info_hit);
+not_nan_ii_allROIs=ii_all_ROIs((~isnan(ssi_all_info_hit))&(~isnan(ssi_all_info_miss))&(~isnan(ssi_all_info_both_lanes)));
 handles_outic.not_nan_ii_allROIs=not_nan_ii_allROIs;
 
-cropped_ssi_all_info_lane1=zeros(length(not_nan_ii_allROIs),1);
-cropped_ssi_all_info_lane4=zeros(length(not_nan_ii_allROIs),1);
+cropped_ssi_all_info_hit=zeros(length(not_nan_ii_allROIs),1);
+cropped_ssi_all_info_miss=zeros(length(not_nan_ii_allROIs),1);
 cropped_ssi_all_info_both_lanes=zeros(length(not_nan_ii_allROIs),1);
 cropped_all_spatial_rhol1l4=zeros(length(not_nan_ii_allROIs),1);
 cropped_all_delta_center_of_mass=zeros(length(not_nan_ii_allROIs),1);
  
 
 for jj=1:length(not_nan_ii_allROIs)
-    cropped_ssi_all_info_lane1(jj)=ssi_all_info_lane1(not_nan_ii_allROIs(jj));
-    cropped_ssi_all_info_lane4(jj)=ssi_all_info_lane4(not_nan_ii_allROIs(jj));
+    cropped_ssi_all_info_hit(jj)=ssi_all_info_hit(not_nan_ii_allROIs(jj));
+    cropped_ssi_all_info_miss(jj)=ssi_all_info_miss(not_nan_ii_allROIs(jj));
     cropped_ssi_all_info_both_lanes(jj)=ssi_all_info_both_lanes(not_nan_ii_allROIs(jj));
     cropped_all_spatial_rhol1l4(jj)=imps.all_spatial_rhol1l4(not_nan_ii_allROIs(jj));
     cropped_all_delta_center_of_mass(jj)=imps.all_delta_center_of_mass(not_nan_ii_allROIs(jj));
 end
 
-handles_outic.cropped_ssi_all_info_lane1=cropped_ssi_all_info_lane1;
-handles_outic.cropped_ssi_all_info_lane4=cropped_ssi_all_info_lane4;
+handles_outic.cropped_ssi_all_info_hit=cropped_ssi_all_info_hit;
+handles_outic.cropped_ssi_all_info_miss=cropped_ssi_all_info_miss;
 handles_outic.cropped_ssi_all_info_both_lanes=cropped_ssi_all_info_both_lanes;
 handles_outic.cropped_all_spatial_rhol1l4=cropped_all_spatial_rhol1l4;
 handles_outic.cropped_all_delta_center_of_mass=cropped_all_delta_center_of_mass;
@@ -1440,21 +1450,21 @@ handles_outic.idxssi=idxssi;
 %Report the mean infos for each cluster
 per_cluster=[];
 for ii_k=1:no_clusters
-    these_ssi_all_info_lane1=cropped_ssi_all_info_lane1(idxssi==ii_k);
-    these_ssi_all_info_lane4=cropped_ssi_all_info_lane4(idxssi==ii_k);
+    these_ssi_all_info_hit=cropped_ssi_all_info_hit(idxssi==ii_k);
+    these_ssi_all_info_miss=cropped_ssi_all_info_miss(idxssi==ii_k);
     these_ssi_all_info_both_lanes=cropped_ssi_all_info_both_lanes(idxssi==ii_k);
-    mean_lane1=mean(these_ssi_all_info_lane1(~isnan(these_ssi_all_info_lane1)));
-    per_cluster.cluster(ii_k).mean_lane1=mean_lane1;
-    per_cluster.cluster(ii_k).these_ssi_all_info_lane1=these_ssi_all_info_lane1(~isnan(these_ssi_all_info_lane1));
-    mean_lane4=mean(these_ssi_all_info_lane4(~isnan(these_ssi_all_info_lane4)));
-    per_cluster.cluster(ii_k).mean_lane4=mean_lane4;
-    per_cluster.cluster(ii_k).these_ssi_all_info_lane4=these_ssi_all_info_lane4(~isnan(these_ssi_all_info_lane4));
+    mean_hi=mean(these_ssi_all_info_hit(~isnan(these_ssi_all_info_hit)));
+    per_cluster.cluster(ii_k).mean_hi=mean_hi;
+    per_cluster.cluster(ii_k).these_ssi_all_info_hit=these_ssi_all_info_hit(~isnan(these_ssi_all_info_hit));
+    mean_miss=mean(these_ssi_all_info_miss(~isnan(these_ssi_all_info_miss)));
+    per_cluster.cluster(ii_k).mean_miss=mean_miss;
+    per_cluster.cluster(ii_k).these_ssi_all_info_miss=these_ssi_all_info_miss(~isnan(these_ssi_all_info_miss));
     mean_both=mean(these_ssi_all_info_both_lanes(~isnan(these_ssi_all_info_both_lanes)));
     per_cluster.cluster(ii_k).mean_both=mean_both;
     per_cluster.cluster(ii_k).these_ssi_all_info_both_lanes=these_ssi_all_info_both_lanes(~isnan(these_ssi_all_info_both_lanes));
 
     fprintf(1, ['\nMean SSI for cluster ' num2str(ii_k) ' lane1, lane 4, both: '...
-        num2str(mean_lane1) ' ' num2str(mean_lane4) ' ' num2str(mean_both) '\n'])
+        num2str(mean_hi) ' ' num2str(mean_miss) ' ' num2str(mean_both) '\n'])
 end
 
 % Step 3: Plot the results
@@ -1503,11 +1513,11 @@ for ii_k=1:no_clusters
     ax=gca;ax.LineWidth=3;
     set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
 
-    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
+    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_hit;
     [f_aic,x_aic] = drg_ecdf(these_ssis);
     plot(x_aic,f_aic,'Color',[204/255 121/255 167/255],'LineWidth',3)
 
-    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+    these_ssis=per_cluster.cluster(ii_k).these_ssi_all_info_miss;
     [f_aic,x_aic] = drg_ecdf(these_ssis); %xy x bindFF for lane 4
     plot(x_aic,f_aic,'Color',[0/255 114/255 178/255],'LineWidth',3)
 
@@ -1587,18 +1597,18 @@ for ii_k=1:no_clusters
     
   
 
-    these_ssis_lane1=per_cluster.cluster(ii_k).these_ssi_all_info_lane1;
-    these_ssis_lane4=per_cluster.cluster(ii_k).these_ssi_all_info_lane4;
+    these_ssis_hi=per_cluster.cluster(ii_k).these_ssi_all_info_hit;
+    these_ssis_miss=per_cluster.cluster(ii_k).these_ssi_all_info_miss;
 
     switch ii_k
         case 1
-            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1);
+            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi);
             plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
         case 2
-            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1); %xy x bindFF for lane 4
+            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi); %xy x bindFF for lane 4
             plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
         case 3
-            [f_aic,x_aic] = drg_ecdf(these_ssis_lane4-these_ssis_lane1);   %xy x bindFF x lane
+            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi);   %xy x bindFF x lane
             plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
     end
 
@@ -1809,10 +1819,10 @@ hFig=figure(figureNo);
 set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 
-[f_aic,x_aic] = drg_ecdf(all_info_lane1);
+[f_aic,x_aic] = drg_ecdf(all_info_hit);
 plot(x_aic,f_aic,'Color',[0/255 0/255 0/255],'LineWidth',3)
 
-[f_aic,x_aic] = drg_ecdf(all_all_info_lane1_sh);
+[f_aic,x_aic] = drg_ecdf(all_all_info_hit_sh);
 plot(x_aic,f_aic,'Color',[0.7 0.7 0.7],'LineWidth',3)
 
 text(0.2,0.7,'Original','Color','k','FontWeight','bold','FontSize',16)
@@ -1834,10 +1844,10 @@ set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 
 
-[f_aic,x_aic] = drg_ecdf(all_info_lane4);
+[f_aic,x_aic] = drg_ecdf(all_info_miss);
 plot(x_aic,f_aic,'Color',[0/255 0/255 0/255],'LineWidth',3)
 
-[f_aic,x_aic] = drg_ecdf(all_all_info_lane4_sh);
+[f_aic,x_aic] = drg_ecdf(all_all_info_miss_sh);
 plot(x_aic,f_aic,'Color',[0.7 0.7 0.7],'LineWidth',3)
 
 
@@ -2005,7 +2015,7 @@ xlabel('Information bits')
 ylabel('Fraction')
 
 %Now do tsne analysis with all_info_mutual_info14
-data = [all_info_lane1; all_info_lane4; all_info_mutual_info14];
+data = [all_info_hit; all_info_miss; all_info_mutual_info14];
 
 % Step 1 Transpose the data if necessary (N samples x 3 variables)
 data = data';
@@ -2053,12 +2063,12 @@ idx = cluster(gm, mappedX);
 
 %Report the mean infos for each cluster
 for ii_k=1:3
-    mean_lane1=mean(all_info_lane1(idx==ii_k));
-    mean_lane4=mean(all_info_lane4(idx==ii_k));
+    mean_hi=mean(all_info_hit(idx==ii_k));
+    mean_miss=mean(all_info_miss(idx==ii_k));
     mean_mutual14=mean(all_info_mutual_info14(idx==ii_k));
 
     fprintf(1, ['\nInformation content for cluster ' num2str(ii_k) ' lane1, lane 2, mutual: '...
-        num2str(mean_lane1) ' ' num2str(mean_lane4) ' ' num2str(mean_mutual14) '\n'])
+        num2str(mean_hi) ' ' num2str(mean_miss) ' ' num2str(mean_mutual14) '\n'])
 end
 
 % Step 3: Plot the results
@@ -2094,7 +2104,7 @@ ylabel('t-SNE Component 2');
 title(['t-SNE MI for lanes, xy and dFF vs. MI for xy in each lane' ]);
 
 %Now do tsne analysis with all_info_mutual_info_dFFbin_xy_op_bin
-data2 = [all_info_lane1; all_info_lane4; all_info_mutual_info_dFFbin_xy_op_bin]; % all_info_mutual_info_dFFbin_xy_op_bin
+data2 = [all_info_hit; all_info_miss; all_info_mutual_info_dFFbin_xy_op_bin]; % all_info_mutual_info_dFFbin_xy_op_bin
 
 % Step 1 Transpose the data if necessary (N samples x 3 variables)
 data2 = data2';
@@ -2143,12 +2153,12 @@ idxl = cluster(gml, mappedXl);
 
 % %Report the mean infos for each cluster
 % for ii_k=1:2
-%     mean_lane1l=mean(all_info_lane1(idxl==ii_k));
-%     mean_lane4l=mean(all_info_lane4(idxl==ii_k));
+%     mean_hil=mean(all_info_hit(idxl==ii_k));
+%     mean_missl=mean(all_info_miss(idxl==ii_k));
 %     mean_lane=mean(all_info_lane(idxl==ii_k));
 % 
 %     fprintf(1, ['\nInformation content for cluster ' num2str(ii_k) ' lane1, lane 2, lane: '...
-%         num2str(mean_lane1) ' ' num2str(mean_lane4) ' ' num2str(mean_mutual14) '\n'])
+%         num2str(mean_hi) ' ' num2str(mean_miss) ' ' num2str(mean_mutual14) '\n'])
 % end
 
 % Step 3: Plot the results
@@ -2235,12 +2245,12 @@ idxF = cluster(gmF, mappedXF);
 
 % %Report the mean infos for each cluster
 % for ii_k=1:2
-%     mean_lane1l=mean(all_info_lane1(idxl==ii_k));
-%     mean_lane4l=mean(all_info_lane4(idxl==ii_k));
+%     mean_hil=mean(all_info_hit(idxl==ii_k));
+%     mean_missl=mean(all_info_miss(idxl==ii_k));
 %     mean_lane=mean(all_info_lane(idxl==ii_k));
 % 
 %     fprintf(1, ['\nInformation content for cluster ' num2str(ii_k) ' lane1, lane 2, lane: '...
-%         num2str(mean_lane1) ' ' num2str(mean_lane4) ' ' num2str(mean_mutual14) '\n'])
+%         num2str(mean_hi) ' ' num2str(mean_miss) ' ' num2str(mean_mutual14) '\n'])
 % end
 
 % Step 3: Plot the results
@@ -2279,23 +2289,23 @@ title(['t-SNE MI for odor plume, xy and dFF vs. MI for Fusi space' ]);
 
 
 ii_ROI_positive=0;
-sig_all_info_lane1=zeros(1,all_info_ii);
+sig_all_info_hit=zeros(1,all_info_ii);
 for ii_ROI=1:all_info_ii
-    if all_info_lane1(ii_ROI)>=3*sd_all_info_lane1_sh(ii_ROI)+mean_all_info_lane1_sh(ii_ROI)
+    if all_info_hit(ii_ROI)>=3*sd_all_info_hit_sh(ii_ROI)+mean_all_info_hit_sh(ii_ROI)
         ii_ROI_positive=ii_ROI_positive+1;
         ii_k=idx(ii_ROI);
-        sig_all_info_lane1(ii_ROI)=1;
+        sig_all_info_hit(ii_ROI)=1;
     end
 end
 
 
 ii_ROI_positive=0;
-sig_all_info_lane4=zeros(1,all_info_ii);
+sig_all_info_miss=zeros(1,all_info_ii);
 for ii_ROI=1:all_info_ii
-    if all_info_lane4(ii_ROI)>=3*sd_all_info_lane4_sh(ii_ROI)+mean_all_info_lane4_sh(ii_ROI)
+    if all_info_miss(ii_ROI)>=3*sd_all_info_miss_sh(ii_ROI)+mean_all_info_miss_sh(ii_ROI)
         ii_ROI_positive=ii_ROI_positive+1;
         ii_k=idx(ii_ROI);
-        sig_all_info_lane4(ii_ROI)=1;
+        sig_all_info_miss(ii_ROI)=1;
 
     end
 end
@@ -2316,24 +2326,24 @@ end
 
 %lane 1
 ii_ROI_positive=0;
-sig_all_info_lane1_dFFbin_xy_op_bin=zeros(1,all_info_ii);
+sig_all_info_hit_dFFbin_xy_op_bin=zeros(1,all_info_ii);
 for ii_ROI=1:all_info_ii
-    if all_info_lane1(ii_ROI)>=3*sd_all_info_lane1_sh(ii_ROI)+mean_all_info_lane1_sh(ii_ROI)
+    if all_info_hit(ii_ROI)>=3*sd_all_info_hit_sh(ii_ROI)+mean_all_info_hit_sh(ii_ROI)
         ii_ROI_positive=ii_ROI_positive+1;
         ii_k=idxl(ii_ROI);
-        sig_all_info_lane1_dFFbin_xy_op_bin(ii_ROI)=1;
+        sig_all_info_hit_dFFbin_xy_op_bin(ii_ROI)=1;
 
     end
 end
 
 
 ii_ROI_positive=0;
-sig_all_info_lane4_dFFbin_xy_op_bin=zeros(1,all_info_ii);
+sig_all_info_miss_dFFbin_xy_op_bin=zeros(1,all_info_ii);
 for ii_ROI=1:all_info_ii
-    if all_info_lane4(ii_ROI)>=3*sd_all_info_lane4_sh(ii_ROI)+mean_all_info_lane4_sh(ii_ROI)
+    if all_info_miss(ii_ROI)>=3*sd_all_info_miss_sh(ii_ROI)+mean_all_info_miss_sh(ii_ROI)
         ii_ROI_positive=ii_ROI_positive+1;
         ii_k=idxl(ii_ROI);
-        sig_all_info_lane4_dFFbin_xy_op_bin(ii_ROI)=1;
+        sig_all_info_miss_dFFbin_xy_op_bin(ii_ROI)=1;
 
     end
 end
@@ -2370,7 +2380,7 @@ bar_offset=0;
 
 %lane 1 spatial information 
 for ii_k=1:3
-    this_fraction=sum(sig_all_info_lane1(idx==ii_k))/sum(idx==ii_k);
+    this_fraction=sum(sig_all_info_hit(idx==ii_k))/sum(idx==ii_k);
        switch ii_k
             case 1
                 bar(bar_offset,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2386,7 +2396,7 @@ end
 
 %lane 4 spatial information 
 for ii_k=1:3
-    this_fraction=sum(sig_all_info_lane4(idx==ii_k))/sum(idx==ii_k);
+    this_fraction=sum(sig_all_info_miss(idx==ii_k))/sum(idx==ii_k);
        switch ii_k
             case 1
                 bar(bar_offset+1,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2445,7 +2455,7 @@ bar_offset=0;
 
 %lane 1 spatial information 
 for ii_k=1:nclusXl
-    this_fraction=sum(sig_all_info_lane1_dFFbin_xy_op_bin(idxl==ii_k))/sum(idxl==ii_k);
+    this_fraction=sum(sig_all_info_hit_dFFbin_xy_op_bin(idxl==ii_k))/sum(idxl==ii_k);
        switch ii_k
             case 1
                 bar(bar_offset,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2461,7 +2471,7 @@ end
 
 %lane 4 spatial information 
 for ii_k=1:nclusXl
-    this_fraction=sum(sig_all_info_lane4_dFFbin_xy_op_bin(idxl==ii_k))/sum(idxl==ii_k);
+    this_fraction=sum(sig_all_info_miss_dFFbin_xy_op_bin(idxl==ii_k))/sum(idxl==ii_k);
        switch ii_k
             case 1
                 bar(bar_offset+1,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2524,7 +2534,7 @@ rand_offset=0.5;
 
 %lane 1 spatial information
 for ii_k=1:3
-    these_SSI=all_info_lane1(idx==ii_k);
+    these_SSI=all_info_hit(idx==ii_k);
     switch ii_k
         case 1
             bar(bar_offset,mean(these_SSI),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2546,7 +2556,7 @@ end
 
 %lane 4 spatial information 
 for ii_k=1:3
-    these_SSI=all_info_lane4(idx==ii_k);
+    these_SSI=all_info_miss(idx==ii_k);
     switch ii_k
         case 1
             bar(bar_offset+1,mean(these_SSI),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2618,7 +2628,7 @@ rand_offset=0.5;
 
 %lane 1 spatial information
 for ii_k=1:2
-    these_SSI=all_info_lane1(idxl==ii_k);
+    these_SSI=all_info_hit(idxl==ii_k);
     switch ii_k
         case 1
             bar(bar_offset,mean(these_SSI),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -2640,7 +2650,7 @@ end
 
 %lane 4 spatial information 
 for ii_k=1:2
-    these_SSI=all_info_lane4(idxl==ii_k);
+    these_SSI=all_info_miss(idxl==ii_k);
     switch ii_k
         case 1
             bar(bar_offset+1,mean(these_SSI),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
@@ -3118,16 +3128,16 @@ ii_y=0;
 sig_pred_imp_conc_ii_k=[];
 ii_conc=0;
 
-all_info_lane1_impx=[];
-all_info_lane4_impx=[];
+all_info_hit_impx=[];
+all_info_miss_impx=[];
 all_info_mutual_info_dFFbin_xy_op_bin_impx=[];
 
-all_info_lane1_impy=[];
-all_info_lane4_impy=[];
+all_info_hit_impy=[];
+all_info_miss_impy=[];
 all_info_mutual_info_dFFbin_xy_op_bin_impy=[];
 
-all_info_lane1_impconc=[];
-all_info_lane4_impconc=[];
+all_info_hit_impconc=[];
+all_info_miss_impconc=[];
 all_info_mutual_info_dFFbin_xy_op_bin_impconc=[];
 
 for ii=1:length(imps.mean_imp_ROI)
@@ -3140,8 +3150,8 @@ for ii=1:length(imps.mean_imp_ROI)
     if imps.sig_pred_imp_x(ii)==1
         ii_x=ii_x+1;
         sig_pred_imp_x_ii_k(ii_x)=this_ii_k;
-        all_info_lane1_impx=[all_info_lane1_impx all_info_lane1(ii_info)];
-        all_info_lane4_impx=[all_info_lane4_impx all_info_lane4(ii_info)];
+        all_info_hit_impx=[all_info_hit_impx all_info_hit(ii_info)];
+        all_info_miss_impx=[all_info_miss_impx all_info_miss(ii_info)];
         all_info_mutual_info_dFFbin_xy_op_bin_impx=[all_info_mutual_info_dFFbin_xy_op_bin_impx all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
 
     end
@@ -3150,8 +3160,8 @@ for ii=1:length(imps.mean_imp_ROI)
     if imps.sig_pred_imp_y(ii)==1
         ii_y=ii_y+1;
         sig_pred_imp_y_ii_k(ii_y)=this_ii_k;
-        all_info_lane1_impy=[all_info_lane1_impy all_info_lane1(ii_info)];
-        all_info_lane4_impy=[all_info_lane4_impy all_info_lane4(ii_info)];
+        all_info_hit_impy=[all_info_hit_impy all_info_hit(ii_info)];
+        all_info_miss_impy=[all_info_miss_impy all_info_miss(ii_info)];
         all_info_mutual_info_dFFbin_xy_op_bin_impy=[all_info_mutual_info_dFFbin_xy_op_bin_impy all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
     end
 
@@ -3159,8 +3169,8 @@ for ii=1:length(imps.mean_imp_ROI)
     if imps.sig_pred_imp_conc(ii)==1
         ii_conc=ii_conc+1;
         sig_pred_imp_conc_ii_k(ii_conc)=this_ii_k;
-        all_info_lane1_impconc=[all_info_lane1_impconc all_info_lane1(ii_info)];
-        all_info_lane4_impconc=[all_info_lane4_impconc all_info_lane4(ii_info)];
+        all_info_hit_impconc=[all_info_hit_impconc all_info_hit(ii_info)];
+        all_info_miss_impconc=[all_info_miss_impconc all_info_miss(ii_info)];
         all_info_mutual_info_dFFbin_xy_op_bin_impconc=[all_info_mutual_info_dFFbin_xy_op_bin_impconc all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
     end
 
@@ -3184,15 +3194,15 @@ edges=[0:0.025:1];
 rand_offset=0.5;
 
 %MI for predictive importance for x
-bar(bar_offset,mean(all_info_lane1_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+bar(bar_offset,mean(all_info_hit_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane1_impx...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_hit_impx...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
-bar(bar_offset,mean(all_info_lane4_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+bar(bar_offset,mean(all_info_miss_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane4_impx...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_miss_impx...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
@@ -3205,15 +3215,15 @@ bar_offset=bar_offset+1;
 bar_offset=bar_offset+1;
 
 %MI for predictive importance for y
-bar(bar_offset,mean(all_info_lane1_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+bar(bar_offset,mean(all_info_hit_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane1_impy...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_hit_impy...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
-bar(bar_offset,mean(all_info_lane4_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+bar(bar_offset,mean(all_info_miss_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane4_impy...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_miss_impy...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
@@ -3227,15 +3237,15 @@ bar_offset=bar_offset+1;
 
 
 %MI for predictive importance for conc
-bar(bar_offset,mean(all_info_lane1_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+bar(bar_offset,mean(all_info_hit_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane1_impconc...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_hit_impconc...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
-bar(bar_offset,mean(all_info_lane4_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+bar(bar_offset,mean(all_info_miss_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
 
-[mean_out, CIout, violin_x]=drgViolinPoint(all_info_lane4_impconc...
+[mean_out, CIout, violin_x]=drgViolinPoint(all_info_miss_impconc...
     ,edges,bar_offset,rand_offset,'k','k',2);
 bar_offset=bar_offset+1;
 
@@ -3346,16 +3356,16 @@ xlim([-1 11])
 % sig_predF_imp_conc_ii_k=[];
 % ii_conc=0;
 % 
-% all_infoF_lane1_impx=[];
-% all_infoF_lane4_impx=[];
+% all_infoF_hi_impx=[];
+% all_infoF_miss_impx=[];
 % all_infoF_mutual_info_dFFbin_xy_op_bin_impx=[];
 % 
-% all_infoF_lane1_impy=[];
-% all_infoF_lane4_impy=[];
+% all_infoF_hi_impy=[];
+% all_infoF_miss_impy=[];
 % all_infoF_mutual_info_dFFbin_xy_op_bin_impy=[];
 % 
-% all_infoF_lane1_impconc=[];
-% all_infoF_lane4_impconc=[];
+% all_infoF_hi_impconc=[];
+% all_infoF_miss_impconc=[];
 % all_infoF_mutual_info_dFFbin_xy_op_bin_impconc=[];
 % 
 % for ii=1:length(imps.mean_imp_ROI)
@@ -3368,8 +3378,8 @@ xlim([-1 11])
 %     if imps.sig_pred_imp_x(ii)==1
 %         ii_x=ii_x+1;
 %         sig_predF_imp_x_ii_k(ii_x)=this_ii_k;
-%         all_infoF_lane1_impx=[all_infoF_lane1_impx all_info_lane1(ii_info)];
-%         all_infoF_lane4_impx=[all_infoF_lane4_impx all_info_lane4(ii_info)];
+%         all_infoF_hi_impx=[all_infoF_hi_impx all_info_hit(ii_info)];
+%         all_infoF_miss_impx=[all_infoF_miss_impx all_info_miss(ii_info)];
 %         all_infoF_mutual_info_dFFbin_xy_op_bin_impx=[all_infoF_mutual_info_dFFbin_xy_op_bin_impx all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
 % 
 %     end
@@ -3378,8 +3388,8 @@ xlim([-1 11])
 %     if imps.sig_pred_imp_y(ii)==1
 %         ii_y=ii_y+1;
 %         sig_predF_imp_y_ii_k(ii_y)=this_ii_k;
-%         all_infoF_lane1_impy=[all_infoF_lane1_impy all_info_lane1(ii_info)];
-%         all_infoF_lane4_impy=[all_infoF_lane4_impy all_info_lane4(ii_info)];
+%         all_infoF_hi_impy=[all_infoF_hi_impy all_info_hit(ii_info)];
+%         all_infoF_miss_impy=[all_infoF_miss_impy all_info_miss(ii_info)];
 %         all_infoF_mutual_info_dFFbin_xy_op_bin_impy=[all_infoF_mutual_info_dFFbin_xy_op_bin_impy all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
 %     end
 % 
@@ -3387,8 +3397,8 @@ xlim([-1 11])
 %     if imps.sig_pred_imp_conc(ii)==1
 %         ii_conc=ii_conc+1;
 %         sig_predF_imp_conc_ii_k(ii_conc)=this_ii_k;
-%         all_infoF_lane1_impconc=[all_infoF_lane1_impconc all_info_lane1(ii_info)];
-%         all_infoF_lane4_impconc=[all_infoF_lane4_impconc all_info_lane4(ii_info)];
+%         all_infoF_hi_impconc=[all_infoF_hi_impconc all_info_hit(ii_info)];
+%         all_infoF_miss_impconc=[all_infoF_miss_impconc all_info_miss(ii_info)];
 %         all_infoF_mutual_info_dFFbin_xy_op_bin_impconc=[all_infoF_mutual_info_dFFbin_xy_op_bin_impconc all_info_mutual_info_dFFbin_xy_op_bin(ii_info)];
 %     end
 % 
@@ -3412,15 +3422,15 @@ xlim([-1 11])
 % rand_offset=0.5;
 % 
 % %MI for predictive importance for x
-% bar(bar_offset,mean(all_infoF_lane1_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% bar(bar_offset,mean(all_infoF_hi_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane1_impx...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_hi_impx...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
-% bar(bar_offset,mean(all_infoF_lane4_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% bar(bar_offset,mean(all_infoF_miss_impx),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane4_impx...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_miss_impx...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
@@ -3433,15 +3443,15 @@ xlim([-1 11])
 % bar_offset=bar_offset+1;
 % 
 % %MI for predictive importance for y
-% bar(bar_offset,mean(all_infoF_lane1_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+% bar(bar_offset,mean(all_infoF_hi_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane1_impy...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_hi_impy...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
-% bar(bar_offset,mean(all_infoF_lane4_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+% bar(bar_offset,mean(all_infoF_miss_impy),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane4_impy...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_miss_impy...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
@@ -3455,15 +3465,15 @@ xlim([-1 11])
 % 
 % 
 % %MI for predictive importance for conc
-% bar(bar_offset,mean(all_infoF_lane1_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+% bar(bar_offset,mean(all_infoF_hi_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane1_impconc...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_hi_impconc...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
-% bar(bar_offset,mean(all_infoF_lane4_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+% bar(bar_offset,mean(all_infoF_miss_impconc),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
 % 
-% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_lane4_impconc...
+% [mean_out, CIout, violin_x]=drgViolinPoint(all_infoF_miss_impconc...
 %     ,edges,bar_offset,rand_offset,'k','k',2);
 % bar_offset=bar_offset+1;
 % 
@@ -3913,29 +3923,29 @@ for fileNo=1:length(handles_conc.arena_file)
                     %Tally info
                     this_bin_dFF=(these_dFF(ii_t)>0)+1;
                     % cum_bindFF(this_bin_dFF)=cum_bindFF(this_bin_dFF)+1;
-                    % cum_bindFF_BothLanes(this_bin_dFF)=cum_bindFF_BothLanes(this_bin_dFF)+1;
+                    % cum_bindFF_BothHitAndMiss(this_bin_dFF)=cum_bindFF_BothHitAndMiss(this_bin_dFF)+1;
                     this_xy_ii=this_x_ii+10*(this_y_ii-1);
                     % cum_xy(this_xy_ii)=cum_xy(this_xy_ii)+1;
-                    % cum_xy_bindFF_BothLanes(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothLanes(this_bin_dFF,this_xy_ii)+1;
-                    % cum_xy_BothLanes(this_xy_ii)=cum_xy_BothLanes(this_xy_ii)+1;
+                    % cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)+1;
+                    % cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
-                    if trials.lane_per_trial(trNo)==1
+                    if (trials.hit1(trNo)==1)||(trials.hit4(trNo)==1)
                         this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
                         this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
                         sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
-                        % cum_xy_bindFF_Lane1(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane1(this_bin_dFF,this_xy_ii)+1;
+                        % cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)+1;
                         % cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)+1;
-                        % cum_xy_Lane1(this_xy_ii)=cum_xy_Lane1(this_xy_ii)+1;
-                        % cum_bindFF_Lane1(this_bin_dFF)=cum_bindFF_Lane1(this_bin_dFF)+1;
+                        % cum_xy_hi(this_xy_ii)=cum_xy_hi(this_xy_ii)+1;
+                        % cum_bindFF_hi(this_bin_dFF)=cum_bindFF_hi(this_bin_dFF)+1;
                         % cum_lane(1)=cum_lane(1)+1;
                     else
                         this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
                         this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
                         sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
-                        % cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_Lane4(this_bin_dFF,this_xy_ii)+1;
+                        % cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)+1;
                         % cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)+1;
-                        % cum_xy_Lane4(this_xy_ii)=cum_xy_Lane4(this_xy_ii)+1;
-                        % cum_bindFF_Lane4(this_bin_dFF)=cum_bindFF_Lane4(this_bin_dFF)+1;
+                        % cum_xy_miss(this_xy_ii)=cum_xy_miss(this_xy_ii)+1;
+                        % cum_bindFF_miss(this_bin_dFF)=cum_bindFF_miss(this_bin_dFF)+1;
                         % cum_lane(2)=cum_lane(2)+1;
                     end
 
@@ -4161,8 +4171,8 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_lane1(ii_ROI_all))];
-                if sig_all_info_lane1(ii_ROI_all)==1
+                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
+                if sig_all_info_hit(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
 
@@ -4208,8 +4218,8 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_lane4(ii_ROI_all))];
-                if sig_all_info_lane4(ii_ROI_all)==1
+                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
+                if sig_all_info_miss(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
 
@@ -4240,8 +4250,8 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_lane4(ii_ROI_all))];
-                if sig_all_info_lane4(ii_ROI_all)==1
+                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
+                if sig_all_info_miss(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
                 title(title_legend)
@@ -4283,8 +4293,8 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_lane1(ii_ROI_all))];
-                if sig_all_info_lane1(ii_ROI_all)==1
+                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
+                if sig_all_info_hit(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
                 title(title_legend)
@@ -4340,11 +4350,11 @@ for fileNo=1:length(handles_conc.arena_file)
                 ,'CategoricalVars',[2])
  
 
-            if sig_all_info_lane1(ii_ROI_all)==1
+            if sig_all_info_hit(ii_ROI_all)==1
                 pffft=1;
             end
 
-            if sig_all_info_lane4(ii_ROI_all)==1
+            if sig_all_info_miss(ii_ROI_all)==1
                 pffft=1;
             end
 

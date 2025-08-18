@@ -1,4 +1,4 @@
-%drgMini_analyze_batch_DecodeCorrXYConc
+%drgMini_analyze_batch_DecodeCorrXYConcBayes
 close all
 clear all
 
@@ -41,8 +41,10 @@ switch is_sphgpu
         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
         choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
-        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeBayesOdorConc05072025/';
-        % choiceOdorConcFileName='drgDynamicOdorConcChoices_Bayes_05072025.m';
+        %Python file. VERY important: the choiceOdorConcFileName should have the
+        %same trials
+        save_PathConcPyth='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeBayesOdorConc05072025/';
+        choiceOdorConcPythFileName='drgDynamicOdorConcChoices_Bayes_05072025.m';
 
         % 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
@@ -97,6 +99,7 @@ run_label{5}='16 bins before';
 
 addpath(choiceBatchPathName)
 eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
+eval(['handles_conc_pyth=' choiceOdorConcPythFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
 
@@ -170,7 +173,7 @@ ii_for_corr=0;
 R1_all_trials_pre=[];
 P_rho_all_trials_pre=[];
 these_fileNos_pre=[];
-
+handles_out_pyth=[];
 
 for fileNo=1:length(handles_conc.arena_file)
     
@@ -180,57 +183,177 @@ for fileNo=1:length(handles_conc.arena_file)
 
     %Load conc data
     arena_file=handles_conc.arena_file{fileNo};
-
-    if isfile([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-        %load the ouptut file
+    dFF_file=handles_conc.dFF_file{fileNo};
+  
+    if isfile([save_PathConcPyth dFF_file(1:end-4) handles_conc_pyth.save_tag{ii_run} '.mat'])
+        %load trials
         load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
         trials=handles_out.trials;
-        odor_plume_template=handles_out.odor_plume_template;
-        op_predicted=handles_out.op_predicted;
+        
+        %load the ouptut file
+        load([save_PathConcPyth dFF_file(1:end-4) handles_conc_pyth.save_tag{ii_run} '.mat'])
+        n_shuffle=size(handles_out.op_predicted_sh,1);
 
-        no_conv_points=11;
-        % conv_win=ones(1,no_conv_points)/no_conv_points;
-        conv_win_gauss = gausswin(no_conv_points);
-        conv_win_gauss=conv_win_gauss/sum(conv_win_gauss);
-
-        op_predicted_conv=conv(op_predicted,conv_win_gauss,'same');
-
-        %Now limit the x and y to max and min
-        minop=min(odor_plume_template);
-        op_predicted_conv(op_predicted_conv<minop)=minop;
-        maxop=max(odor_plume_template);
-        op_predicted_conv(op_predicted_conv>maxop)=maxop;
-
-        last_op_predictedend=1;
-
-
-        for trNo=1:trials.odor_trNo
-
-            op_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
-            op_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
-            if op_predictedend>length(odor_plume_template)
-                op_predictedend=length(odor_plume_template);
+        %Prune out the trials that were not processed
+        %Note: In the python code Byesian processing fails with a subset of trials
+        odor_plume_template=[];
+        op_predicted=[];
+        op_predicted_sh=[];
+        trial_type=[];
+        ii_predictedstart=[];
+        ii_predictedend=[];
+        this_trNo=0;
+        this_ii=0;
+        for trNo=1:length(handles_out.ii_predicted_start)
+            if handles_out.trial_processed(handles_out.ii_predicted_start(trNo)+1)==1
+                %This trial was processed
+                this_trNo=this_trNo+1;
+                odor_plume_template=[odor_plume_template handles_out.op_original(handles_out.ii_predicted_start(trNo)+1:handles_out.ii_predicted_end(trNo)+1)];
+                op_predicted=[op_predicted handles_out.op_predicted(handles_out.ii_predicted_start(trNo)+1:handles_out.ii_predicted_end(trNo)+1)];
+                op_predicted_sh=[op_predicted_sh handles_out.op_predicted_sh(:,handles_out.ii_predicted_start(trNo)+1:handles_out.ii_predicted_end(trNo)+1)];
+                trial_type=[trial_type handles_out.trial_type(handles_out.ii_predicted_start(trNo)+1:handles_out.ii_predicted_end(trNo)+1)];
+                this_ii=this_ii+1;
+                ii_predictedstart(this_trNo)=this_ii;
+                this_ii=this_ii+(handles_out.ii_predicted_end(trNo)-handles_out.ii_predicted_start(trNo));
+                ii_predictedend(this_trNo)=this_ii;
             end
-
-            op_all_trials=[op_all_trials; odor_plume_template(op_predictedstart:op_predictedend)'];
-            op_decod_all_trials=[op_decod_all_trials; op_predicted_conv(op_predictedstart:op_predictedend)];
-
-
         end
 
-        if ~isempty(op_all_trials)
-            if is_pearson==1
-                [R1,this_P_rho_all_trials]=corrcoef(op_all_trials,op_decod_all_trials);
-                R1_all_trials_pre(fileNo)=R1(1,2);
-                P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials(1,2);
+        %Do not process files where less than 80% of the trials were processed
+        if (length(ii_predictedstart)/length(handles_out.ii_predicted_start))>=0.8
+            % odor_plume_template=handles_out.op_original;
+            % op_predicted=handles_out.op_predicted;
+
+            no_conv_points=11;
+            % conv_win=ones(1,no_conv_points)/no_conv_points;
+            conv_win_gauss = gausswin(no_conv_points);
+            conv_win_gauss=conv_win_gauss/sum(conv_win_gauss);
+
+            op_predicted_conv=conv(op_predicted,conv_win_gauss,'same');
+
+            %Now limit the x and y to max and min
+            minop=min(odor_plume_template);
+            op_predicted_conv(op_predicted_conv<minop)=minop;
+            maxop=max(odor_plume_template);
+            op_predicted_conv(op_predicted_conv>maxop)=maxop;
+
+            %Do the convolution for the sh
+            op_predicted_sh_conv=zeros(size(op_predicted_sh,1),size(op_predicted_sh,2));
+
+            for ii_sh=1:n_shuffle
+                this_op_predicted_sh=zeros(1,length(op_predicted));
+                this_op_predicted_sh(1,:)=op_predicted_sh(ii_sh,:);
+
+                this_op_predicted_sh_conv=[];
+
+                this_op_predicted_sh_conv=conv(this_op_predicted_sh,conv_win_gauss,'same');
+
+
+                %Now limit the x and y to max and min
+                minop=min(odor_plume_template);
+                this_op_predicted_sh_conv(this_op_predicted_sh_conv<minop)=minop;
+                maxop=max(odor_plume_template);
+                this_op_predicted_sh_conv(this_op_predicted_sh_conv>maxop)=maxop;
+
+                op_predicted_sh_conv(ii_sh,:)=this_op_predicted_sh_conv;
+            end
+
+            %Now calculate R values and corresponding p values for all trials
+            last_op_predictedend=1;
+
+            op_all_trials=odor_plume_template;
+            op_decod_all_trials=op_predicted_conv;
+   
+
+            if ~isempty(op_all_trials)
+                if is_pearson==1
+                    [R1,this_P_rho_all_trials]=corrcoef(op_all_trials,op_decod_all_trials);
+                    R1_all_trials_pre(fileNo)=R1(1,2);
+                    P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials(1,2);
+                else
+                    [R1,this_P_rho_all_trials]=corr(op_all_trials,op_decod_all_trials,'Type','Spearman');
+                    R1_all_trials_pre(fileNo)=R1;
+                    P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials;
+                end
             else
-                [R1,this_P_rho_all_trials]=corr(op_all_trials,op_decod_all_trials,'Type','Spearman');
-                R1_all_trials_pre(fileNo)=R1;
-                P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials;
+                R1_all_trials_pre(fileNo)=NaN;
             end
+
+            handles_out_pyth.file(fileNo).R1.all_trials=R1_all_trials_pre(fileNo);
+
+            %Now calculate R values and corresponding p values for all trials shifted
+            last_op_predictedend=1;
+
+            op_decod_all_trials_sh=zeros(1,size(op_predicted_sh_conv,2));
+            op_decod_all_trials_sh=op_predicted_sh_conv(1,:);
+            
+
+            if ~isempty(op_all_trials)
+                if is_pearson==1
+                    [R1,this_P_rho_all_trials]=corrcoef(op_all_trials,op_decod_all_trials_sh);
+                    R1_all_trials_pre_sh(fileNo)=R1(1,2);
+                    P_rho_all_trials_pre_sh(fileNo)=this_P_rho_all_trials(1,2);
+                else
+                    [R1,this_P_rho_all_trials]=corr(op_all_trials,op_decod_all_trials_sh,'Type','Spearman');
+                    R1_all_trials_pre_sh(fileNo)=R1;
+                    P_rho_all_trials_pre_sh(fileNo)=this_P_rho_all_trials;
+                end
+            else
+                R1_all_trials_pre(fileNo)=NaN;
+            end
+
+            handles_out_pyth.file(fileNo).R1.all_trials_sh=R1_all_trials_pre_sh(fileNo);
+
+            %Now calculate R1 for hits and miss
+            last_op_predictedend=1;
+            wall_threshold=50;
+
+            op_all_hits=[];
+            op_decod_all_hits=[];
+            op_all_miss=[];
+            op_decod_all_miss=[]
+
+            for trNo=1:length(ii_predictedstart)
+
+                op_predictedstart=ii_predictedstart(trNo);
+                op_predictedend=ii_predictedend(trNo);
+             
+
+                %Okabe_Ito colors
+                switch trial_type(op_predictedstart)
+                    case 1
+                        %Lane 1 hits vermillion
+
+                        op_all_hits=[op_all_hits odor_plume_template(op_predictedstart:op_predictedend)];
+                        op_decod_all_hits=[op_decod_all_hits op_predicted_conv(op_predictedstart:op_predictedend)];
+                    case 2
+                        %Lane 1 miss orange
+                        op_all_miss=[op_all_miss odor_plume_template(op_predictedstart:op_predictedend)];
+                        op_decod_all_miss=[op_decod_all_miss op_predicted_conv(op_predictedstart:op_predictedend)];
+
+                    case 3
+                        %Lane 4 hit blue
+                        op_all_hits=[op_all_hits odor_plume_template(op_predictedstart:op_predictedend)];
+                        op_decod_all_hits=[op_decod_all_hits op_predicted_conv(op_predictedstart:op_predictedend)];
+                    case 4
+                        %Lane 4 miss sky blue
+                        op_all_miss=[op_all_miss odor_plume_template(op_predictedstart:op_predictedend)];
+                        op_decod_all_miss=[op_decod_all_miss op_predicted_conv(op_predictedstart:op_predictedend)];
+                end
+            end
+
+            R1=corrcoef(op_all_hits,op_decod_all_hits);
+            fprintf(1, 'Correlation coefficient nn conv odor conc hits %d\n\n',R1(1,2));
+            handles_out_pyth.file(fileNo).R1.all_hits=R1(1,2);
+
+            R1=corrcoef(op_all_miss,op_decod_all_miss);
+            fprintf(1, 'Correlation coefficient nn conv odor conc miss %d\n\n',R1(1,2));
+            handles_out_pyth.file(fileNo).R1.all_miss=R1(1,2);
+
         else
-            R1_all_trials_pre(fileNo)=NaN;
+            P_rho_all_trials_pre(fileNo)=1;
         end
+
     else
         P_rho_all_trials_pre(fileNo)=1;
     end
@@ -267,6 +390,7 @@ histogram(fraction_other_angle,edges)
 title('Fraction of horizontal approaches for all files')
 xlabel('Fraction')
 
+
 %Calculate the percent of sessions with p<p_thr
 total_sessions=0;
 sessions_p_less=0;
@@ -292,7 +416,7 @@ end
 fprintf(1, ['\nPercent sessions with p<p_thr ' num2str(100*sessions_p_less/total_sessions) ' , total sessions ' num2str(total_sessions)  '\n'])
 fprintf(fileID, ['\nPercent sessions with p<p_thr ' num2str(100*sessions_p_less/total_sessions) ' , total sessions ' num2str(total_sessions)  '\n']);
 
-% try
+
 %Do the R1 conc bar comparing 1 cm vs 2 cm with 0 or 16 bins before
 figureNo = figureNo + 1;
 try
@@ -327,11 +451,8 @@ for grNo=these_groups
     for fileNo=1:length(handles_conc.arena_file)
         arena_file=handles_conc.arena_file{fileNo};
         if (handles_conc.group(fileNo)==grNo)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
-            %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-            these_R1s=[these_R1s handles_out.R1.all_trials];
+            these_R1s=[these_R1s handles_out_pyth.file(fileNo).R1.all_trials];
         end
-
     end
  
     %plot bar
@@ -356,8 +477,6 @@ for grNo=these_groups
     input_r1_data(id_r1_ii).data=these_R1s;
     input_r1_data(id_r1_ii).description=[group_label{grNo} ' ' run_label{ii_run}];
 end
-bar_offset=bar_offset+1;
-
 
 text(1.5,0.38,'2 cm','Color',[230/255 159/255 0/255],'FontWeight','bold')
 text(1.5,0.35,'1 cm','Color',[86/255 180/255 233/255],'FontWeight','bold')
@@ -477,169 +596,169 @@ fprintf(fileID, ['\n\nRanksum or t-test p values for R1 cm from floor and bins b
 % ylabel('R1')
 % catch
 % end
-
-%For 0 bins before plot R1 for conc vs XY
-ii_run=1; %0 bins before
-
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-these_groups=[1 5];
-these_new_groups.gr(1).groups=[1 5]; %2 cm and 1 cm
-these_new_groups.gr(2).groups=[2 3]; %One lane odor
-edges=[0:0.05:1];
-rand_offset=1;
-R1_per_mouse=[];
-
-for grNo=1:2
-    for ii_mouse=unique(handles_conc.mouse)
-        R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc=[];
-        R1_per_mouse.group(grNo).mouse(ii_mouse).pc=[];
-        R1_per_mouse.group(grNo).mouse(ii_mouse).R1_XY=[];
-    end
-end
-
-for grNo=1:2
-    %R1 for conc all trials
-
-    R1_conc=[];
-    percent_correct=[];
-
-    for fileNo=1:length(handles_conc.arena_file)
-        if (sum(handles_conc.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
-            arena_file=handles_conc.arena_file{fileNo};
-            %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-            R1_conc=[R1_conc handles_out.R1.all_trials];
-            R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).R1_conc=...
-                [R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).R1_conc handles_out.R1.all_trials];
-            this_pc=100*(sum(handles_out.trials.hit1)+sum(handles_out.trials.hit4))/length(handles_out.trials.hit1);
-            R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).pc=...
-                [R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).pc this_pc];
-            percent_correct=[percent_correct this_pc];
-        end
-    end
-    these_new_groups.gr(grNo).R1_conc=R1_conc;
-    these_new_groups.gr(grNo).percent_correct=percent_correct;
-
-    %R1 for XY all trials
-    R1_XY=[];
-
-    for fileNo=1:length(handles_XY.arena_file)
-        if (sum(handles_XY.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
-            arena_file=handles_conc.arena_file{fileNo};
-            %load the ouptut file
-            load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
-            R1_XY=[R1_XY handles_out.R1.within_XY];
-            R1_per_mouse.group(grNo).mouse(handles_XY.mouse(fileNo)).R1_XY=...
-                [R1_per_mouse.group(grNo).mouse(handles_XY.mouse(fileNo)).R1_XY handles_out.R1.within_XY];
-        end
-    end
-
-    these_new_groups.gr(grNo).R1_XY=R1_XY;
-
-
-    switch grNo
-        case 1
-            plot(R1_conc,R1_XY,'ok','MarkerFaceColor','k')
-        case 2
-            plot(R1_conc,R1_XY,'ok','MarkerFaceColor',[0.7 0.7 0.7])
-    end
-
-end
-
-text(0.5,0.5,'Both spouts','Color','k')
-text(0.5,0.4,'One spout','Color',[0.7 0.7 0.7])
-title('Within trial R1')
-xlabel('R1 conc')
-ylabel('R1 XY')
-
-%R1 0 bins before per mouse
-
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-marker_per_group{1}=['' 'o' ''];
-marker_per_group{2}=['' 's' ''];
-
-color_okabe_ito{1}='[230/255 159/255 0/255]';
-color_okabe_ito{2}='[86/255 180/255 233/255]';
-color_okabe_ito{3}='[0/255 158/255 115/255]';
-color_okabe_ito{4}='[240/255 228/255 66/255]';
-color_okabe_ito{5}='[0/255 114/255 178/255]';
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-
-for grNo=1:2
-
-    for ii_mouse=unique(handles_conc.mouse)
-
-        if ~isempty(R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc)
-            these_R1conc=R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc;
-            these_R1XY=R1_per_mouse.group(grNo).mouse(ii_mouse).R1_XY;
-            this_mean_R1conc=mean(these_R1conc);
-            this_mean_R1XY=mean(these_R1XY);
-            eval(['plot(this_mean_R1conc, this_mean_R1XY,''' marker_per_group{grNo} ''',''MarkerSize'',12,''MarkerEdgeColor'',''none'',''MarkerFaceColor'', ' color_okabe_ito{ii_mouse} ')'])
-            for ii_point=1:length(these_R1conc)
-                eval(['plot(these_R1conc(ii_point), these_R1XY(ii_point),''' marker_per_group{grNo} ''',''MarkerSize'',6,''MarkerEdgeColor'',''none'',''MarkerFaceColor'', ' color_okabe_ito{ii_mouse} ')'])
-            end
-            
-        end
-    end
-
-end
-
-text(0.5,0.5,'Both spouts','Color','k')
-text(0.5,0.4,'One spout','Color',[0.7 0.7 0.7])
-title('Within trial R1 per mouse')
-xlabel('R1 conc')
-ylabel('R1 XY')
-
-
-%Plot R1 vs percent correct behavior
-group_labels{1}='odor in both spouts';
-group_labels{2}='odor in one spout';
-for grNo=1:2
-    figureNo = figureNo + 1;
-    try
-        close(figureNo)
-    catch
-    end
-    hFig=figure(figureNo);
-    hold on
- 
-    ax=gca;ax.LineWidth=3;
-    set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-    R1_conc=these_new_groups.gr(grNo).R1_conc;
-    R1_XY=these_new_groups.gr(grNo).R1_XY;
-    percent_correct=these_new_groups.gr(grNo).percent_correct;
-
-    plot(percent_correct,R1_conc,'o','MarkerEdgeColor','none','MarkerFaceColor',[230/255 159/255 0/255])
-    plot(percent_correct,R1_XY,'o','MarkerEdgeColor','none','MarkerFaceColor',[86/255 180/255 233/255])
-
-    text(60,0.7,'Odor','Color',[230/255 159/255 0/255])
-    text(60,0.65,'XY','Color',[86/255 180/255 233/255])
-
-    title(['R1 vs. percent correct behavior ' group_labels{grNo}])
-    ylabel('R1')
-    xlabel('Percent correct')
-end
+% 
+% %For 0 bins before plot R1 for conc vs XY
+% ii_run=1; %0 bins before
+% 
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% these_groups=[1 5];
+% these_new_groups.gr(1).groups=[1 5]; %2 cm and 1 cm
+% these_new_groups.gr(2).groups=[2 3]; %One lane odor
+% edges=[0:0.05:1];
+% rand_offset=1;
+% R1_per_mouse=[];
+% 
+% for grNo=1:2
+%     for ii_mouse=unique(handles_conc.mouse)
+%         R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc=[];
+%         R1_per_mouse.group(grNo).mouse(ii_mouse).pc=[];
+%         R1_per_mouse.group(grNo).mouse(ii_mouse).R1_XY=[];
+%     end
+% end
+% 
+% for grNo=1:2
+%     %R1 for conc all trials
+% 
+%     R1_conc=[];
+%     percent_correct=[];
+% 
+%     for fileNo=1:length(handles_conc.arena_file)
+%         if (sum(handles_conc.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+%             arena_file=handles_conc.arena_file{fileNo};
+%             %load the ouptut file
+%             load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+%             R1_conc=[R1_conc handles_out.R1.all_trials];
+%             R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).R1_conc=...
+%                 [R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).R1_conc handles_out.R1.all_trials];
+%             this_pc=100*(sum(handles_out.trials.hit1)+sum(handles_out.trials.hit4))/length(handles_out.trials.hit1);
+%             R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).pc=...
+%                 [R1_per_mouse.group(grNo).mouse(handles_conc.mouse(fileNo)).pc this_pc];
+%             percent_correct=[percent_correct this_pc];
+%         end
+%     end
+%     these_new_groups.gr(grNo).R1_conc=R1_conc;
+%     these_new_groups.gr(grNo).percent_correct=percent_correct;
+% 
+%     %R1 for XY all trials
+%     R1_XY=[];
+% 
+%     for fileNo=1:length(handles_XY.arena_file)
+%         if (sum(handles_XY.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+%             arena_file=handles_conc.arena_file{fileNo};
+%             %load the ouptut file
+%             load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
+%             R1_XY=[R1_XY handles_out.R1.within_XY];
+%             R1_per_mouse.group(grNo).mouse(handles_XY.mouse(fileNo)).R1_XY=...
+%                 [R1_per_mouse.group(grNo).mouse(handles_XY.mouse(fileNo)).R1_XY handles_out.R1.within_XY];
+%         end
+%     end
+% 
+%     these_new_groups.gr(grNo).R1_XY=R1_XY;
+% 
+% 
+%     switch grNo
+%         case 1
+%             plot(R1_conc,R1_XY,'ok','MarkerFaceColor','k')
+%         case 2
+%             plot(R1_conc,R1_XY,'ok','MarkerFaceColor',[0.7 0.7 0.7])
+%     end
+% 
+% end
+% 
+% text(0.5,0.5,'Both spouts','Color','k')
+% text(0.5,0.4,'One spout','Color',[0.7 0.7 0.7])
+% title('Within trial R1')
+% xlabel('R1 conc')
+% ylabel('R1 XY')
+% 
+% %R1 0 bins before per mouse
+% 
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% marker_per_group{1}=['' 'o' ''];
+% marker_per_group{2}=['' 's' ''];
+% 
+% color_okabe_ito{1}='[230/255 159/255 0/255]';
+% color_okabe_ito{2}='[86/255 180/255 233/255]';
+% color_okabe_ito{3}='[0/255 158/255 115/255]';
+% color_okabe_ito{4}='[240/255 228/255 66/255]';
+% color_okabe_ito{5}='[0/255 114/255 178/255]';
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% 
+% for grNo=1:2
+% 
+%     for ii_mouse=unique(handles_conc.mouse)
+% 
+%         if ~isempty(R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc)
+%             these_R1conc=R1_per_mouse.group(grNo).mouse(ii_mouse).R1_conc;
+%             these_R1XY=R1_per_mouse.group(grNo).mouse(ii_mouse).R1_XY;
+%             this_mean_R1conc=mean(these_R1conc);
+%             this_mean_R1XY=mean(these_R1XY);
+%             eval(['plot(this_mean_R1conc, this_mean_R1XY,''' marker_per_group{grNo} ''',''MarkerSize'',12,''MarkerEdgeColor'',''none'',''MarkerFaceColor'', ' color_okabe_ito{ii_mouse} ')'])
+%             for ii_point=1:length(these_R1conc)
+%                 eval(['plot(these_R1conc(ii_point), these_R1XY(ii_point),''' marker_per_group{grNo} ''',''MarkerSize'',6,''MarkerEdgeColor'',''none'',''MarkerFaceColor'', ' color_okabe_ito{ii_mouse} ')'])
+%             end
+% 
+%         end
+%     end
+% 
+% end
+% 
+% text(0.5,0.5,'Both spouts','Color','k')
+% text(0.5,0.4,'One spout','Color',[0.7 0.7 0.7])
+% title('Within trial R1 per mouse')
+% xlabel('R1 conc')
+% ylabel('R1 XY')
+% 
+% 
+% %Plot R1 vs percent correct behavior
+% group_labels{1}='odor in both spouts';
+% group_labels{2}='odor in one spout';
+% for grNo=1:2
+%     figureNo = figureNo + 1;
+%     try
+%         close(figureNo)
+%     catch
+%     end
+%     hFig=figure(figureNo);
+%     hold on
+% 
+%     ax=gca;ax.LineWidth=3;
+%     set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+%     R1_conc=these_new_groups.gr(grNo).R1_conc;
+%     R1_XY=these_new_groups.gr(grNo).R1_XY;
+%     percent_correct=these_new_groups.gr(grNo).percent_correct;
+% 
+%     plot(percent_correct,R1_conc,'o','MarkerEdgeColor','none','MarkerFaceColor',[230/255 159/255 0/255])
+%     plot(percent_correct,R1_XY,'o','MarkerEdgeColor','none','MarkerFaceColor',[86/255 180/255 233/255])
+% 
+%     text(60,0.7,'Odor','Color',[230/255 159/255 0/255])
+%     text(60,0.65,'XY','Color',[86/255 180/255 233/255])
+% 
+%     title(['R1 vs. percent correct behavior ' group_labels{grNo}])
+%     ylabel('R1')
+%     xlabel('Percent correct')
+% end
 % 
 % %Compare groups with fittree, weber frechner and only current data
 % %point
@@ -738,141 +857,141 @@ end
 
 %Do the R1 bar graph for odor vs one lane vs shuffled
 
-
-figureNo = figureNo + 1;
 try
-    close(figureNo)
+    figureNo = figureNo + 1;
+    try
+        close(figureNo)
+    catch
+    end
+    hFig=figure(figureNo);
+    hold on
+
+    ax=gca;ax.LineWidth=3;
+    set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+    bar_offset=0;
+
+    edges=[0:0.05:1];
+    rand_offset=0.5;
+
+    glm_r1=[];
+    glm_r1_ii=0;
+
+    id_r1_ii=0;
+    input_r1_data=[];
+
+    ii_run=1; %0 bins before
+    these_new_groups.gr(1).groups=[1 5]; %2 cm and 1 cm
+    these_new_groups.gr(2).groups=[2 3]; %One lane odor
+
+    R1type_label=[];
+    R1type_label{1}='all_trials';
+    R1type_label{2}='all_trials_sh';
+
+    R1type{1}='all_trials';
+    R1type{2}='all_trials_sh';
+
+    group_labels{1}='Both spouts';
+    group_labels{2}='One spout';
+
+    %Plot the different R1s
+    all_R1s=[];
+
+    for grNo=1:2
+        for ii_R1type=1:length(R1type_label)
+
+            these_R1s=[];
+            for fileNo=1:length(handles_conc.arena_file)
+                arena_file=handles_conc.arena_file{fileNo};
+                if (sum(handles_conc.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
+                    eval(['these_R1s=[these_R1s handles_out_pyth.file(fileNo).R1.' R1type{ii_R1type} '];'])
+                end
+            end
+            all_R1s.group(grNo).R1type(ii_R1type).R1=these_R1s;
+            %plot bar
+            switch ii_R1type
+                case 1
+                    bar(bar_offset,mean(these_R1s),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+                case 2
+                    bar(bar_offset,mean(these_R1s),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+            end
+
+            %Violin plot
+            [mean_out, CIout, all_R1s.group(grNo).ii_R1type(ii_R1type).violin_x]=drgViolinPoint(these_R1s...
+                ,edges,bar_offset,rand_offset,'k','k',4);
+            bar_offset=bar_offset+1;
+
+            glm_r1.data(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=these_R1s;
+            glm_r1.trial_type(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=ii_R1type*ones(1,length(these_R1s));
+            glm_r1.group(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=grNo*ones(1,length(these_R1s));
+            glm_r1_ii=glm_r1_ii+length(these_R1s);
+
+            id_r1_ii=id_r1_ii+1;
+            input_r1_data(id_r1_ii).data=these_R1s;
+            input_r1_data(id_r1_ii).description=[R1type_label{ii_R1type} ' ' group_labels{grNo}];
+
+        end
+        bar_offset=bar_offset+1;
+    end
+
+
+    %Plot lines between points
+    ii_R1type=1;
+    for grNo=1:2
+        for ii=1:length(all_R1s.group(grNo).R1type(ii_R1type).R1)
+            these_R1s=[];
+            for ii_R1type=1:2
+                these_R1s=[these_R1s all_R1s.group(grNo).R1type(ii_R1type).R1(ii)];
+            end
+            plot([all_R1s.group(grNo).ii_R1type(1).violin_x(ii) all_R1s.group(grNo).ii_R1type(2).violin_x(ii)],these_R1s,'-','Color',[0.7 0.7 0.7])
+        end
+    end
+
+
+    % x_pos=3;
+    text(0,0.9,'within','Color',[230/255 159/255 0/255])
+    text(0,0.8,'shuffled','Color',[86/255 180/255 233/255])
+    % text(x_pos,0.45,'miss','Color',[240/255 228/255 66/255])
+    % text(x_pos,0.41,'shuffled','Color',[0/255 114/255 178/255])
+
+    xticks([0 3])
+    xticklabels({'both spouts','one spout'})
+
+
+    title(['R1 for odor in either both spouts or one spout'])
+    ylabel('R1')
+    ylim([-0.2 1])
+    xlim([-1 5])
+
+    %Perform the glm  for errors
+    fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' odor in one or both spouts\n'])
+    fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' odor in one or both spouts\n']);
+    %
+    % fprintf(1, ['\nwindow 0: Base, 1:PreFV, 2:PreOdor, 3:Odor\n'])
+    % fprintf(fileID, ['\nwindow 0: Base, 1:PreFV, 2:PreOdor, 3:Odor\n']);
+
+    tbl = table(glm_r1.data',glm_r1.trial_type',glm_r1.group',...
+        'VariableNames',{'R1','trial_type','group'});
+    mdl = fitglm(tbl,'R1~trial_type+group'...
+        ,'CategoricalVars',[2,3])
+
+    txt = evalc('mdl');
+    txt=regexp(txt,'<strong>','split');
+    txt=cell2mat(txt);
+    txt=regexp(txt,'</strong>','split');
+    txt=cell2mat(txt);
+
+    fprintf(fileID,'%s\n', txt);
+
+
+    %Do the ranksum/t-test
+    fprintf(1, ['\n\nRanksum or t-test p values for odor in one or both spouts\n'])
+    fprintf(fileID, ['\n\nRanksum or t-test p values for odor in one or both spouts\n']);
+
+
+    [output_data] = drgMutiRanksumorTtest(input_r1_data, fileID,0);
 catch
 end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-bar_offset=0;
-
-edges=[0:0.05:1];
-rand_offset=0.5;
-
-glm_r1=[];
-glm_r1_ii=0;
-
-id_r1_ii=0;
-input_r1_data=[];
-
-ii_run=1; %0 bins before
-these_new_groups.gr(1).groups=[1 5]; %2 cm and 1 cm
-these_new_groups.gr(2).groups=[2 3]; %One lane odor
-
-R1type_label=[];
-R1type_label{1}='all_trials';
-R1type_label{2}='all_trials_sh';
-
-R1type{1}='all_trials';
-R1type{2}='all_trials_sh';
-
-group_labels{1}='Both spouts';
-group_labels{2}='One spout';
-
-%Plot the different R1s
-all_R1s=[];
-
-for grNo=1:2
-    for ii_R1type=1:length(R1type_label)
-
-        these_R1s=[];
-        for fileNo=1:length(handles_conc.arena_file)
-            arena_file=handles_conc.arena_file{fileNo};
-            if (sum(handles_conc.group(fileNo)==these_new_groups.gr(grNo).groups)>0)&(fraction_other_angle(fileNo)<thr_froa)&(P_rho_all_trials_pre(fileNo)<=thr_rho)
-                %load the ouptut file
-                load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-                eval(['these_R1s=[these_R1s handles_out.R1.' R1type{ii_R1type} '];'])
-            end
-        end
-        all_R1s.group(grNo).R1type(ii_R1type).R1=these_R1s;
-        %plot bar
-        switch ii_R1type
-            case 1
-                bar(bar_offset,mean(these_R1s),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-            case 2
-                bar(bar_offset,mean(these_R1s),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
-        end
-
-        %Violin plot
-        [mean_out, CIout, all_R1s.group(grNo).ii_R1type(ii_R1type).violin_x]=drgViolinPoint(these_R1s...
-            ,edges,bar_offset,rand_offset,'k','k',4);
-        bar_offset=bar_offset+1;
-
-        glm_r1.data(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=these_R1s;
-        glm_r1.trial_type(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=ii_R1type*ones(1,length(these_R1s));
-        glm_r1.group(glm_r1_ii+1:glm_r1_ii+length(these_R1s))=grNo*ones(1,length(these_R1s));
-        glm_r1_ii=glm_r1_ii+length(these_R1s);
-
-        id_r1_ii=id_r1_ii+1;
-        input_r1_data(id_r1_ii).data=these_R1s;
-        input_r1_data(id_r1_ii).description=[R1type_label{ii_R1type} ' ' group_labels{grNo}];
-
-    end
-    bar_offset=bar_offset+1;
-end
-
-
-%Plot lines between points
-ii_R1type=1;
-for grNo=1:2
-    for ii=1:length(all_R1s.group(grNo).R1type(ii_R1type).R1)
-        these_R1s=[];
-        for ii_R1type=1:2
-            these_R1s=[these_R1s all_R1s.group(grNo).R1type(ii_R1type).R1(ii)];   
-        end
-        plot([all_R1s.group(grNo).ii_R1type(1).violin_x(ii) all_R1s.group(grNo).ii_R1type(2).violin_x(ii)],these_R1s,'-','Color',[0.7 0.7 0.7])
-    end
-end
-
-
-% x_pos=3;
-text(0,0.9,'within','Color',[230/255 159/255 0/255])
-text(0,0.8,'shuffled','Color',[86/255 180/255 233/255])
-% text(x_pos,0.45,'miss','Color',[240/255 228/255 66/255])
-% text(x_pos,0.41,'shuffled','Color',[0/255 114/255 178/255])
-
-xticks([0 3])
-xticklabels({'both spouts','one spout'})
-
-
-title(['R1 for odor in either both spouts or one spout'])
-ylabel('R1')
-ylim([-0.2 1])
-xlim([-1 5])
-
-%Perform the glm  for errors
-fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' odor in one or both spouts\n'])
-fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' odor in one or both spouts\n']);
-%
-% fprintf(1, ['\nwindow 0: Base, 1:PreFV, 2:PreOdor, 3:Odor\n'])
-% fprintf(fileID, ['\nwindow 0: Base, 1:PreFV, 2:PreOdor, 3:Odor\n']);
-
-tbl = table(glm_r1.data',glm_r1.trial_type',glm_r1.group',...
-    'VariableNames',{'R1','trial_type','group'});
-mdl = fitglm(tbl,'R1~trial_type+group'...
-    ,'CategoricalVars',[2,3])
-
-txt = evalc('mdl');
-txt=regexp(txt,'<strong>','split');
-txt=cell2mat(txt);
-txt=regexp(txt,'</strong>','split');
-txt=cell2mat(txt);
-
-fprintf(fileID,'%s\n', txt);
-
-
-%Do the ranksum/t-test
-fprintf(1, ['\n\nRanksum or t-test p values for odor in one or both spouts\n'])
-fprintf(fileID, ['\n\nRanksum or t-test p values for odor in one or both spouts\n']);
-
-
-[output_data] = drgMutiRanksumorTtest(input_r1_data, fileID,0);
 
 %Do the R1 bar graph for 1 and 2 cm all trials vs hit, miss
 ii_run=1;
@@ -932,8 +1051,7 @@ for ii_R1type=1:length(R1type)
                 fprintf(1, [' ' num2str(fileNo)])
             end
             %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-            eval(['these_R1s=[these_R1s handles_out.R1.' R1type{ii_R1type} '];'])
+            eval(['these_R1s=[these_R1s handles_out_pyth.file(fileNo).R1.' R1type{ii_R1type} '];'])
             switch ii_R1type
                 case 1
                     R1_all_trials_orig=[R1_all_trials_orig handles_out.R1.all_trials];
@@ -1075,8 +1193,7 @@ for ii_R1type=1:length(R1type)
                 fprintf(1, [' ' num2str(fileNo)])
             end
             %load the ouptut file
-            load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-            eval(['these_R1s=[these_R1s handles_out.R1.' R1type{ii_R1type} '];'])
+            eval(['these_R1s=[these_R1s handles_out_pyth.file(fileNo).R1.' R1type{ii_R1type} '];'])
             switch ii_R1type
                 case 1
                     R1_all_trials_orig=[R1_all_trials_orig handles_out.R1.all_trials];
@@ -4401,9 +4518,10 @@ fprintf(fileID, ['\n\nRanksum or t-test p values for Fig ' num2str(figureNo) ' R
 [output_data] = drgMutiRanksumorTtest(input_r1_data, fileID,0);
 
 
-%Do R1 x,y bar graph for 1 and 2 cm all trials vs hit, miss
+%Do the R1_x and R1_y bar graph for 1 and 2 cm all trials vs hit, miss
 ii_run=1;
 R1t=[];
+
 R1t.xy(1).R1type{1}='R1_x_all_trials';
 R1t.xy(1).R1type{2}='R1_x_hits';
 R1t.xy(1).R1type{3}='R1_x_miss';
@@ -4420,7 +4538,10 @@ R1type_label{2}='hits';
 R1type_label{3}='miss';
 R1type_label{4}='shuffled';
 
-iiR1type_reorder=[2 1 3 4];
+xy_label{1}='x';
+xy_label{2}='y';
+
+iiR1type_reorder=[2 3 1 4];
 
 figureNo = figureNo + 1;
 try
@@ -4447,15 +4568,20 @@ input_r1_data=[];
 all_R1s=[];
 %Plot the different R1s
 these_groups=[1 5]; %1 and 2 cm all trials
+R1_all_trials_orig=[];
+R1_hits_orig=[];
+R1_miss_orig=[];
+R1_shuffle_orig=[];
+
 for ii_xy=1:2
-    for ii_R1type=1:length(R1t.xy(ii_xy).R1type)
+    all_R1s=[];
+    for ii_R1type=1:length(R1type)
 
         these_R1s=[];
 
         eval(['these_R1s=' R1t.xy(ii_xy).R1type{ii_R1type} ';'])
 
         all_R1s.R1type(ii_R1type).R1=these_R1s;
-
         %plot bar
         switch ii_R1type
             case 1
@@ -4482,9 +4608,10 @@ for ii_xy=1:2
 
         id_r1_ii=id_r1_ii+1;
         input_r1_data(id_r1_ii).data=these_R1s;
-        input_r1_data(id_r1_ii).description=[R1type_label{ii_R1type}];
+        input_r1_data(id_r1_ii).description=[R1type_label{ii_R1type} ' ' xy_label{ii_xy}];
 
     end
+
     bar_offset=bar_offset+1;
 
     %Plot lines between points
@@ -4500,18 +4627,18 @@ for ii_xy=1:2
 
 end
 xticks([0 1 2 3 5 6 7 8])
-xticklabels({'within x','hit x','miss x','shuffled x','within y','hit y','miss y','shuffled y'})
+xticklabels({'x within','x hit','x miss','x shuffled','y within','y hit','y miss','y shuffled'})
 
 
-title(['R1 x,y for prediction of odor hit, miss, shuffled'])
+title(['R1 x and y for prediction of odor hit, miss, shuffled'])
 ylabel('R1')
 ylim([-0.2 1])
 xlim([-1 9])
 
 %Perform the glm  for errors
-fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' R1 x,y \n'])
+fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' R1 x and y, hit, miss, within, shuffled\n'])
 fprintf(1, ['\n1 Hit, 2 Miss, 3 All trials, 4 Shuffled\n'])
-fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' R1 x,y\n']);
+fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' R1 x an dy, hit, miss, within, shuffled\n']);
 fprintf(fileID, ['\n1 Hit, 2 Miss, 3 All trials, 4 Shuffled\n'])
 %
 % fprintf(1, ['\nwindow 0: Base, 1:PreFV, 2:PreOdor, 3:Odor\n'])
@@ -4520,7 +4647,7 @@ fprintf(fileID, ['\n1 Hit, 2 Miss, 3 All trials, 4 Shuffled\n'])
 tbl = table(glm_r1.data',glm_r1.trial_type',glm_r1.xy',...
     'VariableNames',{'R1','trial_type','xy'});
 mdl = fitglm(tbl,'R1~trial_type+xy+trial_type*xy'...
-    ,'CategoricalVars',[2,3])
+    ,'CategoricalVars',[2])
 
 txt = evalc('mdl');
 txt=regexp(txt,'<strong>','split');
@@ -4532,8 +4659,8 @@ fprintf(fileID,'%s\n', txt);
 
 
 %Do the ranksum/t-test
-fprintf(1, ['\n\nRanksum or t-test p values for R1 x,y Fig ' num2str(figureNo) '\n'])
-fprintf(fileID, ['\n\nRanksum or t-test p values for R1 x,y Fig ' num2str(figureNo) '\n']);
+fprintf(1, ['\n\nRanksum or t-test p values for Fig ' num2str(figureNo) ' R1 x and y, hit, miss, within, shuffled\n'])
+fprintf(fileID, ['\n\nRanksum or t-test p values for Fig ' num2str(figureNo) ' R1 x and y, hit, miss, within, shuffled\n']);
 
 
 [output_data] = drgMutiRanksumorTtest(input_r1_data, fileID,0);

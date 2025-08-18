@@ -4758,15 +4758,15 @@ for fileNo=1:length(handles_conc.arena_file)
                 pffft=1;
             end
 
-            if (fileNo==7)&(ii_ROI==154)
+            if (fileNo==7)&(ii_ROI==16)
                 pffft=1;
             end
 
-            if (fileNo==13)&(ii_ROI==124)
+            if (fileNo==13)&(ii_ROI==2)
                 pffft=1;
             end
 
-            if (fileNo==14)&(ii_ROI==8)
+            if (fileNo==13)&(ii_ROI==21)
                 pffft=1;
             end
 

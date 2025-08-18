@@ -1,4 +1,4 @@
-%drgMini_information_contentv2
+%drgMini_information_contentv3
 close all
 clear all
 
@@ -20,8 +20,8 @@ switch is_sphgpu
         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01062025.m';
 
          %Trained with hits only
-         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
+         choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m';
 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
         % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01062025.m';
@@ -30,8 +30,13 @@ switch is_sphgpu
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
-        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
-        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+        %Angle file
+        % save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
+        % choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+
+        %This one has the odor encounter
+        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
+        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
 
         % save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser12212024/';
         % choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_12192024.m';
@@ -46,7 +51,7 @@ switch is_sphgpu
 
         %The imps file with predictive importance values is be saved here
         save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FilePredImp='outputPredictionImportance.mat';
+        save_FilePredImp='outputPredictionImportancev2.mat';
 
         %The output of drgMini_information_contentv2 is saved here
         save_PathIC='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';

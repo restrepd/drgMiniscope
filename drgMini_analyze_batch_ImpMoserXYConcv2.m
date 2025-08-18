@@ -1,4 +1,4 @@
-%drgMini_analyze_batch_ImpMoserXYConc
+%drgMini_analyze_batch_ImpMoserXYConcv2
 close all
 clear all
 
@@ -23,7 +23,7 @@ switch is_sphgpu
          % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
          % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m';
 
-          %Trained with hits only taking on account when mouse detects the odor
+        %Trained with hits only taking on account when mouse detects the odor
         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
         choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
@@ -34,9 +34,13 @@ switch is_sphgpu
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
-        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
-        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
-        
+        % save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
+        % choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+
+        %This one has the odor encounter
+        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
+        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
+     
         % save_PathMoser='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Moser12212024/';
         % choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_12192024.m';
 
@@ -47,8 +51,8 @@ switch is_sphgpu
         fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
 
         %The imps file with predictive importance values is be saved here
-        save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FilePredImp='outputPredictionImportancev2.mat';
+        % save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        % save_FilePredImp='outputPredictionImportancev2.mat';
 
         %The output of drgMini_information_contentv2 is saved here
         save_PathIC='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
@@ -155,11 +159,24 @@ file_numbers=[];
 
 
 figureNo=figureNo+1;
-these_R1s=[];save_PathIC
+these_R1s=[];
 imps=[];
 
 %Load information content caclulated in drgMini_information_contentv2
 load([save_PathIC save_FileIC])
+
+% %Note that I am uploading the data compiled by drgMini_analyze_batch_Imp
+% load([save_PathPredImp save_FilePredImp])
+% 
+% ii_95_class=imps.ii_95_class;
+% mean_x_imps=imps.mean_x_imps;
+% mean_y_imps=imps.mean_y_imps;
+% mean_conc_imps=imps.mean_conc_imps;
+% mean_imp_fileNo=imps.mean_imp_fileNo;
+% mean_imp_ROI=imps.mean_imp_ROI;
+% sig_pred_imp_x=imps.sig_pred_imp_x;
+% sig_pred_imp_y=imps.sig_pred_imp_y;
+% sig_pred_imp_conc=imps.sig_pred_imp_conc;
 
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
@@ -182,7 +199,7 @@ for fileNo=1:length(handles_conc.arena_file)
         % imps.file(fileNo).conc.thr_conc_imps=prctile(mean_conc_imps,percentile_stringency);
         all_mean_conc_imps=[all_mean_conc_imps; mean_conc_imps];
         above_thr_conc_imps=[above_thr_conc_imps; mean_conc_imps>=thr_conc_imps(fileNo)];
-        
+
         file_numbers=[file_numbers; fileNo*ones(length(mean_conc_imps),1)];
         these_ROIs=[1:length(mean_conc_imps)];
         all_imps_ROI=[all_imps_ROI these_ROIs];
@@ -193,7 +210,7 @@ for fileNo=1:length(handles_conc.arena_file)
         imps.all_mean_conc_imps=all_mean_conc_imps;
         imps.all_imps_ROI=all_imps_ROI;
         imps.file_numbers=file_numbers;
- 
+
         %Get predictor importance for x and y decoding
         load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
         all_x_imps=[];
@@ -409,9 +426,9 @@ for fileNo=1:length(handles_conc.arena_file)
 end
 
 
-
-figureNo=figureNo+2;
-
+% 
+% figureNo=figureNo+2;
+% 
 mean_x_imps_x95=all_mean_x_imps(logical(above_thr_x_imps));
 mean_x_imps_y95=all_mean_x_imps(logical(above_thr_y_imps));
 mean_x_imps_conc95=all_mean_x_imps(logical(above_thr_conc_imps));
@@ -525,22 +542,11 @@ for ii=1:length(all_mean_x_imps)
 
 end
  
-%Note that I am uploading the 
-load([save_PathPredImp save_FilePredImp])
-
-imps.ii_95_class=ii_95_class;
-imps.mean_x_imps=mean_x_imps;
-imps.mean_y_imps=mean_y_imps;
-imps.mean_conc_imps=mean_conc_imps;
-imps.mean_imp_fileNo=mean_imp_fileNo;
-imps.mean_imp_ROI=mean_imp_ROI;
-imps.sig_pred_imp_x=sig_pred_imp_x;
-imps.sig_pred_imp_y=sig_pred_imp_y;
-imps.sig_pred_imp_conc=sig_pred_imp_conc;
 
 
-
-save([save_PathPredImp save_FilePredImp],'imps')
+% 
+% 
+% save([save_PathPredImp save_FilePredImp],'imps')
 
 data = [mean_x_imps; mean_y_imps; mean_conc_imps];
 
@@ -675,7 +681,7 @@ for ii=1:size(data,1)
             plot(mappedX(ii,1),mappedX(ii,2),'s','MarkerFaceColor',[0.8 0.6 0.7],'MarkerEdgeColor','k');
     end
 end
-
+  
 these_ylim=ylim;
 these_xlim=xlim;
 text(these_xlim(1)+0.10*(these_xlim(2)-these_xlim(1)),these_ylim(1)+0.95*(these_ylim(2)-these_ylim(1)),'x','Color',[0.9 0.6 0],'FontWeight','bold','FontSize',16)

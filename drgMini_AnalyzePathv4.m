@@ -12,7 +12,7 @@ if exist('handles_choices')==0
     clear all
 
     handles_choices.save_results=1;
-    handles_choices.is_sphgpu=0; %0 Diego's Mac, 1 sphgpu, 2 Alpine
+    handles_choices.is_sphgpu=1; %0 Diego's Mac, 1 sphgpu, 2 Alpine
     is_sphgpu=handles_choices.is_sphgpu;
     %Troubleshooting Fabio's files May 14th
     % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
@@ -32,12 +32,21 @@ if exist('handles_choices')==0
     % 
     % handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
 
+    % %For Mac
+    % %20221117_FCM22_lanes_1_4 for first figure in manuscript 
+    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+    % dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
+    % arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
+    % 
+    % handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
+
+    %For sphgpu
     %20221117_FCM22_lanes_1_4 for first figure in manuscript 
-    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+    this_path='/data2/SFTP/PreProcessed/20221117_FCM22_lanes_1_4/';
     dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
     arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
 
-    handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
+    handles_choices.save_path='/data2/SFTP/PreProcessed/Temp/';
 
 
     % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';
@@ -87,6 +96,8 @@ if exist('handles_choices')==0
     handles_choices.bins_after=bins_after;
 
 
+
+    
     %Note: The data brought into the Kording lab jupyter notebbok seems to be
     %binned in 200 msec bins
     dt=0.1; %Time bins for decoding, this was 0.2
@@ -115,6 +126,9 @@ else
     is_sphgpu=handles_choices.is_sphgpu;
 end
 
+air_flow_speed=50; %mm/sec
+handles_choices.air_flow_speed=air_flow_speed;
+
 try
     delete(gcp('nocreate'));
 catch
@@ -124,11 +138,11 @@ setenv('MW_PCT_TRANSPORT_HEARTBEAT_INTERVAL', '700')
 
 switch is_sphgpu
     case 1
-        addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
-        addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
-        addpath('/home/restrepd/Documents/MATLAB/drgMaster')
-        addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
-        addpath(genpath('/home/restrepd/Documents/MATLAB/m new/CircStat2012a'))
+        addpath('/data2/DRMatlab/drgMiniscope')
+        addpath('/data2/DRMatlab/m new/Chi Squared')
+        addpath('/data2/DRMatlab/drgMaster')
+        addpath(genpath('/data2/DRMatlab/m new/kakearney-boundedline-pkg-32f2a1f'))
+        addpath(genpath('/data2/DRMatlab/m new/CircStat2012a'))
     case 2
         addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMiniscope')
         addpath('/projects/drestrepo@xsede.org/software/DR_matlab/m new/Chi Squared')
@@ -439,6 +453,28 @@ handles_out.no_neurons=no_neurons;
 
 XYtest=pos_binned;
 
+%Get X_DFF
+
+%Do z scores
+mean_neural_data_col=mean(neural_data,1);
+mean_neural_data=repmat(mean_neural_data_col,no_time_bins,1);
+
+std_neural_data_col=std(neural_data,1);
+std_neural_data=repmat(std_neural_data_col,no_time_bins,1);
+
+neural_data=(neural_data-mean_neural_data)./std_neural_data;
+
+pffft=1;
+
+% Format for Wiener Filter, Wiener Cascade, XGBoost, and Dense Neural Network
+% Put in "flat" format, so each "neuron / time" is a single feature
+% i.e. each time point in the before and after window becomes a different
+% "neuron"
+
+X_dFF=zeros(no_time_bins,no_neurons);
+X_dFF(:,:)=neural_data(:,:);
+
+
 %Now do the neural networks
 tic
 %Set what part of data should be part of the training/testing/validation sets
@@ -635,6 +671,8 @@ for trNo=1:trials.odor_trNo
     %Find mean angle for the trajectory within 150 mm of the end
     x = XYtest(ii_predictedstart:ii_predictedend,1);
     y = XYtest(ii_predictedstart:ii_predictedend,2);
+
+
     these_points=[ii_predictedstart:ii_predictedend];
     this_ii_end=find(these_points==ii_trialend);
     if ~isempty(this_ii_end)
@@ -725,15 +763,22 @@ for trNo=1:trials.odor_trNo
     % end
 
     %Plot the point of turns towards the spout
+    last_turn_ii=1;
+    last_turn_found=0;
     for ii_t=1:ii_turns
         if angles.trial(trNo).delta_x(ii_t)>100
             this_ii_turn=angles.trial(trNo).ii_turns(ii_t);
-            if handles_choices.display_figures==1
-                plot(x(this_ii_turn),y(this_ii_turn),'or','MarkerSize',10,'MarkerEdgeColor','r','MarkerFaceColor','k')
-            end
+            last_turn_ii=this_ii_turn;
+            last_turn_found=1;
         end
     end
  
+    if last_turn_found==1
+        if handles_choices.display_figures==1
+            plot(x(last_turn_ii),y(last_turn_ii),'or','MarkerSize',10,'MarkerEdgeColor','r','MarkerFaceColor','k')
+        end
+    end
+
     if handles_choices.display_figures==1
         text(100,100,['End angle ' num2str(angles.trial(trNo).end_angle)])
         text(100,130,['Mean end angle ' num2str(angles.trial(trNo).mean_end_angle)])
@@ -747,6 +792,37 @@ for trNo=1:trials.odor_trNo
         yticklabels({'lane 4','100','200','300','400','lane 1'})
     end
  
+    %find first odor encounter
+    ii_delta_start=1-handles_choices.trial_start_offset;
+    odor_detected=0;
+    ii_first_odor_encounter(trNo)=ii_delta_start;
+    dt_first_odor_encounter(trNo)=ii_delta_start*dt;
+    for ii=ii_delta_start+1:length(x)
+        x_on=ii*dt*air_flow_speed;
+        if (odor_detected==0)&(x(ii)<=x_on)
+            odor_detected=1;
+            ii_first_odor_encounter(trNo)=ii;
+            dt_first_odor_encounter(trNo)=ii*dt;
+        end
+    end
+
+    angles.trial(trNo).ii_first_odor_encounter=ii_first_odor_encounter(trNo);
+
+    if handles_choices.display_figures==1
+        plot(x(ii_first_odor_encounter(trNo)),y(ii_first_odor_encounter(trNo)),'oy','MarkerSize',10,'MarkerEdgeColor','k','MarkerFaceColor','y')
+    end
+
+    %Save all time points for events such as last turn, odor encounter, etc
+    %aligned to session start
+    angles.trial(trNo).ii_aligned_to_start.last_turn_ii=ii_predictedstart+last_turn_ii-1;
+    angles.trial(trNo).ii_aligned_to_start.trial_start_ii=ii_trialstart;
+    angles.trial(trNo).ii_aligned_to_start.trial_end_ii=ii_trialend;
+    angles.trial(trNo).ii_aligned_to_start.ii_first_odor_encounter=ii_predictedstart+ii_first_odor_encounter(trNo)-1;
+    angles.trial(trNo).last_turn_found=last_turn_found;
+    
+
+    %Make sure this is the same point
+    % plot(XYtest(ii_predictedstart+last_turn_ii-1,1),XYtest(ii_predictedstart+last_turn_ii-1,2),'or','MarkerSize',10,'MarkerEdgeColor','r','MarkerFaceColor','y')
     pffft1=1;
 
     mean_end_angles=[mean_end_angles angles.trial(trNo).mean_end_angle];
@@ -772,7 +848,10 @@ end
 
 handles_out.trials=trials;
 handles_out.angles=angles;
+handles_out.X_dFF=X_dFF;
+handles_out.XYtest=XYtest;
 
+ 
 save([handles_choices.save_path arena_file(1:end-4) handles_choices.save_tag '.mat'],'handles_out','handles_choices','-v7.3')
  
 pfft=1;

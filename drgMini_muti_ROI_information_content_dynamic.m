@@ -1,4 +1,4 @@
-%drgMini_multi_ROI_information_contentv2
+%drgMini_multi_ROI_information_content_dynamic
 close all
 clear all
 
@@ -11,6 +11,17 @@ display_figures=1;
 handles.display_figures=display_figures;
 is_gpu=0; %1=GPU, 0=CPU
 handles.is_gpu=is_gpu;
+
+handles_choices.trial_start_offset=-15; %This was -10
+handles_choices.trial_end_offset=15;
+
+%Time bins for decoding in seconds
+dt=0.1;
+handles_choices.dt=dt;
+
+%Speed for background air flow in mm/sec
+air_flow_speed=50; %5 cm/sec = 50 mm/sec
+handles.air_flow_speed=air_flow_speed;
 
 switch is_sphgpu
     case 0
@@ -27,10 +38,14 @@ switch is_sphgpu
         %Trained with all trials
         % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01062025/';
         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01062025.m';
+         % 
+         % %Trained with hits only
+         % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
+         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
 
-         %Trained with hits only
-         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-         choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+         %Trained with hits only and taking on accoount odor on
+         save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
+         choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01062925/';
         % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01062025.m';
@@ -144,7 +159,7 @@ switch is_sphgpu
 end
 
 
-outputFile='multi_ROI_info_content_best.mat';
+outputFile='multi_ROI_info_content_dynamic.mat';
 
 
 tic
@@ -189,7 +204,7 @@ this_cmap(1,:)=[0.3 0.3 0.3];
 
 %Find which files are included in the analysis
 files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc);
-
+ 
 these_groups=[1 5];
 ii_run=1;
 
@@ -280,6 +295,8 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 these_dFF=trials.trial(trNo).XdFFtest(:,ii_ROI);
 
+                ii_t_odor_on=1-handles_choices.trial_start_offset;
+
                 these_bin_dFF=(these_dFF>0);
                 all_bin_dFF=[all_bin_dFF;these_bin_dFF];
 
@@ -298,31 +315,40 @@ for fileNo=1:length(handles_conc.arena_file)
 
                   
                     %Keep track of binary op
-                    if trials.lane_per_trial(trNo)==1
-
-                        switch handles_conc.group(fileNo)
-                            case 1
-                                %2 cm from the floor
-                                cm_from_floor=2;
-                                these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
-                            case 5
-                                %1 cm from the floor
-                                cm_from_floor=1;
-                                these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii); 
-                        end
+                    if ii_t<=ii_t_odor_on
+                        %Before odor is turned on this is zero
+                        these_bin_op(ii_t)=0;
                     else
-                        switch handles_conc.group(fileNo)
-                            case 1
-                                %2 cm from the floor
-                                cm_from_floor=2;
-                                these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
-                            case 5
-                                %1 cm from the floor
-                                cm_from_floor=1;
-                                these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                        x_on=(ii_t-ii_t_odor_on)*dt*air_flow_speed;
+                        if these_x(ii_t)>x_on
+                            these_bin_op(ii_t)=0;
+                        else
+                            if trials.lane_per_trial(trNo)==1
+
+                                switch handles_conc.group(fileNo)
+                                    case 1
+                                        %2 cm from the floor
+                                        cm_from_floor=2;
+                                        these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                    case 5
+                                        %1 cm from the floor
+                                        cm_from_floor=1;
+                                        these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
+                                end
+                            else
+                                switch handles_conc.group(fileNo)
+                                    case 1
+                                        %2 cm from the floor
+                                        cm_from_floor=2;
+                                        these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                    case 5
+                                        %1 cm from the floor
+                                        cm_from_floor=1;
+                                        these_bin_op(ii_t)=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
+                                end
+                            end
                         end
                     end
-                      
                     %Also keep track of hits and misses
                     %trials.odor_trial_type(trNo)
                     %1 Hit Lane 1

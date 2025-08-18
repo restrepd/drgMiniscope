@@ -3,20 +3,34 @@ clear all
 close all
 
 %Trained with hits only
-save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+% save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
+% choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+
+%Trained with hits only taking on account when mouse detects the odor
+save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
+choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
 %This one has the dFF per trial
 save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
 choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
-save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
-choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+%Angle file
+% save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
+% choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
 
-% addpath(choiceBatchPathName)
+%This one has the odor encounter
+save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
+choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
+
+choiceDateFileName='drgOdorPlumeDates_Fabio_Good_01122025.m';
+
+choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/CurrentChoices/'
+
+addpath(choiceBatchPathName)
 eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
+eval(['handles_Date=' choiceDateFileName(1:end-2) ';'])
 
 
 %Find which files are included in the analysis
@@ -63,8 +77,8 @@ for fileNo=1:length(handles_conc.arena_file)
         percent_correct.file(fileNo).percent_correct=100*(sum(trials.hit4)+sum(trials.hit1))/trials.odor_trNo;
         percent_correct.file(fileNo).percent_correct1=100*sum(trials.hit1)/(sum(trials.hit1)+sum(trials.miss1));
         percent_correct.file(fileNo).percent_correct4=100*sum(trials.hit4)/(sum(trials.hit4)+sum(trials.miss4));
-        eval(['this_date=handles_conc.date{' num2str(fileNo) '};'])
-        percent_correct.file(fileNo).date=datetime(this_date, 'InputFormat', 'MMddyyyy');
+        eval(['this_date=handles_Date.date{' num2str(fileNo) '};'])
+        percent_correct.file(fileNo).date=datetime(this_date, 'InputFormat', 'M/D/yyyy');
         percent_correct.file(fileNo).mouse=handles_conc.mouse(fileNo);
         all_percents=[all_percents 100*(sum(trials.hit4)+sum(trials.hit1))/trials.odor_trNo];
 
@@ -154,6 +168,16 @@ for fileNo=1:length(handles_conc.arena_file)
         last_op_predictedend=1;
         wall_threshold=50;
 
+         %Load angle data
+        angle_file=handles_Angle.arena_file{fileNo};
+        %load the ouptut file
+        load([save_PathAngle angle_file(1:end-4) handles_Angle.save_tag '.mat'])
+        angles=handles_out.angles;
+
+        aligned_trials=[];
+        aligned_trials.hit_trNo=0;
+        aligned_trials.miss_trNo=0;
+
         for trNo=1:trials.odor_trNo
 
             op_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
@@ -170,36 +194,48 @@ for fileNo=1:length(handles_conc.arena_file)
             last_op_predictedend=op_predictedend;
 
             ii_end=ii_start+length(odor_plume_template(op_predictedstart:op_predictedend))-1;
-
-
-
+ 
             %Okabe_Ito colors
             switch trials.odor_trial_type(trNo)
                 case 1
                     %Lane 1 hits orange
-                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[230/255 159/255 0/255],'LineWidth',3)
+                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[86/255 180/255 233/255],'LineWidth',3)
                     plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
                     plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
                     plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
                     op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
                     op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
+                    
+                    %Save trials aligned to odor encounter
+                    aligned_trials.hit_trNo=aligned_trials.hit_trNo+1;
+                    aligned_trials.hit_trial(aligned_trials.hit_trNo).ii_odor_encounter=angles.trial(trNo).ii_aligned_to_start.ii_first_odor_encounter;
+
                 case 2
                     %Lane 1 miss sky blue
-                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[86/255 180/255 233/255],'LineWidth',3)
+                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend),'Color',[0/255 158/255 115/255],'LineWidth',3)
                     plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
                     plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
                     plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
                     op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
                     op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
 
+                    %Save trials aligned to odor encounter
+                    aligned_trials.miss_trNo=aligned_trials.miss_trNo+1;
+                    aligned_trials.miss_trial(aligned_trials.miss_trNo).ii_odor_encounter=angles.trial(trNo).ii_aligned_to_start.ii_first_odor_encounter;
+
                 case 3
                     %Lane 4 hit vermillion
-                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[213/255 94/255 0/255],'LineWidth',3)
+                    plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[86/255 180/255 233/255],'LineWidth',3)
                     plot(dt*[ii_start:ii_end]',op_predicted_conv(op_predictedstart:op_predictedend)','-k','LineWidth',1.5)
                     plot(dt*[ii_start+10 ii_start+10],[minop maxop],'-k')
                     plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
                     op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
                     op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
+
+                    %Save trials aligned to odor encounter
+                    aligned_trials.hit_trNo=aligned_trials.hit_trNo+1;
+                    aligned_trials.hit_trial(aligned_trials.hit_trNo).ii_odor_encounter=angles.trial(trNo).ii_aligned_to_start.ii_first_odor_encounter;
+ 
                 case 4
                     %Lane 4 miss bluish green
                     plot(dt*[ii_start:ii_end]',odor_plume_template(op_predictedstart:op_predictedend)','Color',[0/255 158/255 115/255],'LineWidth',3)
@@ -208,6 +244,11 @@ for fileNo=1:length(handles_conc.arena_file)
                     plot(dt*[ii_end-15 ii_end-15],[minop maxop],'-k')
                     op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
                     op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
+
+                    %Save trials aligned to odor encounter
+                    aligned_trials.miss_trNo=aligned_trials.miss_trNo+1;
+                    aligned_trials.miss_trial(aligned_trials.miss_trNo).ii_odor_encounter=angles.trial(trNo).ii_aligned_to_start.ii_first_odor_encounter;
+
             end
             ii_start=ii_start+length(odor_plume_template(op_predictedstart:op_predictedend))+20;
         end
@@ -216,25 +257,135 @@ for fileNo=1:length(handles_conc.arena_file)
         maxC=max(op_all_trials)+0.1*(max(op_all_trials)-min(op_all_trials));
         ylim([minC maxC])
 
-        if figNo==22
-            pffft=1;
-        end
-
         this_xlim=xlim;
         divisor=6;
-        text(this_xlim(1)+0.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Hit lane 1','Color',[230/255 159/255 0/255],'FontSize',16,'FontWeight','bold')
-        text(this_xlim(1)+1.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Miss lane 1','Color',[86/255 180/255 233/255],'FontSize',16,'FontWeight','bold')
-        text(this_xlim(1)+2.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Hit lane 4','Color',[213/255 94/255 0/255],'FontSize',16,'FontWeight','bold')
-        text(this_xlim(1)+3.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Miss lane 4','Color',[0/255 158/255 115/255],'FontSize',16,'FontWeight','bold')
-        text(this_xlim(1)+4.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Predicted','Color',[0/255 0/255 0/255],'FontSize',16,'FontWeight','bold')
+        text(this_xlim(1)+1.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Hit','Color',[86/255 180/255 233/255],'FontSize',16,'FontWeight','bold')
+        text(this_xlim(1)+2.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Miss','Color',[0/255 158/255 115/255],'FontSize',16,'FontWeight','bold')
+        % text(this_xlim(1)+2.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Hit lane 4','Color',[213/255 94/255 0/255],'FontSize',16,'FontWeight','bold')
+        % text(this_xlim(1)+3.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Miss lane 4','Color',[0/255 158/255 115/255],'FontSize',16,'FontWeight','bold')
+        text(this_xlim(1)+3.7*(this_xlim(2)-this_xlim(1))/divisor,minC+0.95*(maxC-minC),'Predicted','Color',[0/255 0/255 0/255],'FontSize',16,'FontWeight','bold')
 
 
         title(['log10(odor) per trial, file No ' num2str(fileNo) ],'FontSize',16,'FontWeight','bold')
         ylabel('log10(odor) A.U.')
         xlabel('Time (s)')
+ 
+       
+
+        %Now plot average Hit and Miss conc time courses aligned to odor encounter
+        ii_t_before=-5/dt;
+        ii_t_after=5/dt;
+
+        aligned_miss_template=minC*ones(aligned_trials.miss_trNo,-ii_t_before+ii_t_after+1);
+        aligned_miss_predicted=minC*ones(aligned_trials.miss_trNo,-ii_t_before+ii_t_after+1);
+
+        aligned_hit_template=minC*ones(aligned_trials.hit_trNo,-ii_t_before+ii_t_after+1);
+        aligned_hit_predicted=minC*ones(aligned_trials.hit_trNo,-ii_t_before+ii_t_after+1);
+
+        %Now fill in the aligned time courses
+        for trNo=1:aligned_trials.miss_trNo
+            op_predictedstart=aligned_trials.miss_trial(trNo).ii_odor_encounter+ii_t_before;
+            op_predictedend=aligned_trials.miss_trial(trNo).ii_odor_encounter+ii_t_after;
+            ii_start_offset=0;
+            ii_end_offset=0;
+            if op_predictedstart<1
+                ii_start_offset=-op_predictedstart+1;
+            end
+            if op_predictedend>length(op_predicted)
+                ii_end_offset=length(op_predicted)-op_predictedend;
+            end
+
+            aligned_miss_template(trNo,1+ii_start_offset:end+ii_end_offset)=...
+                odor_plume_template(op_predictedstart+ii_start_offset:op_predictedend+ii_end_offset);
+            aligned_miss_predicted(trNo,1+ii_start_offset:end+ii_end_offset)...
+                =op_predicted_conv(op_predictedstart+ii_start_offset:op_predictedend+ii_end_offset);
+
+        end
+
+        for trNo=1:aligned_trials.hit_trNo
+            op_predictedstart=aligned_trials.hit_trial(trNo).ii_odor_encounter+ii_t_before;
+            op_predictedend=aligned_trials.hit_trial(trNo).ii_odor_encounter+ii_t_after;
+            ii_start_offset=0;
+            ii_end_offset=0;
+            if op_predictedstart<1
+                ii_start_offset=-op_predictedstart+1;
+            end
+            if op_predictedend>length(op_predicted)
+                ii_end_offset=length(op_predicted)-op_predictedend;
+            end
+
+            aligned_hit_template(trNo,1+ii_start_offset:end+ii_end_offset)=...
+                odor_plume_template(op_predictedstart+ii_start_offset:op_predictedend+ii_end_offset);
+            aligned_hit_predicted(trNo,1+ii_start_offset:end+ii_end_offset)...
+                =op_predicted_conv(op_predictedstart+ii_start_offset:op_predictedend+ii_end_offset);
+
+        end
+
+        figNo=figNo+1;
+        try
+            close(figNo)
+        catch
+        end
+
+        hFig = figure(figNo);
+
+        set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 
 
-     
+        hold on
+
+        %Plot hit
+        this_time=[1:-ii_t_before+ii_t_after+1]*dt;
+
+
+        CIsp = bootci(1000, @mean, aligned_hit_template);
+        meansp=mean(aligned_hit_template,1);
+        CIsp(1,:)=meansp-CIsp(1,:);
+        CIsp(2,:)=CIsp(2,:)-meansp;
+
+        [hlpvl, hppvl] = boundedline(this_time,mean(aligned_hit_template,1)', CIsp','cmap',[86/255 180/255 233/255]);
+        plot(this_time,mean(aligned_hit_template,1)','Color',[86/255 180/255 233/255],'LineWidth',3);
+
+        % CIsp = bootci(1000, @mean, aligned_hit_predicted);
+        % meansp=mean(aligned_hit_predicted,1);
+        % CIsp(1,:)=meansp-CIsp(1,:);
+        % CIsp(2,:)=CIsp(2,:)-meansp;
+        % 
+        % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_hit_predicted,1)', CIsp','cmap',[0 0 0]);
+
+        plot(this_time,mean(aligned_hit_predicted,1)','-k','LineWidth',2)
+
+
+        % %Plot miss
+        % this_time=this_time+1.2*(-ii_t_before+ii_t_after+1)*dt;
+        % 
+        % 
+        % CIsp = bootci(1000, @mean, aligned_miss_template);
+        % meansp=mean(aligned_miss_template,1);
+        % CIsp(1,:)=meansp-CIsp(1,:);
+        % CIsp(2,:)=CIsp(2,:)-meansp;
+        % 
+        % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_miss_template,1)', CIsp','cmap',[0/255 158/255 115/255]);
+        % 
+        % % CIsp = bootci(1000, @mean, aligned_miss_predicted);
+        % % meansp=mean(aligned_miss_predicted,1);
+        % % CIsp(1,:)=meansp-CIsp(1,:);
+        % % CIsp(2,:)=CIsp(2,:)-meansp;
+        % % 
+        % % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_miss_predicted,1)', CIsp','cmap',[0 0 0]);
+        % 
+        % plot(this_time,mean(aligned_miss_predicted,1)','-k')
+
+        title(['Mean log10(odor) vs. predicted for hits, file No ' num2str(fileNo) ])
+        this_ylim=ylim;
+        plot([this_time(-ii_t_before) this_time(-ii_t_before)],this_ylim,'-k','LineWidth',1)
+        xlabel('Time (sec)')
+        ylabel('log10(odor) AU')
+
+        if fileNo==7
+            pffft=1;
+        end
+      
         %Plot the per trial results for x with nn trained with permuted input
         figNo=figNo+1;
         try
@@ -356,22 +507,31 @@ for ii_mouse=these_mice
     pcorr.mouse(ii_mouse).pcorr1=[];
     pcorr.mouse(ii_mouse).pcorr4=[];
     pcorr.mouse(ii_mouse).delta_date=[];
+    pcorr.mouse(ii_mouse).date_zero=handles_Date.mouse(ii_mouse).date;
 end
+all_mice_pcorr=[];
+all_mice_delta_date=[];
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
         
         this_date=percent_correct.file(fileNo).date;
         ii_mouse=percent_correct.file(fileNo).mouse;
+        date_zero=pcorr.mouse(ii_mouse).date_zero;
         pcorr.mouse(ii_mouse).delta_date=[pcorr.mouse(ii_mouse).delta_date days(this_date - date_zero)];
+        all_mice_delta_date=[all_mice_delta_date days(this_date - date_zero)];
 
         this_pcorr=percent_correct.file(fileNo).percent_correct;
         pcorr.mouse(ii_mouse).pcorr=[pcorr.mouse(ii_mouse).pcorr this_pcorr];
+        all_mice_pcorr=[all_mice_pcorr this_pcorr];
+
+        fprintf(1, ['file No ' num2str(fileNo) ', Percent correct  %d\n\n'],this_pcorr);
 
          this_pcorr=percent_correct.file(fileNo).percent_correct1;
         pcorr.mouse(ii_mouse).pcorr1=[pcorr.mouse(ii_mouse).pcorr1 this_pcorr];
 
          this_pcorr=percent_correct.file(fileNo).percent_correct4;
         pcorr.mouse(ii_mouse).pcorr4=[pcorr.mouse(ii_mouse).pcorr4 this_pcorr];
+
 
         pffft=1;
     end
@@ -413,6 +573,37 @@ end
 
 title('Percent correct')
 xlabel('Session No')
+ylabel('Percent correct')
+
+
+figNo=figNo+1;
+try
+    close(figNo)
+catch
+end
+
+hFig = figure(figNo);
+
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+
+
+hold on
+
+plot(all_mice_delta_date,all_mice_pcorr,'-ok','MarkerFaceColor','k')
+
+% Fit a first-degree polynomial (straight line)
+p = polyfit(all_mice_delta_date, all_mice_pcorr, 1);
+
+% Evaluate the fit over your x data
+yfit = polyval(p, all_mice_delta_date);
+
+% Plot the best fit line
+plot(all_mice_delta_date, yfit, '-b', 'LineWidth', 2);
+
+[rho, pval] = corr(all_mice_delta_date(:), all_mice_pcorr(:), 'Type', 'Spearman');
+
+title('Percent correct')
+xlabel('Days of training')
 ylabel('Percent correct')
 
 figNo=figNo+1;

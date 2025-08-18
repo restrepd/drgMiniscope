@@ -137,6 +137,11 @@ handles_out2=[];
 
 %Show a subset of the spatial maps
 figureNo=figureNo+1;
+for ii_comp=1:6
+    handles_out2.ii_comp(ii_comp).no_neurons=0;
+    handles_out2.ii_comp(ii_comp).no_significant=0;
+end
+handles_out2.no_files=0;
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
 
@@ -783,18 +788,27 @@ for fileNo=1:length(handles_conc.arena_file)
         handles_out2.file(fileNo).pFDR=pFDRs_per_file(fileNo);
         fprintf(1, ['\n p FDR: ' num2str(pFDRs_per_file(fileNo)) '\n'])
 
+        handles_out2.no_files=handles_out2.no_files+1;
         for ii_comp=1:6
             these_p_values=zeros(no_neurons,1);
             these_p_values(:,1)=these_p_values_per_ROI(:,ii_comp);
             handles_out2.file(fileNo).ii_comp(ii_comp).these_p_values=these_p_values;
             handles_out2.file(fileNo).ii_comp(ii_comp).significant=these_p_values<=pFDRs_per_file(fileNo);
             fprintf(1, ['\nFor ' trial_type_comp_labels{ii_comp}  ' number significant ' num2str(sum(these_p_values<=pFDRs_per_file(fileNo))) '\n'])
+            handles_out2.ii_comp(ii_comp).no_neurons=handles_out2.ii_comp(ii_comp).no_neurons+no_neurons;
+            handles_out2.ii_comp(ii_comp).no_significant=handles_out2.ii_comp(ii_comp).no_significant+sum(handles_out2.file(fileNo).ii_comp(ii_comp).significant);
         end
 
     end
 end
 
-
+%Report the overall fraction of significant divergent responses
+fprintf(1, ['\n\nPercent of cells showing divergent responses in ' num2str(handles_out2.no_files)  ' sessions\n'])
+fprintf(1, ['\nTotal number of cells ' num2str(handles_out2.ii_comp(1).no_neurons)  '\n\n'])
+for ii_comp=1:6
+    fprintf(1, ['\nFor ' trial_type_comp_labels{ii_comp}  ' ' num2str(100*handles_out2.ii_comp(ii_comp).no_significant/handles_out2.ii_comp(ii_comp).no_neurons) '\n'])
+end
+ 
 %Now show the divergent responses
 sorted_handles_out=[];
 no_clusters=[3 2 2 2 2 2];

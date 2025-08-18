@@ -12,8 +12,12 @@ switch is_sphgpu
         % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_12192024.m';
 
         %Trained with hits only
-        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-        choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
+        % choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+
+        %Trained with hits only taking on account when mouse detects the odor
+        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
+        choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
         % save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput12192024/';
         % choiceXYFileName='drgOdorArenaChoices_Fabio_Good_12192024.m';
@@ -22,8 +26,13 @@ switch is_sphgpu
         save_PathXY='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
         choiceXYFileName='drgOdorArenaChoices_Fabio_Good_01122025.m';
 
-        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
-        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+        %This was used initially
+        % save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle12212024/';
+        % choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_12212024.m';
+
+        %This one has the odor encounter
+        save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
+        choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
 
         % choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
         choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/CurrentChoices/';
@@ -37,6 +46,11 @@ switch is_sphgpu
         addpath('/home/restrepd/Documents/MATLAB/drgMaster')
         addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
 end
+
+%Speed for background air flow in mm/sec
+air_flow_speed=50; %5 cm/sec = 50 mm/sec
+
+display_dt=[-1.5 1.5]; %The speed will be displayed in this span (seconds)
 
 %These are used to classify angle approach
 low_angle=-130;
@@ -70,22 +84,37 @@ eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
 
+dt=handles_conc.dt;
+
 figNo=0;
 
 
 ii_run=1;
+
+%Group 1 is rewarded, odor ISO1 in both lane 1 and lane 4, 2 cm from floor
+%Group 2 is rewarded, with odor lane 4, no odor in lane 1
+%Group 3 is rewarded, with odor lane 1, no odor in lane 4
+%Group 4 is rewarded, with no odor in lane 1 and lane 4
+%Group 5 is rewarded, with ISO1 in both lane 1 and lane 4, 1 cm from floor
 these_groups=[1 5];
+% these_groups=[4];
+% these_groups=[2 3];
 
 %Determine which files will be included
 %Find which files are included in the analysis
-files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc);
+files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc,1);
 
 %Calculate percent correct behavior
 behavior_analysis=[];
 behavior_analysis.files_included=[];
 percent_correct=[];
+time_set=0;
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
+        if time_set==0
+            display_t=[display_dt(1):handles_XY.dt:display_dt(2)];
+            time_set=1;
+        end
         behavior_analysis.files_included=[behavior_analysis.files_included fileNo];
         %Load conc data
         arena_file=handles_conc.arena_file{fileNo};
@@ -100,7 +129,7 @@ for fileNo=1:length(handles_conc.arena_file)
         fprintf(1,['\nFor file No ' num2str(fileNo) '\n'])
         fprintf(1,['percent correct ' num2str(behavior_analysis.file(fileNo).percent_correct) '\n'])
         fprintf(1,['percent correct lane 1 ' num2str(behavior_analysis.file(fileNo).percent_correct1) '\n'])
-         fprintf(1,['percent correct lane 4 ' num2str(behavior_analysis.file(fileNo).percent_correct4) '\n'])
+        fprintf(1,['percent correct lane 4 ' num2str(behavior_analysis.file(fileNo).percent_correct4) '\n'])
 
 
         [p_hit_miss_between_lanes, Q]= chi2test([sum(trials.hit1), sum(trials.miss1); sum(trials.hit4), sum(trials.miss4)]);
@@ -132,6 +161,12 @@ x_length=500;
 
 y_values=(y_length/20):y_length/10:y_length-(y_length/20);
 x_values=(x_length/20):x_length/10:x_length-(x_length/20);
+
+dt_turn_to_odor_lane1=[];
+dt_turn_to_odor_lane4=[];
+
+distance_turn_to_odor_lane1=[];
+distance_turn_to_odor_lane4=[];
 
 lane1_hit_turn_angle_positions=zeros(10,10);
 lane1_miss_turn_angle_positions=zeros(10,10);
@@ -171,6 +206,14 @@ per_session_normalized_speed_before_turn_hits=[];
 per_session_normalized_speed_after_turn_hits=[];
 per_session_normalized_speed_before_turn_misses=[];
 per_session_normalized_speed_after_turn_misses=[];
+
+per_session_speed_timecourse_aligned_to_odor_hits=zeros(length(display_t),length(handles_conc.arena_file));
+per_session_speed_timecourse_aligned_to_odor_miss=zeros(length(display_t),length(handles_conc.arena_file));
+
+per_session_normalized_speed_timecourse_aligned_to_odor_hits=zeros(length(display_t),length(handles_conc.arena_file));
+per_session_normalized_speed_timecourse_aligned_to_odor_miss=zeros(length(display_t),length(handles_conc.arena_file));
+
+ii_files_included=0;
 
 glm_speed=[];
 glm_speed_ii=0;
@@ -236,18 +279,36 @@ for fileNo=1:length(handles_conc.arena_file)
         this_file_speed_before_turn_misses=[];
         this_file_speed_after_turn_misses=[];
 
+        this_file_speed_timecourse_aligned_to_turn_hits=zeros(length(display_t),trials.odor_trNo);
+        this_file_speed_timecourse_aligned_to_odor_hits=zeros(length(display_t),trials.odor_trNo);
+        no_trials_odor_hits=0;
+
+        this_file_speed_timecourse_aligned_to_turn_miss=zeros(length(display_t),trials.odor_trNo);
+        this_file_speed_timecourse_aligned_to_odor_miss=zeros(length(display_t),trials.odor_trNo);
+        no_trials_odor_miss=0;
+
         this_file_dt_spout_hits=[];
         this_file_dt_spout_miss=[];
 
         for trNo=1:trials.odor_trNo
 
+            these_x=trials.trial(trNo).XYtest(:,1);
+            these_y=trials.trial(trNo).XYtest(:,2);
+            ii_t_odor_on=1-handles_choices.trial_start_offset;
 
+            these_distances=zeros(1,length(these_x));
+            for ii_x=2:length(these_x)
+                these_distances(ii_x)=these_distances(ii_x-1)+sqrt( (these_x(ii_x)-these_x(ii_x-1))^2 + (these_y(ii_x)-these_y(ii_x-1))^2);
+            end
+            
 
             %Find the last turn
             this_ii_turn=find(handles_out_angle.angles.trial(trNo).delta_x>100,1,'last');
             if ~isempty(this_ii_turn)
 
                 ii_turns=handles_out_angle.angles.trial(trNo).ii_turns(this_ii_turn);
+                ii_odor=handles_out_angle.angles.trial(trNo).ii_first_odor_encounter;
+                these_distances=these_distances-these_distances(ii_turns);
 
                 ii_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
                 ii_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
@@ -302,6 +363,9 @@ for fileNo=1:length(handles_conc.arena_file)
                 end
 
                 %Find the position for this last turn
+                this_odor_ii=ii_predictedstart+ii_odor-1;
+
+                %Find the position for this odor encounter
                 this_ap_ii=ii_predictedstart+ii_turns-1;
 
                 this_ap_x=XYtest(this_ap_ii,1);
@@ -322,6 +386,25 @@ for fileNo=1:length(handles_conc.arena_file)
                 if ii_ap_y>10
                     ii_ap_y=10;
                 end
+
+                %Find the position when the mouse encounters the odor
+                found_it=0;
+                for ii_t=1:length(these_x)
+                    %Odor truns on at ii_t_odor_on
+                     if ii_t>=ii_t_odor_on
+                        x_on=(ii_t-ii_t_odor_on)*dt*air_flow_speed;
+                        if (these_x(ii_t)<=x_on)&(found_it==0)
+                            found_it=1;
+                            this_odor_on_x=these_x(ii_t);
+                            this_odor_on_y=these_y(ii_t);
+                            this_odor_on_ii_t=ii_t;
+                            this_dt_odor_to_turn=dt*(this_odor_on_ii_t-ii_turns);
+                            this_distance_from_turn=these_distances(ii_t);
+                        end
+                     end
+                end
+
+               
 
                 %How long does the animal linger around the water spout after the angle
                 %turn?
@@ -353,10 +436,39 @@ for fileNo=1:length(handles_conc.arena_file)
                     these_after_speeds=[these_after_speeds delta_d/handles_XY.dt];
                 end
 
+                %Calculate speed aligned to odor encounter
+                these_speeds_aligned_to_odor=[];
+                for ii=this_odor_ii-floor(length(display_t)/2):this_odor_ii+floor(length(display_t)/2)
+                    if ii+1<=size(XYtest,1)
+                        delta_d=sqrt((XYtest(ii,1)-XYtest(ii+1,1))^2+(XYtest(ii,2)-XYtest(ii+1,2))^2);
+                        last_speed=delta_d/handles_XY.dt;
+                    end
+                    these_speeds_aligned_to_odor=[these_speeds_aligned_to_odor last_speed];
+                end
+                
+                %Calculate speed aligned to turn
+                these_speeds_aligned_to_turn=[];
+                for ii=this_ap_ii-floor(length(display_t)/2):this_ap_ii+floor(length(display_t)/2)
+                    if ii+1<=size(XYtest,1)
+                        delta_d=sqrt((XYtest(ii,1)-XYtest(ii+1,1))^2+(XYtest(ii,2)-XYtest(ii+1,2))^2);
+                        last_speed=delta_d/handles_XY.dt;
+                    end
+                    these_speeds_aligned_to_turn=[these_speeds_aligned_to_turn last_speed];
+                end
+
                 %Okabe_Ito colors
                 switch trials.odor_trial_type(trNo)
                     case 1
                         %Lane 1 hits vermillion
+ 
+                        %Time course for speed 
+                        no_trials_odor_hits=no_trials_odor_hits+1;
+                        this_file_speed_timecourse_aligned_to_odor_hits(:,no_trials_odor_hits)=these_speeds_aligned_to_odor;
+                        this_file_speed_timecourse_aligned_to_turn_hits(:,no_trials_odor_hits)=these_speeds_aligned_to_turn;
+        
+                        %Speed before and after turn
+                        dt_turn_to_odor_lane1=[dt_turn_to_odor_lane1 this_dt_odor_to_turn];
+                        distance_turn_to_odor_lane1=[distance_turn_to_odor_lane1 this_distance_from_turn];
                         lane1_hit_turn_angle_positions(ii_ap_x,ii_ap_y)=lane1_hit_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane1_hit_start_positions(ii_start_x,ii_start_y)=lane1_hit_start_positions(ii_start_x,ii_start_y)+1;
                         lane1_hit_end_positions(ii_end_x,ii_end_y)=lane1_hit_end_positions(ii_end_x,ii_end_y)+1;
@@ -383,6 +495,13 @@ for fileNo=1:length(handles_conc.arena_file)
                       
                     case 2
                         %Lane 1 miss orange
+
+                        %Time course for speed 
+                        no_trials_odor_miss=no_trials_odor_miss+1;
+                        this_file_speed_timecourse_aligned_to_odor_miss(:,no_trials_odor_miss)=these_speeds_aligned_to_odor;
+                        this_file_speed_timecourse_aligned_to_turn_miss(:,no_trials_odor_miss)=these_speeds_aligned_to_turn;
+        
+                        %Speed before and after turn
                         lane1_miss_turn_angle_positions(ii_ap_x,ii_ap_y)=lane1_miss_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane1_miss_start_positions(ii_start_x,ii_start_y)=lane1_miss_start_positions(ii_start_x,ii_start_y)+1;
                         lane1_miss_end_positions(ii_end_x,ii_end_y)=lane1_miss_end_positions(ii_end_x,ii_end_y)+1;
@@ -408,6 +527,17 @@ for fileNo=1:length(handles_conc.arena_file)
                         input_speed_data(4).data=[input_speed_data(4).data mean(these_after_speeds)];
                     case 3
                         %Lane 4 hit blue
+
+
+                        %Time course for speed 
+                        no_trials_odor_hits=no_trials_odor_hits+1;
+                        this_file_speed_timecourse_aligned_to_odor_hits(:,no_trials_odor_hits)=these_speeds_aligned_to_odor;
+                        this_file_speed_timecourse_aligned_to_turn_hits(:,no_trials_odor_hits)=these_speeds_aligned_to_turn;
+        
+        
+                        %Speed before and after turn
+                        dt_turn_to_odor_lane4=[dt_turn_to_odor_lane4 this_dt_odor_to_turn];
+                        distance_turn_to_odor_lane4=[distance_turn_to_odor_lane4 this_distance_from_turn];
                         lane4_hit_turn_angle_positions(ii_ap_x,ii_ap_y)=lane4_hit_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane4_hit_start_positions(ii_start_x,ii_start_y)=lane4_hit_start_positions(ii_start_x,ii_start_y)+1;
                         lane4_hit_end_positions(ii_end_x,ii_end_y)=lane4_hit_end_positions(ii_end_x,ii_end_y)+1;
@@ -433,6 +563,13 @@ for fileNo=1:length(handles_conc.arena_file)
                         input_speed_data(2).data=[input_speed_data(2).data mean(these_after_speeds)];
                     case 4
                         %Lane 4 miss sky blue
+
+                        %Time course for speed 
+                        no_trials_odor_miss=no_trials_odor_miss+1;
+                        this_file_speed_timecourse_aligned_to_odor_miss(:,no_trials_odor_miss)=these_speeds_aligned_to_odor;
+                        this_file_speed_timecourse_aligned_to_turn_miss(:,no_trials_odor_miss)=these_speeds_aligned_to_turn;
+        
+                        %Speed before and after turn
                         lane4_miss_turn_angle_positions(ii_ap_x,ii_ap_y)=lane4_miss_turn_angle_positions(ii_ap_x,ii_ap_y)+1;
                         lane4_miss_start_positions(ii_start_x,ii_start_y)=lane4_miss_start_positions(ii_start_x,ii_start_y)+1;
                         lane4_miss_end_positions(ii_end_x,ii_end_y)=lane4_miss_end_positions(ii_end_x,ii_end_y)+1;
@@ -465,7 +602,9 @@ for fileNo=1:length(handles_conc.arena_file)
         this_file_speed_before_turn_hits=this_file_speed_before_turn_hits(~isnan(this_file_speed_before_turn_hits));
         this_file_speed_after_turn_hits=this_file_speed_after_turn_hits(~isnan(this_file_speed_after_turn_hits));
 
-        average_speed=[average_speed mean([this_file_speed_before_turn_misses this_file_speed_after_turn_misses...
+        % average_speed=[average_speed mean([this_file_speed_before_turn_misses this_file_speed_after_turn_misses...
+        %     this_file_speed_before_turn_hits])];
+        average_speed=[average_speed mean([this_file_speed_before_turn_misses...
             this_file_speed_before_turn_hits])];
         normalized_speed_before_turn_hits=[normalized_speed_before_turn_hits this_file_speed_before_turn_hits/average_speed(end)];
         normalized_speed_after_turn_hits=[normalized_speed_after_turn_hits this_file_speed_after_turn_hits/average_speed(end)];
@@ -479,6 +618,26 @@ for fileNo=1:length(handles_conc.arena_file)
 
         per_session_dt_spout_hits=[per_session_dt_spout_hits mean(this_file_dt_spout_hits)];
         per_session_dt_spout_miss=[per_session_dt_spout_miss mean(this_file_dt_spout_miss)];
+
+      
+        
+        this_file_speed_timecourse_aligned_to_odor_hits=this_file_speed_timecourse_aligned_to_odor_hits(:,1:no_trials_odor_hits);
+        this_file_speed_timecourse_aligned_to_odor_miss=this_file_speed_timecourse_aligned_to_odor_miss(:,1:no_trials_odor_miss);
+        this_file_speed_timecourse_aligned_to_turn_hits=this_file_speed_timecourse_aligned_to_turn_hits(:,1:no_trials_odor_hits);
+        this_file_speed_timecourse_aligned_to_turn_miss=this_file_speed_timecourse_aligned_to_turn_miss(:,1:no_trials_odor_miss);
+        
+        ii_files_included=ii_files_included+1;
+        per_session_speed_timecourse_aligned_to_odor_hits(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_odor_hits,2);
+        per_session_speed_timecourse_aligned_to_odor_miss(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_odor_miss,2);
+        per_session_speed_timecourse_aligned_to_turn_hits(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_turn_hits,2);
+        per_session_speed_timecourse_aligned_to_turn_miss(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_turn_miss,2);
+
+        per_session_normalized_speed_timecourse_aligned_to_odor_hits(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_odor_hits,2)/average_speed(end);
+        per_session_normalized_speed_timecourse_aligned_to_odor_miss(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_odor_miss,2)/average_speed(end);
+        per_session_normalized_speed_timecourse_aligned_to_turn_hits(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_turn_hits,2)/average_speed(end);
+        per_session_normalized_speed_timecourse_aligned_to_turn_miss(:,ii_files_included)=mean(this_file_speed_timecourse_aligned_to_turn_miss,2)/average_speed(end);
+
+
       end
 end
 
@@ -1446,7 +1605,7 @@ xlim([-0.75 1.75])
 
 [h,p]=ttest2(dt_spout_hits,dt_spout_miss);
 
- fprintf(1,['\np value for For file No ' num2str(fileNo) '\n'])
+ fprintf(1,['\np value for time near spout ' num2str(p) '\n'])
 
 
 
@@ -1603,7 +1762,7 @@ text(x_pos,40,'Misses','Color',[86/255 180/255 233/255])
 xticks([0 1 3 4])
 xticklabels({'Before','After','Before','After'})
 
-
+ 
 title(['Mouse speed'])
 ylabel('Speed (cm/sec)')
 ylim([0 80])
@@ -1706,6 +1865,203 @@ xticklabels({''})
 [h,p]=ttest(percent_correct-50);
 
 fprintf(1,['\np value for percent corect ' num2str(p) '\n'])
+
+%Plot the histogram for the time for odor encounter with respect to the
+%final turn
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+edges=[-10:0.5:3];
+histogram([dt_turn_to_odor_lane1 dt_turn_to_odor_lane4],edges)
+
+xlabel('Time (sec)')
+title('Time from last turn to odor encounter')
+ylabel('Count')
+
+%Plot the histogram for the time for odor encounter with respect to the
+%final turn
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+edges=[-700:100:500];
+histogram([distance_turn_to_odor_lane1 distance_turn_to_odor_lane4],edges)
+
+xlabel('Distance (mm)')
+title('Distance from last turn to odor encounter')
+ylabel('Count')
+
+
+%Trim the per session speed files
+per_session_speed_timecourse_aligned_to_odor_hits=per_session_speed_timecourse_aligned_to_odor_hits(:,1:ii_files_included)/10;
+per_session_speed_timecourse_aligned_to_odor_miss=per_session_speed_timecourse_aligned_to_odor_miss(:,1:ii_files_included)/10;
+
+per_session_speed_timecourse_aligned_to_turn_hits=per_session_speed_timecourse_aligned_to_turn_hits(:,1:ii_files_included)/10;
+per_session_speed_timecourse_aligned_to_turn_miss=per_session_speed_timecourse_aligned_to_turn_miss(:,1:ii_files_included)/10;
+
+
+
+
+
+%Show the time course for speed aligned to odor encounter
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+%Miss
+CIpvsm = bootci(1000, @mean, per_session_speed_timecourse_aligned_to_odor_miss');
+meanpvsm=mean(per_session_speed_timecourse_aligned_to_odor_miss',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_speed_timecourse_aligned_to_odor_miss'), CIpvsm','cmap',[86/255 180/255 233/255]);
+
+%Hits
+CIpvsm = bootci(1000, @mean, per_session_speed_timecourse_aligned_to_odor_hits');
+meanpvsm=mean(per_session_speed_timecourse_aligned_to_odor_hits',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_speed_timecourse_aligned_to_odor_hits'), CIpvsm','cmap',[230/255 159/255 0/255]);
+
+text(-1,80,'Hits','Color',[230/255 159/255 0/255])
+text(-1,70,'Misses','Color',[86/255 180/255 233/255])
+
+xlabel('Time (sec)')
+ylabel('Speed (cm/sec)')
+title('Mouse speed aligned to odor onset')
+
+
+%Show the time course for speed aligned to turn
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+%Miss
+CIpvsm = bootci(1000, @mean, per_session_speed_timecourse_aligned_to_turn_miss');
+meanpvsm=mean(per_session_speed_timecourse_aligned_to_turn_miss',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_speed_timecourse_aligned_to_turn_miss'), CIpvsm','cmap',[86/255 180/255 233/255]);
+
+%Hits
+CIpvsm = bootci(1000, @mean, per_session_speed_timecourse_aligned_to_turn_hits');
+meanpvsm=mean(per_session_speed_timecourse_aligned_to_turn_hits',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_speed_timecourse_aligned_to_turn_hits'), CIpvsm','cmap',[230/255 159/255 0/255]);
+
+text(-1,80,'Hits','Color',[230/255 159/255 0/255])
+text(-1,70,'Misses','Color',[86/255 180/255 233/255])
+
+xlabel('Time (sec)')
+ylabel('Speed (cm/sec)')
+title('Mouse speed aligned to turn')
+
+
+%Trim the per session speed files
+per_session_normalized_speed_timecourse_aligned_to_odor_hits=mean(average_speed)*per_session_normalized_speed_timecourse_aligned_to_odor_hits(:,1:ii_files_included)/10;
+per_session_normalized_speed_timecourse_aligned_to_odor_miss=mean(average_speed)*per_session_normalized_speed_timecourse_aligned_to_odor_miss(:,1:ii_files_included)/10;
+
+per_session_normalized_speed_timecourse_aligned_to_turn_hits=mean(average_speed)*per_session_normalized_speed_timecourse_aligned_to_turn_hits(:,1:ii_files_included)/10;
+per_session_normalized_speed_timecourse_aligned_to_turn_miss=mean(average_speed)*per_session_normalized_speed_timecourse_aligned_to_turn_miss(:,1:ii_files_included)/10;
+
+
+%Show the time course for speed aligned to odor encounter
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+%Miss
+CIpvsm = bootci(1000, @mean, per_session_normalized_speed_timecourse_aligned_to_odor_miss');
+meanpvsm=mean(per_session_normalized_speed_timecourse_aligned_to_odor_miss',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_normalized_speed_timecourse_aligned_to_odor_miss'), CIpvsm','cmap',[86/255 180/255 233/255]);
+
+%Hits
+CIpvsm = bootci(1000, @mean, per_session_normalized_speed_timecourse_aligned_to_odor_hits');
+meanpvsm=mean(per_session_normalized_speed_timecourse_aligned_to_odor_hits',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_normalized_speed_timecourse_aligned_to_odor_hits'), CIpvsm','cmap',[230/255 159/255 0/255]);
+
+text(-1,80,'Hits','Color',[230/255 159/255 0/255])
+text(-1,70,'Misses','Color',[86/255 180/255 233/255])
+
+xlabel('Time (sec)')
+ylabel('Speed (cm/sec)')
+title('Mouse speed aligned to odor onset (normalized)')
+
+
+%Show the time course for speed aligned to turn
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+%Miss
+CIpvsm = bootci(1000, @mean, per_session_normalized_speed_timecourse_aligned_to_turn_miss');
+meanpvsm=mean(per_session_normalized_speed_timecourse_aligned_to_turn_miss',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_normalized_speed_timecourse_aligned_to_turn_miss'), CIpvsm','cmap',[86/255 180/255 233/255]);
+
+%Hits
+CIpvsm = bootci(1000, @mean, per_session_normalized_speed_timecourse_aligned_to_turn_hits');
+meanpvsm=mean(per_session_normalized_speed_timecourse_aligned_to_turn_hits',1);
+CIpvsm(1,:)=meanpvsm-CIpvsm(1,:);
+CIpvsm(2,:)=CIpvsm(2,:)-meanpvsm;
+
+[hlpvl, hppvl] = boundedline(display_t,mean(per_session_normalized_speed_timecourse_aligned_to_turn_hits'), CIpvsm','cmap',[230/255 159/255 0/255]);
+
+text(-1,80,'Hits','Color',[230/255 159/255 0/255])
+text(-1,70,'Misses','Color',[86/255 180/255 233/255])
+
+xlabel('Time (sec)')
+ylabel('Speed (cm/sec)')
+title('Mouse speed aligned to turn (normalized)')
 
 fclose(fileID);
 

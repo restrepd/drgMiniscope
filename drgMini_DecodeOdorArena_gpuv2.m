@@ -59,6 +59,7 @@ if exist('handles_choices')==0
     handles_choices.algo=2;
     %1 fitrnet
     %2 fitrtree
+    %3 fitrsvz
 
     handles_choices.save_tag='treexy';
 
@@ -427,7 +428,9 @@ end
 % parfor trNo=1:trials.odor_trNo
 for trNo=1:trials.odor_trNo
     start_toc=toc;
-
+    
+    %Please note that I decode the entire time course
+    %Below I parse out the within and between trials
     this_test_range=zeros(1,no_time_bins);
     if trNo==1
         ii_test_range_start=1;
@@ -444,19 +447,26 @@ for trNo=1:trials.odor_trNo
     this_test_range(ii_test_range_start:ii_test_range_end)=1;
     this_training_range=logical(training_range_template)&(~logical(this_test_range));
 
-    % ii_valid_range=ceil(valid_range*no_time_bins);
-    %     ii_test_range=ceil(test_range*no_time_bins);
 
     XdFFtrain=X_dFF(this_training_range,:);
-    % Xvalid=X_dFF(ii_valid_range(1):ii_valid_range(2),:);
     XdFFtest=X_dFF(logical(this_test_range),:);
 
     XYtrain=pos_binned(this_training_range,:);
 
-
-    trials.trial(trNo).XYtest=pos_binned(logical(this_test_range),:);
-    trials.trial(trNo).XdFFtest=XdFFtest;
-
+    %Now save the start to end
+    this_trial_test_range=zeros(1,no_time_bins);
+    ii_trial_test_range_start=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+     if ii_trial_test_range_start<1
+        ii_trial_test_range_start=1;
+    end
+    ii_trial_test_range_end=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+    if ii_trial_test_range_end>size(pos_binned,1)
+        ii_trial_test_range_end=size(pos_binned,1);
+    end
+    this_trial_test_range(ii_trial_test_range_start:ii_trial_test_range_end)=1;
+   
+    trials.trial(trNo).XYtest=pos_binned(logical(this_trial_test_range),:);
+    trials.trial(trNo).XdFFtest=X_dFF(logical(this_trial_test_range),:);
 
     %Use gpu
     XdFFtrain_gpu=gpuArray(XdFFtrain);
@@ -467,6 +477,10 @@ for trNo=1:trials.odor_trNo
         case 1
             MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true);
             MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true);
+
+            %Gather back the data from the gpu
+            MdlY1=gather(MdlY1_gpu);
+            MdlY2=gather(MdlY2_gpu);
         case 2
             MdlY1_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,1));
             impx_gpu=predictorImportance(MdlY1_gpu);
@@ -478,11 +492,50 @@ for trNo=1:trials.odor_trNo
             impy=gather(impy_gpu);
             handles_out.imp.trial(trNo).impx=impx;
             handles_out.imp.trial(trNo).impy=impy;
+
+            %Gather back the data from the gpu
+            MdlY1=gather(MdlY1_gpu);
+            MdlY2=gather(MdlY2_gpu);
+        case 3
+            %SVM
+            opts = struct('AcquisitionFunctionName','expected-improvement-plus',...
+                'Verbose', 0, ...
+                'MaxObjectiveEvaluations', 15,...
+                'UseParallel',true);
+
+            fig = figure('Visible','off');
+            MdlY1 = fitrsvm(XdFFtrain,XYtrain(:,1),...
+                'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                opts);
+            MdlY2 = fitrsvm(XdFFtrain,XYtrain(:,1),...
+                'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                opts);
+        case 4
+            %GP
+            opts = struct('AcquisitionFunctionName','expected-improvement-plus',...
+                'Verbose', 0, ...
+                'MaxObjectiveEvaluations', 15,...
+                'UseParallel',true);
+
+            fig = figure('Visible','off');
+            %             MdlY1_gpu = fitrgp(XdFFtrain_gpu,XYtrain_gpu(:,1));
+            %             MdlY2_gpu = fitrgp(XdFFtrain_gpu,XYtrain_gpu(:,1));
+            MdlY1 = fitrgp(XdFFtrain,XYtrain(:,1),'KernelFunction','squaredexponential',...
+                'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                opts);
+            MdlY2 = fitrgp(XdFFtrain,XYtrain(:,1),'KernelFunction','squaredexponential',...
+                'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                opts);
+            %Gather back the data from the gpu
+            %             MdlY1=gather(MdlY1_gpu);
+            %             MdlY2=gather(MdlY2_gpu);
+        case 5
+            MdlY1 = fitglm(XdFFtrain,XYtrain(:,1));
+            MdlY2 = fitglm(XdFFtrain,XYtrain(:,2));
+
     end
 
-    %Gather back the data from the gpu
-    MdlY1=gather(MdlY1_gpu);
-    MdlY2=gather(MdlY2_gpu);
+
 
     x_pred(trNo).data=predict(MdlY1,XdFFtest);
     y_pred(trNo).data=predict(MdlY2,XdFFtest);
@@ -587,6 +640,10 @@ for ii_shuffled=1:n_shuffle
             case 1
                 MdlY1_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,1),'Standardize',true);
                 MdlY2_gpu = fitrnet(XdFFtrain_gpu,XYtrain_gpu(:,2),'Standardize',true);
+
+                %Gather back the data from the gpu
+                MdlY1=gather(MdlY1_gpu);
+                MdlY2=gather(MdlY2_gpu);
             case 2
                 MdlY1_gpu = fitrtree(XdFFtrain_gpu,XYtrain_gpu(:,1));
                 impx_gpu=predictorImportance(MdlY1_gpu);
@@ -598,11 +655,49 @@ for ii_shuffled=1:n_shuffle
                 impy=gather(impy_gpu);
                 handles_out.imp.trial(trNo).impx=impx;
                 handles_out.imp.trial(trNo).impy=impy;
+
+                %Gather back the data from the gpu
+                MdlY1=gather(MdlY1_gpu);
+                MdlY2=gather(MdlY2_gpu);
+            case 3
+                %SVM
+                opts = struct('AcquisitionFunctionName','expected-improvement-plus',...
+                    'Verbose', 0, ...
+                    'MaxObjectiveEvaluations', 15,...
+                    'UseParallel',true);
+
+                fig = figure('Visible','off');
+                MdlY1 = fitrsvm(XdFFtrain,XYtrain(:,1),...
+                    'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                    opts);
+                MdlY2 = fitrsvm(XdFFtrain,XYtrain(:,1),...
+                    'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                    opts);
+            case 4
+                %GP
+                opts = struct('AcquisitionFunctionName','expected-improvement-plus',...
+                    'Verbose', 0, ...
+                    'MaxObjectiveEvaluations', 15,...
+                    'UseParallel',true);
+
+                fig = figure('Visible','off');
+                %                 MdlY1_gpu = fitrgp(XdFFtrain_gpu,XYtrain_gpu(:,1));
+                %                 MdlY2_gpu = fitrgp(XdFFtrain_gpu,XYtrain_gpu(:,1));
+                MdlY1 = fitrgp(XdFFtrain,XYtrain(:,1),'KernelFunction','squaredexponential',...
+                    'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                    opts);
+                MdlY2 = fitrgp(XdFFtrain,XYtrain(:,1),'KernelFunction','squaredexponential',...
+                    'OptimizeHyperparameters','auto','HyperparameterOptimizationOptions',...
+                    opts);
+                %Gather back the data from the gpu
+                %                 MdlY1=gather(MdlY1_gpu);
+                %                 MdlY2=gather(MdlY2_gpu);
+            case 5
+                MdlY1 = fitglm(XdFFtrain,XYtrain(:,1));
+                MdlY2 = fitglm(XdFFtrain,XYtrain(:,2));
         end
 
-        %Gather back the data from the gpu
-        MdlY1=gather(MdlY1_gpu);
-        MdlY2=gather(MdlY2_gpu);
+
 
         %Calculate predictions
         x_pred(trNo).data=predict(MdlY1,XdFFtest);

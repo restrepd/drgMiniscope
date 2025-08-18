@@ -1,4 +1,4 @@
-function files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc,thr_rho)
+function files_included = drgMini_included_R1_hit_files(handles_Angle,save_PathAngle, handles_conc, save_PathConc,thr_rho)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -87,8 +87,8 @@ thr_no_roi=1300;
 %Now calculate p values for conc R1 all files
 ii_run=1;
 ii_for_corr=0;
-R1_all_trials_pre=[];
-P_rho_all_trials_pre=[];
+R1_hits=[];
+p_R1_hits=[];
 these_fileNos_pre=[];
 
 
@@ -97,21 +97,21 @@ for fileNo=1:length(handles_conc.arena_file)
     if fileNo==23
         pffft=1;
     end
-    op_all_trials=[];
-    op_decod_all_trials=[];
+    % op_all_trials=[];
+    % op_decod_all_trials=[];
+    op_all_hits=[];
+    op_decod_all_hits=[];
 
 
     %Load conc data
     arena_file=handles_conc.arena_file{fileNo};
 
     if isfile([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
+
+        %Load conc data
+        arena_file=handles_conc.arena_file{fileNo};
         %load the ouptut file
         load([save_PathConc arena_file(1:end-4) handles_conc.save_tag{ii_run} '.mat'])
-
-        if handles_out.no_neurons>thr_no_roi
-            files_included(fileNo)=0;
-        end
-
         trials=handles_out.trials;
         odor_plume_template=handles_out.odor_plume_template;
         op_predicted=handles_out.op_predicted;
@@ -129,8 +129,6 @@ for fileNo=1:length(handles_conc.arena_file)
         maxop=max(odor_plume_template);
         op_predicted_conv(op_predicted_conv>maxop)=maxop;
 
-        last_op_predictedend=1;
-
 
         for trNo=1:trials.odor_trNo
 
@@ -139,27 +137,50 @@ for fileNo=1:length(handles_conc.arena_file)
             if op_predictedend>length(odor_plume_template)
                 op_predictedend=length(odor_plume_template);
             end
+            %
+            % op_all_trials=[op_all_trials; odor_plume_template(op_predictedstart:op_predictedend)'];
+            % op_decod_all_trials=[op_decod_all_trials; op_predicted_conv(op_predictedstart:op_predictedend)];
 
-            op_all_trials=[op_all_trials; odor_plume_template(op_predictedstart:op_predictedend)'];
-            op_decod_all_trials=[op_decod_all_trials; op_predicted_conv(op_predictedstart:op_predictedend)];
+            %Okabe_Ito colors
+            switch trials.odor_trial_type(trNo)
+                case 1
+                    %Lane 1 hits vermillion
+                    op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
+                    op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
 
+                case 2
+                    % %Lane 1 miss orange
+                    % op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
+                    % op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
 
+                case 3
+                    %Lane 4 hit blue
+                    op_all_hits=[op_all_hits; odor_plume_template(op_predictedstart:op_predictedend)'];
+                    op_decod_all_hits=[op_decod_all_hits; op_predicted_conv(op_predictedstart:op_predictedend)];
+
+                case 4
+                    % %Lane 4 miss sky blue
+                    % op_all_miss=[op_all_miss; odor_plume_template(op_predictedstart:op_predictedend)'];
+                    % op_decod_all_miss=[op_decod_all_miss; op_predicted_conv(op_predictedstart:op_predictedend)];
+            end
         end
 
         if ~isempty(op_all_trials)
-            if is_pearson==1
-                [R1,this_P_rho_all_trials]=corrcoef(op_all_trials,op_decod_all_trials);
-                R1_all_trials_pre(fileNo)=R1(1,2);
-                P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials(1,2);
+            if ~isempty(op_all_hits)
+                [R1,this_p_R1_hits]=corrcoef(op_all_hits,op_decod_all_hits);
+                R1_hits(fileNo)=R1(1,2);
+                p_R1_hits(fileNo)=this_p_R1_hits(1,2);
+
             else
-                [R1,this_P_rho_all_trials]=corr(op_all_trials,op_decod_all_trials,'Type','Spearman');
-                R1_all_trials_pre(fileNo)=R1;
-                P_rho_all_trials_pre(fileNo)=this_P_rho_all_trials;
+                R1_hits(fileNo)=0;
+                p_R1_hits(fileNo)=1;
             end
+
         else
             R1_all_trials_pre(fileNo)=NaN;
         end
-        if P_rho_all_trials_pre(fileNo)>thr_rho
+
+        if p_R1_hits>thr_rho
             files_included(fileNo)=0;
         end
     else
