@@ -46,12 +46,12 @@ switch is_sphgpu
         choiceMoserFileName='drgMiniMoserChoices_Fabio_Good_02032025.m';
 
 
-        choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/CurrentChoices/';
         fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
 
         %The imps file with predictive importance values is be saved here
         save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FilePredImp='outputPredictionImportancev2.mat';
+        save_FilePredImp='outputPredictionImportanceHitMiss.mat';
 
         %The output of drgMini_information_contentv2 is saved here
         save_PathIC='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
@@ -196,13 +196,13 @@ for fileNo=1:length(handles_conc.arena_file)
             this_dFF_activity_n=zeros(10,10);
             sum_dFF_activity=0;
 
-            this_dFFl1_activity=zeros(10,10);
-            this_dFFl1_activity_n=zeros(10,10);
-            sum_dFFl1_activity=0;
+            this_Hit_activity=zeros(10,10);
+            this_Hit_activity_n=zeros(10,10);
+            sum_Hit_activity=0;
 
-            this_dFFl4_activity=zeros(10,10);
-            this_dFFl4_activity_n=zeros(10,10);
-            sum_dFFl4_activity=0;
+            this_Miss_activity=zeros(10,10);
+            this_Miss_activity_n=zeros(10,10);
+            sum_Miss_activity=0;
 
             %Cumulative counts for info
             
@@ -279,7 +279,7 @@ for fileNo=1:length(handles_conc.arena_file)
                     this_dFF_activity(this_x_ii,this_y_ii)=this_dFF_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
                     this_dFF_activity_n(this_x_ii,this_y_ii)=this_dFF_activity_n(this_x_ii,this_y_ii)+1;
                     sum_dFF_activity=sum_dFF_activity+these_dFF(ii_t);
- 
+
                     %Tally info
                     this_bin_dFF=(these_dFF(ii_t)>0)+1;
                     cum_bindFF(this_bin_dFF)=cum_bindFF(this_bin_dFF)+1;
@@ -293,10 +293,16 @@ for fileNo=1:length(handles_conc.arena_file)
                     cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_BothHitAndMiss(this_bin_dFF,this_xy_ii)+1;
                     cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
+                    %Where are odor start and end?
+                    op_predictedstart=trials.odor_ii_start(trNo)+handles_choices.trial_start_offset;
+                    op_predictedend=trials.odor_ii_end(trNo)+handles_choices.trial_end_offset;
+                    x_ii=op_predictedstart+ii_t;
+
+
                     if (trials.hit1(trNo)==1)||(trials.hit4(trNo)==1)
-                        % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
-                        % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+                        % this_Hit_activity(this_x_ii,this_y_ii)=this_Hit_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_Hit_activity_n(this_x_ii,this_y_ii)=this_Hit_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_Hit_activity=sum_Hit_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF,1)=cum_lane_bindFF(this_bin_dFF,1)+1;
                         cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)+1;
@@ -310,11 +316,20 @@ for fileNo=1:length(handles_conc.arena_file)
                                 cm_from_floor=2;
                                 %Find the binary op
                                 binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
-                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
-                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
-                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
-                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
-
+                                %Make odor zero if the time is early or late
+                                if x_ii<trials.odor_ii_start(trNo)
+                                    binary_op=0;
+                                else
+                                    if x_ii>trials.odor_ii_end(trNo)
+                                        binary_op=0;
+                                    else
+                                        this_x=trials.trial(trNo).XYtest(ii_t,1);
+                                        x_on=(x_ii-trials.odor_ii_start(trNo))*handles_conc.dt*handles_conc.air_flow_speed;
+                                        if this_x>x_on
+                                            binary_op=0;
+                                        end
+                                    end
+                                end
                                 cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
                                 cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
                                 cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
@@ -325,12 +340,20 @@ for fileNo=1:length(handles_conc.arena_file)
                                 cm_from_floor=1;
                                 %Find the binary op
                                 binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel1(this_x_ii,this_y_ii);
-                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
-                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
-                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
-                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
-
-                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1; 
+                                if x_ii<trials.odor_ii_start(trNo)
+                                    binary_op=0;
+                                else
+                                    if x_ii>trials.odor_ii_end(trNo)
+                                        binary_op=0;
+                                    else
+                                        this_x=trials.trial(trNo).XYtest(ii_t,1);
+                                        x_on=(x_ii-trials.odor_ii_start(trNo))*handles_conc.dt*handles_conc.air_flow_speed;
+                                        if this_x>x_on
+                                            binary_op=0;
+                                        end
+                                    end
+                                end
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
                                 cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
                                 cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
                                     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
@@ -338,9 +361,9 @@ for fileNo=1:length(handles_conc.arena_file)
                         end
 
                     else
-                        % this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
-                        % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        % this_Miss_activity(this_x_ii,this_y_ii)=this_Miss_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_Miss_activity_n(this_x_ii,this_y_ii)=this_Miss_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_Miss_activity=sum_Miss_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF,2)=cum_lane_bindFF(this_bin_dFF,2)+1;
                         cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)+1;
@@ -354,12 +377,20 @@ for fileNo=1:length(handles_conc.arena_file)
                                 cm_from_floor=2;
                                 %Find the binary op
                                 binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
-                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
-                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
-                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
-                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
-
-                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1; 
+                                if x_ii<trials.odor_ii_start(trNo)
+                                    binary_op=0;
+                                else
+                                    if x_ii>trials.odor_ii_end(trNo)
+                                        binary_op=0;
+                                    else
+                                        this_x=trials.trial(trNo).XYtest(ii_t,1);
+                                        x_on=(x_ii-trials.odor_ii_start(trNo))*handles_conc.dt*handles_conc.air_flow_speed;
+                                        if this_x>x_on
+                                            binary_op=0;
+                                        end
+                                    end
+                                end
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
                                 cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
                                 cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
                                     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
@@ -370,12 +401,20 @@ for fileNo=1:length(handles_conc.arena_file)
                                 cm_from_floor=1;
                                 %Find the binary op
                                 binary_op=odor_plume_patterns.cm_from_floor(cm_from_floor).binary_plumel4(this_x_ii,this_y_ii);
-                                % cum_op(binary_op*100+this_xy_ii)=cum_op(binary_op*100+this_xy_ii)+1;
-                                % cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)=...
-                                %     cum_xy_bindFF_op(this_bin_dFF,this_xy_ii,binary_op*100+this_xy_ii)+1;
-                                % cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)=cum_op_bindFF(this_bin_dFF,binary_op*100+this_xy_ii)+1;
-
-                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1; 
+                                if x_ii<trials.odor_ii_start(trNo)
+                                    binary_op=0;
+                                else
+                                    if x_ii>trials.odor_ii_end(trNo)
+                                        binary_op=0;
+                                    else
+                                        this_x=trials.trial(trNo).XYtest(ii_t,1);
+                                        x_on=(x_ii-trials.odor_ii_start(trNo))*handles_conc.dt*handles_conc.air_flow_speed;
+                                        if this_x>x_on
+                                            binary_op=0;
+                                        end
+                                    end
+                                end
+                                cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
                                 cum_xy_op_bin(this_xy_ii,binary_op+1)=cum_xy_op_bin(this_xy_ii,binary_op+1)+1;
                                 cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)=...
                                     cum_xy_bindFF_op_bin(this_bin_dFF,this_xy_ii,binary_op+1)+1;
@@ -705,9 +744,9 @@ for fileNo=1:length(handles_conc.arena_file)
                     cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
                     if all_hit_vs_miss(ii_t)==1
-                        % this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        % this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
-                        % sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+                        % this_Hit_activity(this_x_ii,this_y_ii)=this_Hit_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_Hit_activity_n(this_x_ii,this_y_ii)=this_Hit_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_Hit_activity=sum_Hit_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF_rev,1)=cum_lane_bindFF(this_bin_dFF_rev,1)+1;
                         cum_xy_bindFF_hi(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF_rev,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,1)+1;
@@ -751,9 +790,9 @@ for fileNo=1:length(handles_conc.arena_file)
                                 cum_op_bin(binary_op+1)=cum_op_bin(binary_op+1)+1;
                         end
                     else
-                        % this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        % this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
-                        % sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        % this_Miss_activity(this_x_ii,this_y_ii)=this_Miss_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        % this_Miss_activity_n(this_x_ii,this_y_ii)=this_Miss_activity_n(this_x_ii,this_y_ii)+1;
+                        % sum_Miss_activity=sum_Miss_activity+these_dFF(ii_t);
                         cum_lane_bindFF(this_bin_dFF_rev,2)=cum_lane_bindFF(this_bin_dFF_rev,2)+1;
                         cum_xy_bindFF_miss(this_bin_dFF_rev,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF_rev,this_xy_ii)+1;
                         cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF_rev,this_xy_ii,2)+1;
@@ -1178,6 +1217,7 @@ for ii_ROI=1:all_info_ii
     this_all_info_mutual_info14_sh(1,:)=all_info_mutual_info14_sh(ii_ROI,:);
     this_all_info_lane_sh=zeros(1,n_shuffle_SI);
     this_all_info_lane_sh(1,:)=all_info_lane_sh(ii_ROI,:);
+    
     this_all_info_op_bin_sh=zeros(1,n_shuffle_SI);
     this_all_info_op_bin_sh(1,:)=all_info_op_bin_sh(ii_ROI,:);
     this_all_info_mutual_info_dFFbin_xy_op_bin_sh=zeros(1,n_shuffle_SI);
@@ -1254,8 +1294,9 @@ for ii_ROI=1:all_info_ii
     mean_all_info_both_lanes_sh(ii_ROI)=mean(this_all_info_both_lanes_sh);
     mean_all_info_mutual_info14_sh(ii_ROI)=mean(this_all_info_mutual_info14_sh);
     mean_all_info_lane_sh(ii_ROI)=mean(this_all_info_lane_sh);
-    mean_all_info_op_bin_sh(ii_ROI)=mean(this_all_info_lane_sh);
-    mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI)=mean(this_all_info_lane_sh);
+
+    mean_all_info_op_bin_sh(ii_ROI)=mean(this_all_info_op_bin_sh);
+    mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI)=mean(this_all_info_mutual_info_dFFbin_xy_op_bin_sh);
     mean_all_info_mutual_xy_op_bin_sh(ii_ROI)=mean(this_all_info_mutual_xy_op_bin_sh);
 
     ssi_all_info_hit(ii_ROI)=(all_info_hit(ii_ROI)-mean_all_info_hit_sh(ii_ROI))/sd_all_info_hit_sh(ii_ROI);
@@ -1263,6 +1304,7 @@ for ii_ROI=1:all_info_ii
     ssi_all_info_both_lanes(ii_ROI)=(all_info_both_lanes(ii_ROI)-mean_all_info_both_lanes_sh(ii_ROI))/sd_all_info_both_lanes_sh(ii_ROI);
     ssi_all_info_mutual_info14(ii_ROI)=(all_info_mutual_info14(ii_ROI)-mean_all_info_mutual_info14_sh(ii_ROI))/sd_all_info_mutual_info14_sh(ii_ROI);
     ssi_all_info_lane(ii_ROI)=(all_info_lane(ii_ROI)-mean_all_info_lane_sh(ii_ROI))/sd_all_info_lane_sh(ii_ROI);
+    
     ssi_all_info_op_bin(ii_ROI)=(all_info_op_bin(ii_ROI)-mean_all_info_op_bin_sh(ii_ROI))/sd_all_info_op_bin_sh(ii_ROI);
     ssi_all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)=(all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)-mean_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_info_dFFbin_xy_op_bin_sh(ii_ROI);
     ssi_all_info_mutual_xy_op_bin(ii_ROI)=(all_info_mutual_xy_op_bin(ii_ROI)-mean_all_info_mutual_xy_op_bin_sh(ii_ROI))/sd_all_info_mutual_xy_op_bin_sh(ii_ROI);
@@ -1272,6 +1314,7 @@ for ii_ROI=1:all_info_ii
     handles_outic.ssi_all_info_both_lanes(ii_ROI)=ssi_all_info_both_lanes(ii_ROI);
     handles_outic.ssi_all_info_mutual_info14(ii_ROI)=ssi_all_info_mutual_info14(ii_ROI);
     handles_outic.ssi_all_info_lane(ii_ROI)=ssi_all_info_lane(ii_ROI);
+    
     handles_outic.ssi_all_info_op_bin(ii_ROI)=ssi_all_info_op_bin(ii_ROI);
     handles_outic.ssi_all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI)=ssi_all_info_mutual_info_dFFbin_xy_op_bin(ii_ROI);
     handles_outic.ssi_all_info_mutual_xy_op_bin(ii_ROI)=ssi_all_info_mutual_xy_op_bin(ii_ROI);
@@ -1312,7 +1355,7 @@ hold on
 edges=[-4:1:20];
 histogram(ssi_all_info_op_bin,edges)
 
-plot([3 3],[0 828],'-k','LineWidth',2)
+plot([3 3],[0 900],'-k','LineWidth',2)
 
 xlim([-5 20])
 title('Histogram for SSI MI op x bindFF')
@@ -1383,7 +1426,7 @@ handles_outic.not_nan_ii_allROIs=not_nan_ii_allROIs;
 cropped_ssi_all_info_hit=zeros(length(not_nan_ii_allROIs),1);
 cropped_ssi_all_info_miss=zeros(length(not_nan_ii_allROIs),1);
 cropped_ssi_all_info_both_lanes=zeros(length(not_nan_ii_allROIs),1);
-cropped_all_spatial_rhol1l4=zeros(length(not_nan_ii_allROIs),1);
+cropped_all_spatial_rho_hit_vs_miss=zeros(length(not_nan_ii_allROIs),1);
 cropped_all_delta_center_of_mass=zeros(length(not_nan_ii_allROIs),1);
  
 
@@ -1391,14 +1434,14 @@ for jj=1:length(not_nan_ii_allROIs)
     cropped_ssi_all_info_hit(jj)=ssi_all_info_hit(not_nan_ii_allROIs(jj));
     cropped_ssi_all_info_miss(jj)=ssi_all_info_miss(not_nan_ii_allROIs(jj));
     cropped_ssi_all_info_both_lanes(jj)=ssi_all_info_both_lanes(not_nan_ii_allROIs(jj));
-    cropped_all_spatial_rhol1l4(jj)=imps.all_spatial_rhol1l4(not_nan_ii_allROIs(jj));
+    cropped_all_spatial_rho_hit_vs_miss(jj)=imps.all_spatial_rho_hit_vs_miss(not_nan_ii_allROIs(jj));
     cropped_all_delta_center_of_mass(jj)=imps.all_delta_center_of_mass(not_nan_ii_allROIs(jj));
 end
 
 handles_outic.cropped_ssi_all_info_hit=cropped_ssi_all_info_hit;
 handles_outic.cropped_ssi_all_info_miss=cropped_ssi_all_info_miss;
 handles_outic.cropped_ssi_all_info_both_lanes=cropped_ssi_all_info_both_lanes;
-handles_outic.cropped_all_spatial_rhol1l4=cropped_all_spatial_rhol1l4;
+handles_outic.cropped_all_spatial_rho_hit_vs_miss=cropped_all_spatial_rho_hit_vs_miss;
 handles_outic.cropped_all_delta_center_of_mass=cropped_all_delta_center_of_mass;
 
 % Step 1 Transpose the data if necessary (N samples x 3 variables)
@@ -1409,12 +1452,13 @@ rng('default') % for reproducibility
 % Step 2: Run t-SNE
 % The default parameters are usually sufficient, but you can adjust them
 % For example, set 'NumPCAComponents' to reduce dimensionality before t-SNE
-% mappedX = tsne(data, 'NumPCAComponents', 2, 'Perplexity', 30);
-% mappedX = tsne(data,'Algorithm','exact','Distance','mahalanobis'); %Works well
-mappedX = tsne(datassi,'Algorithm','exact','Distance','cosine'); %works better
+% mappedX = tsne(datassi, 'NumPCAComponents', 2, 'Perplexity', 30);
+% mappedX = tsne(datassi,'Algorithm','exact','Distance','mahalanobis'); %Works well
+% mappedX = tsne(datassi,'Algorithm','exact','Distance','cosine'); %works better
+mappedX = tsne(datassi,'Distance','cosine'); %works best
 
-% mappedX = tsne(data,'Algorithm','exact','Distance','chebychev'); %Ok
-% mappedX = tsne(data,'Algorithm','exact','Distance','euclidean'); %OK
+% mappedX = tsne(datassi,'Algorithm','exact','Distance','chebychev'); %Ok, yields two clusters
+% mappedX = tsne(datassi,'Algorithm','exact','Distance','euclidean'); %OK, three clusters
 
 % %Step 3: Plot the results
 % figureNo=figureNo+1;
@@ -1491,9 +1535,9 @@ for ii_k=1:no_clusters
     end
 end
 
-text(-55,20,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
-text(-55,10,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
-text(-55,0,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+text(-37,30,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(-37,20,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(-37,10,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
 
 xlabel('t-SNE Component 1');
 ylabel('t-SNE Component 2');
@@ -1577,7 +1621,7 @@ text(10,0.4,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','Fon
 text(10,0.3,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
 text(10,0.2,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
 
-title(['SSI for both lanes'])
+title(['SSI for all trials'])
 ylabel('Cumulative probability')
 xlabel('SSI')
 xlim([-5 35])
@@ -1594,28 +1638,26 @@ hold on
 ax=gca;ax.LineWidth=3;
 set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
 for ii_k=1:no_clusters
-    
-  
 
-    these_ssis_hi=per_cluster.cluster(ii_k).these_ssi_all_info_hit;
+    these_ssis_hit=per_cluster.cluster(ii_k).these_ssi_all_info_hit;
     these_ssis_miss=per_cluster.cluster(ii_k).these_ssi_all_info_miss;
 
     switch ii_k
         case 1
-            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi);
+            [f_aic,x_aic] = drg_ecdf(these_ssis_hit-these_ssis_miss);
             plot(x_aic,f_aic,'Color',[230/255 159/255 0/255],'LineWidth',3)
         case 2
-            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi); %xy x bindFF for lane 4
+            [f_aic,x_aic] = drg_ecdf(these_ssis_hit-these_ssis_miss); %xy x bindFF for lane 4
             plot(x_aic,f_aic,'Color',[86/255 180/255 233/255],'LineWidth',3)
         case 3
-            [f_aic,x_aic] = drg_ecdf(these_ssis_miss-these_ssis_hi);   %xy x bindFF x lane
+            [f_aic,x_aic] = drg_ecdf(these_ssis_hit-these_ssis_miss);   %xy x bindFF x lane
             plot(x_aic,f_aic,'Color',[0/255 158/255 115/255],'LineWidth',3)
     end
 
     
 end
 plot([0 0],[0 1],'-k')
-title(['SSI4 -SSI1'])
+title(['SSI hit -SSI miss'])
 ylabel('Cumulative probability')
 xlabel('Delta SSI')
 xlim([-15 15])
@@ -1643,7 +1685,7 @@ for ii_k=1:no_clusters
     
   
 
-    these_rhos=cropped_all_spatial_rhol1l4(idxssi==ii_k);
+    these_rhos=cropped_all_spatial_rho_hit_vs_miss(idxssi==ii_k);
     these_rhos=these_rhos(~isnan(these_rhos));
 
     switch ii_k
@@ -1661,7 +1703,7 @@ for ii_k=1:no_clusters
     
 end
 plot([0 0],[0 1],'-k')
-title(['rho lane 1 vs lane 4'])
+title(['rho hit vs miss'])
 ylabel('Cumulative probability')
 xlabel('rho')
 xlim([-0.5 1])
@@ -1723,7 +1765,7 @@ hold on
 
 ax=gca;ax.LineWidth=3;
 set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-these_rhos=imps.all_spatial_rhol1l4;
+these_rhos=imps.all_spatial_rho_hit_vs_miss;
 these_rhos=these_rhos(~isnan(these_rhos));
 
 edges=[-0.5:0.1:1];
@@ -3589,7 +3631,7 @@ rand_offset=0.5;
 
 %predictive importance for x
 for ii_k=1:3
-    these_rhos=imps.all_spatial_rhol1l4(idx==ii_k);
+    these_rhos=imps.all_spatial_rho_hit_vs_miss(idx==ii_k);
     these_rhos=these_rhos(~isnan(these_rhos));
     switch ii_k
         case 1
@@ -3704,7 +3746,7 @@ rand_offset=0.5;
 
 %predictive importance for x
 for ii_k=1:2
-    these_rhos=imps.all_spatial_rhol1l4(idxl==ii_k);
+    these_rhos=imps.all_spatial_rho_hit_vs_miss(idxl==ii_k);
     these_rhos=these_rhos(~isnan(these_rhos));
     switch ii_k
         case 1
@@ -3833,7 +3875,7 @@ for fileNo=1:length(handles_conc.arena_file)
             ii_ROI_all=find((all_info_fileNo==fileNo)&(all_info_ii_ROI==ii_ROI));
 
             % this_ROI=these_important_ROIs(ii_ROI);
-            % spatial_rhol1l4=imps.file(fileNo).spatial_rhol1l4;
+            % spatial_rhol_hit_vs_miss=imps.file(fileNo).spatial_rhol_hit_vs_miss;
             % delta_center_of_mass=imps.file(fileNo).delta_center_of_mass;
             % SSI=imps.file(fileNo).information_content;
             % SSIl1=imps.file(fileNo).information_contentl1;
@@ -3845,13 +3887,13 @@ for fileNo=1:length(handles_conc.arena_file)
             this_dFF_activity_n=zeros(10,10);
             sum_dFF_activity=0;
 
-            this_dFFl1_activity=zeros(10,10);
-            this_dFFl1_activity_n=zeros(10,10);
-            sum_dFFl1_activity=0;
+            this_Hit_activity=zeros(10,10);
+            this_Hit_activity_n=zeros(10,10);
+            sum_Hit_activity=0;
 
-            this_dFFl4_activity=zeros(10,10);
-            this_dFFl4_activity_n=zeros(10,10);
-            sum_dFFl4_activity=0;
+            this_Miss_activity=zeros(10,10);
+            this_Miss_activity_n=zeros(10,10);
+            sum_Miss_activity=0;
 
 
 
@@ -3930,18 +3972,18 @@ for fileNo=1:length(handles_conc.arena_file)
                     % cum_xy_BothHitAndMiss(this_xy_ii)=cum_xy_BothHitAndMiss(this_xy_ii)+1;
 
                     if (trials.hit1(trNo)==1)||(trials.hit4(trNo)==1)
-                        this_dFFl1_activity(this_x_ii,this_y_ii)=this_dFFl1_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        this_dFFl1_activity_n(this_x_ii,this_y_ii)=this_dFFl1_activity_n(this_x_ii,this_y_ii)+1;
-                        sum_dFFl1_activity=sum_dFFl1_activity+these_dFF(ii_t);
+                        this_Hit_activity(this_x_ii,this_y_ii)=this_Hit_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        this_Hit_activity_n(this_x_ii,this_y_ii)=this_Hit_activity_n(this_x_ii,this_y_ii)+1;
+                        sum_Hit_activity=sum_Hit_activity+these_dFF(ii_t);
                         % cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_hi(this_bin_dFF,this_xy_ii)+1;
                         % cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,1)+1;
                         % cum_xy_hi(this_xy_ii)=cum_xy_hi(this_xy_ii)+1;
                         % cum_bindFF_hi(this_bin_dFF)=cum_bindFF_hi(this_bin_dFF)+1;
                         % cum_lane(1)=cum_lane(1)+1;
                     else
-                        this_dFFl4_activity(this_x_ii,this_y_ii)=this_dFFl4_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
-                        this_dFFl4_activity_n(this_x_ii,this_y_ii)=this_dFFl4_activity_n(this_x_ii,this_y_ii)+1;
-                        sum_dFFl4_activity=sum_dFFl4_activity+these_dFF(ii_t);
+                        this_Miss_activity(this_x_ii,this_y_ii)=this_Miss_activity(this_x_ii,this_y_ii)+these_dFF(ii_t);
+                        this_Miss_activity_n(this_x_ii,this_y_ii)=this_Miss_activity_n(this_x_ii,this_y_ii)+1;
+                        sum_Miss_activity=sum_Miss_activity+these_dFF(ii_t);
                         % cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)=cum_xy_bindFF_miss(this_bin_dFF,this_xy_ii)+1;
                         % cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)=cum_xy_bindFF_lane(this_bin_dFF,this_xy_ii,2)+1;
                         % cum_xy_miss(this_xy_ii)=cum_xy_miss(this_xy_ii)+1;
@@ -4040,16 +4082,16 @@ for fileNo=1:length(handles_conc.arena_file)
 
             for ii_x=1:10
                 for ii_y=1:10
-                    if this_dFFl1_activity_n(ii_x,ii_y)~=0
-                        this_dFFl1_activity(ii_x,ii_y)=this_dFFl1_activity(ii_x,ii_y)/this_dFFl1_activity_n(ii_x,ii_y);
+                    if this_Hit_activity_n(ii_x,ii_y)~=0
+                        this_Hit_activity(ii_x,ii_y)=this_Hit_activity(ii_x,ii_y)/this_Hit_activity_n(ii_x,ii_y);
                     end
                 end
             end
 
             for ii_x=1:10
                 for ii_y=1:10
-                    if this_dFFl4_activity_n(ii_x,ii_y)~=0
-                        this_dFFl4_activity(ii_x,ii_y)=this_dFFl4_activity(ii_x,ii_y)/this_dFFl4_activity_n(ii_x,ii_y);
+                    if this_Miss_activity_n(ii_x,ii_y)~=0
+                        this_Miss_activity(ii_x,ii_y)=this_Miss_activity(ii_x,ii_y)/this_Miss_activity_n(ii_x,ii_y);
                     end
                 end
             end
@@ -4064,7 +4106,7 @@ for fileNo=1:length(handles_conc.arena_file)
             hFig = figure(figureNo);
             set(hFig, 'units','normalized','position',[.1 .1 .75 .75])
 
-            %Plot dFFs for lane 1 and 4
+            %Plot dFFs for lanes 1 and 4
             y_gap=2;
             hit_miss_1=zeros(size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,delta_below_zero_ii+delta_above_zero_ii);
             hit_miss_1(size(miss1_dFF,1)+y_gap+1:size(hit1_dFF,1)+size(miss1_dFF,1)+y_gap,:)=hit1_dFF;
@@ -4085,7 +4127,7 @@ for fileNo=1:length(handles_conc.arena_file)
             all_hit_miss=[hit_miss_4(:); hit_miss_1(:)];
             c_percentile=prctile(all_hit_miss(all_hit_miss>0),99);
 
-            %Plot dFF for lane 1
+            %Plot dFF for lane1
             subplot(2, 6, [1 2 3]);
             hold on
 
@@ -4114,7 +4156,7 @@ for fileNo=1:length(handles_conc.arena_file)
             xlabel('Time (sec)')
             yticks([1+(size(miss1_dFF,1)/2) size(miss1_dFF,1)+1+y_gap+(size(hit1_dFF,1)/2)])
             yticklabels({'Misses','Hits'})
-            title(['Lane 1 dFF'])
+            title(['Lane 1 odor'])
 
             %Plot dFF for lane 4
             subplot(2, 6, [4 5 6]);
@@ -4136,28 +4178,28 @@ for fileNo=1:length(handles_conc.arena_file)
             xlabel('Time (sec)')
             yticks([1+(size(miss4_dFF,1)/2) size(miss4_dFF,1)+1+y_gap+(size(hit4_dFF,1)/2)])
             yticklabels({'Misses','Hits'})
-            title(['Lane 4 dFF'])
+            title(['Lane 4 odor'])
 
             %Plot space activity maps as in Moser https://doi.org/10.1126/science.1114037
             max_this_dFF_activity=max(this_dFF_activity(:));
-            max_this_dFFl4_activity=max(this_dFFl4_activity(:));
-            max_this_dFFl1_activity=max(this_dFFl1_activity(:));
+            max_this_Miss_activity=max(this_Miss_activity(:));
+            max_this_Hit_activity=max(this_Hit_activity(:));
 
             colormap fire
             this_cmap=colormap;
             this_cmap(1,:)=[0.3 0.3 0.3];
 
-            if max_this_dFFl1_activity>max_this_dFFl4_activity
+            if max_this_Hit_activity>max_this_Miss_activity
                 %Lane 1
                 subplot(2, 6, [7 8]);
-                max_activity=max_this_dFFl1_activity;
+                max_activity=max_this_Hit_activity;
                 delta_ac=max_activity/255;
                 if delta_ac==0
                     delta_ac=0.000001;
                 end
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                this_masked_Hit_activity=this_Hit_activity;
+                this_masked_Hit_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Hit_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4171,7 +4213,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
+                title_legend=['Hits, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
                 if sig_all_info_hit(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -4180,10 +4222,10 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 %Lane 4 normalized to lane 1
                 subplot(2, 6, [9 10]);
-                max_activity=max_this_dFFl1_activity;
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                max_activity=max_this_Hit_activity;
+                this_masked_Miss_activity=this_Miss_activity;
+                this_masked_Miss_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Miss_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4194,18 +4236,18 @@ for fileNo=1:length(handles_conc.arena_file)
                 xticks(0:50:500)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
-                title(['Lane 4 normalized to Lane 1'])
+                title(['Miss normalized to Hits'])
 
                 %Lane 4 normalized to lane 4
                 subplot(2, 6, [11 12]);
-                max_activity=max_this_dFFl4_activity;
+                max_activity=max_this_Miss_activity;
                 delta_ac=max_activity/255;
                 if delta_ac==0
                     delta_ac=0.000001;
                 end
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                this_masked_Miss_activity=this_Miss_activity;
+                this_masked_Miss_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Miss_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4218,7 +4260,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 ylabel('y (mm)')
 
 
-                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
+                title_legend=['Miss, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
                 if sig_all_info_miss(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -4229,14 +4271,14 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 %Lane 4 normalized to lane 4
                 subplot(2, 6, [7 8]);
-                max_activity=max_this_dFFl4_activity;
+                max_activity=max_this_Miss_activity;
                 delta_ac=max_activity/255;
                 if delta_ac==0
                     delta_ac=0.000001;
                 end
-                this_masked_dFFl4_activity=this_dFFl4_activity;
-                this_masked_dFFl4_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl4_activity)
+                this_masked_Miss_activity=this_Miss_activity;
+                this_masked_Miss_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Miss_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4250,7 +4292,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 4, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
+                title_legend=['Miss, SSI= ' num2str(ssi_all_info_miss(ii_ROI_all))];
                 if sig_all_info_miss(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -4258,10 +4300,10 @@ for fileNo=1:length(handles_conc.arena_file)
 
                 %Lane 1 normalized to lane 4
                 subplot(2, 6, [9 10]);
-                max_activity=max_this_dFFl4_activity;
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                max_activity=max_this_Miss_activity;
+                this_masked_Hit_activity=this_Hit_activity;
+                this_masked_Hit_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Hit_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4271,18 +4313,18 @@ for fileNo=1:length(handles_conc.arena_file)
                 xticks(0:50:500)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
-                title(['Lane 1 normalized to Lane 4'])
+                title(['Hits normalized to Miss'])
 
                 %Lane 1 normalized to lane 1
                 subplot(2, 6, [11 12]);
-                max_activity=max_this_dFFl1_activity;
+                max_activity=max_this_Hit_activity;
                 delta_ac=max_activity/255;
                 if delta_ac==0
                     delta_ac=0.00001;
                 end
-                this_masked_dFFl1_activity=this_dFFl1_activity;
-                this_masked_dFFl1_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
-                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_dFFl1_activity)
+                this_masked_Hit_activity=this_Hit_activity;
+                this_masked_Hit_activity(this_dFF_activity_n==0)=-0.9*delta_ac;
+                drg_pcolor(repmat(x,length(y),1)',repmat(y,length(x),1),this_masked_Hit_activity)
                 colormap(this_cmap)
                 clim([-1.5*delta_ac max_activity])
                 shading interp
@@ -4293,7 +4335,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 xlabel('x (mm)')
                 ylabel('y (mm)')
 
-                title_legend=['Lane 1, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
+                title_legend=['Hits, SSI= ' num2str(ssi_all_info_hit(ii_ROI_all))];
                 if sig_all_info_hit(ii_ROI_all)==1
                     title_legend=[title_legend ' S'];
                 end
@@ -4302,7 +4344,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
 
             sgt_legend=['dFF map file  No ' num2str(fileNo) ' ROI No ' num2str(ii_ROI) ' SSI both= ' num2str(ssi_all_info_both_lanes(ii_ROI_all))...
-                ' rho= ' num2str(imps.all_spatial_rhol1l4(ii_ROI_all)) ' dCOM= ' num2str(imps.all_delta_center_of_mass(ii_ROI_all)) ' mm '...
+                ' rho= ' num2str(imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)) ' dCOM= ' num2str(imps.all_delta_center_of_mass(ii_ROI_all)) ' mm '...
                 'SSIop= ' num2str(ssi_all_info_op_bin(ii_ROI_all))];
 
 
@@ -4348,57 +4390,61 @@ for fileNo=1:length(handles_conc.arena_file)
                 'VariableNames',{'dFF','trial_type','time'});
             mdl = fitglm(tbl,'dFF~trial_type+time'...
                 ,'CategoricalVars',[2])
- 
 
-            if sig_all_info_hit(ii_ROI_all)==1
+            if fileNo>6
+                if sig_all_info_hit(ii_ROI_all)==1
+                    switch idxssi(ii_ROI_all)
+                        case 1
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)>0.7
+                                pffft=1;
+                            end
+                        case 2
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)<0.3
+                                pffft=1;
+                            end
+                        case 3
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)<0.3
+                                pffft=1;
+                            end
+                    end
+                end
+
+                if sig_all_info_miss(ii_ROI_all)==1
+                    switch idxssi(ii_ROI_all)
+                        case 1
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)>0.7
+                                pffft=1;
+                            end
+                        case 2
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)<0.3
+                                pffft=1;
+                            end
+                        case 3
+                            if imps.all_spatial_rho_hit_vs_miss(ii_ROI_all)<0.3
+                                pffft=1;
+                            end
+                    end
+                end
+            end
+       
+
+            if (fileNo==7)&(ii_ROI==23)
                 pffft=1;
             end
 
-            if sig_all_info_miss(ii_ROI_all)==1
+            if (fileNo==7)&(ii_ROI==99)
                 pffft=1;
             end
 
-            if sig_all_info_mutual_info14(ii_ROI_all)==1
-                pfft=1; %MI is significant
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_conc)>0
-                pfft=1;
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_x)>0
-                pfft=1;
-            end
-
-            if sum(ii_ROI==imps.file(fileNo).ROIs_y)>0
+            if (fileNo==7)&(ii_ROI==154)
                 pffft=1;
             end
 
-            if (fileNo==7)&(ii_ROI==16)
-                pffft=1;
-            end
-
-            if (fileNo==7)&(ii_ROI==2)
-                pffft=1;
-            end
-
-            if (fileNo==13)&(ii_ROI==21)
-                pffft=1;
-            end
-
-            if (ssi_all_info_both_lanes(ii_ROI_all)>15)&(imps.all_spatial_rhol1l4(ii_ROI_all)>0.7)
-                pffft=1;
-            end
-
-             if (ssi_all_info_both_lanes(ii_ROI_all)>15)&(imps.all_spatial_rhol1l4(ii_ROI_all)<0.3)
+            if (fileNo==13)&(ii_ROI==92)
                 pffft=1;
             end
 
 
-            if ssi_all_info_op_bin(ii_ROI_all)>3
-                pffft=1;
-            end
-   
 
         end
     end
