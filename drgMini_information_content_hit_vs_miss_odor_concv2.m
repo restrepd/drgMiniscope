@@ -2035,6 +2035,51 @@ ylabel('Fraction SSI')
 ylim([0 1])
 xlim([-1 11])
 
+
+%Now plot the cluster distribution for ssi_op
+%Now plot the fraction of significant information for each cluster for
+%info14
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+bar_offset=0;
+
+
+%lBoth mutual spatial information 
+for ii_k=1:3
+    this_fraction=sum(sig_ssi_all_op_info(cluster_ssi_all_op_info==ii_k))/sum(sig_ssi_all_op_info);
+       switch ii_k
+            case 1
+                bar(bar_offset+1,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+            case 2
+                bar(bar_offset+2,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+            case 3
+                bar(bar_offset+3,this_fraction,'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+       end
+
+end
+
+
+text(1,0.8,'Cluster 1','Color',[230/255 159/255 0/255],'FontWeight','bold','FontSize',16)
+text(1,0.72,'Cluster 2','Color',[86/255 180/255 233/255],'FontWeight','bold','FontSize',16)
+text(1,0.64,'Cluster 3','Color',[0/255 158/255 115/255],'FontWeight','bold','FontSize',16)
+
+xticks([1 2 3])
+xticklabels({'Cluster 1','Cluster 2','Cluster 3'})
+xtickangle(45)
+
+title(['Cluster distribution for zMI of odor concentration x bin dFF'])
+ylabel('Fraction of cells')
+ylim([0 1])
+xlim([0 4])
+
 %Now do tsne analysis with SSI for odorant concentration
 % ssi_all_spatial_info_hit_no_nan=ssi_all_spatial_info_hit((~isnan(ssi_all_spatial_info_hit))&(~isnan(ssi_all_spatial_info_miss))&(~isnan(ssi_all_spatial_info)));
 % ssi_all_spatial_info_miss_no_nan=ssi_all_spatial_info_miss((~isnan(ssi_all_spatial_info_hit))&(~isnan(ssi_all_spatial_info_miss))&(~isnan(ssi_all_spatial_info)));
@@ -4409,6 +4454,9 @@ for fileNo=1:length(handles_conc.arena_file)
 
             this_dFF_op_activity=zeros(1,length(odor_c_bounds));
             this_dFF_op_activity_n=zeros(1,length(odor_c_bounds));
+
+            these_dFF_op_activity=zeros(trials.odor_trNo,length(odor_c_bounds));
+            these_dFF_op_activity_n=zeros(trials.odor_trNo,length(odor_c_bounds));
             
 
             this_Hit_op_activity=zeros(1,length(odor_c_bounds));
@@ -4539,6 +4587,9 @@ for fileNo=1:length(handles_conc.arena_file)
 
                     this_dFF_op_activity(this_ii_op)=this_dFF_op_activity(this_ii_op)+these_dFF(ii_t);
                     this_dFF_op_activity_n(this_ii_op)=this_dFF_op_activity_n(this_ii_op)+1;
+
+                    these_dFF_op_activity(trNo,this_ii_op)=these_dFF_op_activity(trNo,this_ii_op)+these_dFF(ii_t);
+                    these_dFF_op_activity_n(trNo,this_ii_op)=these_dFF_op_activity_n(trNo,this_ii_op)+1;
                     
 
                     %Tally info
@@ -4937,21 +4988,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
        
 
-            if (fileNo==7)&(ii_ROI==23)
-                pffft=1;
-            end
 
-            if (fileNo==7)&(ii_ROI==99)
-                pffft=1;
-            end
-
-            if (fileNo==7)&(ii_ROI==154)
-                pffft=1;
-            end
-
-            if (fileNo==13)&(ii_ROI==92)
-                pffft=1;
-            end
 
             %Normalize the dFF
             for ii_op=1:11
@@ -4989,7 +5026,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
 
             hFig = figure(figureNo+1);
-            set(hFig, 'units','normalized','position',[.3 .3 .3 .4])
+            set(hFig, 'units','normalized','position',[.02 .3 .3 .4])
 
             subplot(3,1,1)
             hold on
@@ -5001,6 +5038,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 end
             end
             xticks([1 6 11])
+            ylim([0 1.2])
             xticklabels({'-10','-6','-2'})
             title('Hit')
             xlabel('Odor concentration')
@@ -5016,6 +5054,7 @@ for fileNo=1:length(handles_conc.arena_file)
                 end
             end
             xticks([1 6 11])
+            ylim([0 1.2])
             xticklabels({'-10','-6','-2'})
             title('Miss')
             xlabel('Odor concentration')
@@ -5032,6 +5071,7 @@ for fileNo=1:length(handles_conc.arena_file)
             end
             xticks([1 6 11])
             xticklabels({'-10','-6','-2'})
+            ylim([0 1.2])
             title('All')
             xlabel('Odor concentration')
             ylabel('dFF activity (AU)')
@@ -5068,6 +5108,141 @@ for fileNo=1:length(handles_conc.arena_file)
                 oc_dFF_norm_map_iiROI_all(oc_ii_all)=ii_ROI;
             end
 
+            %Now plot the per trial pseudocolor plot
+            all_these_dFF_op_activity=[];
+            for trNo=1:trials.odor_trNo
+                for ii_occ=1:11
+                    if these_dFF_op_activity_n(trNo,ii_occ)~=0
+                        these_dFF_op_activity(trNo,ii_occ)=these_dFF_op_activity(trNo,ii_occ)/these_dFF_op_activity_n(trNo,ii_occ);
+                        all_these_dFF_op_activity=[all_these_dFF_op_activity these_dFF_op_activity(trNo,ii_occ)];
+                    end
+                end
+            end
+            max_these_dFF_op_activity=max(all_these_dFF_op_activity);
+            min_these_dFF_op_activity=min(all_these_dFF_op_activity);
+            these_dFF_op_activity=(these_dFF_op_activity-min_these_dFF_op_activity)/(max_these_dFF_op_activity-min_these_dFF_op_activity);
+            for trNo=1:trials.odor_trNo
+                for ii_occ=1:11
+                    if these_dFF_op_activity_n(trNo,ii_occ)==0
+                        these_dFF_op_activity(trNo,ii_occ)=-0.1;
+                    end
+                end
+            end
+
+            try
+                close(figureNo+2)
+            catch
+            end
+
+
+            hFig = figure(figureNo+2);
+            set(hFig, 'units','normalized','position',[.35 .3 .3 .4])
+            hold on
+
+            drg_pcolor(repmat(odor_c_bounds',1,trials.odor_trNo),repmat([1:trials.odor_trNo],length(odor_c_bounds),1),these_dFF_op_activity')
+            colormap(this_cmap)
+            clim([0 1])
+
+
+            shading flat
+
+
+            ylim([1 trials.odor_trNo])
+            xlim([-10 -2 ])
+            xlabel('log(odor concentration) AU')
+            ylabel('Trial #')
+            title(['Neural activity vs. odor conc, all trials'])
+
+            try
+                close(figureNo+3)
+            catch
+            end
+
+
+            hFig = figure(figureNo+3);
+            set(hFig, 'units','normalized','position',[.35 .3 .3 .4])
+            hold on
+
+            hit_trials=logical((trials.hit1==1)|(trials.hit4==1));
+            no_hits=sum( (trials.hit1==1)|(trials.hit4==1));
+            drg_pcolor(repmat(odor_c_bounds',1,no_hits),repmat([1:no_hits],length(odor_c_bounds),1),these_dFF_op_activity(hit_trials,:)')
+            colormap(this_cmap)
+            clim([0 1])
+
+
+
+            shading flat
+
+
+            ylim([1 sum(hit_trials)])
+            xlim([-10 -2 ])
+            xlabel('log(odor concentration) AU')
+            ylabel('Trial #')
+            title(['Neural activity vs. odor conc, hit trials'])
+
+            try
+                close(figureNo+4)
+            catch
+            end
+
+
+            hFig = figure(figureNo+4);
+            set(hFig, 'units','normalized','position',[.67 .3 .3 .4])
+            hold on
+
+            miss_trials=logical((trials.miss1==1)|(trials.miss4==1));
+            no_miss=sum( (trials.miss1==1)|(trials.miss4==1));
+            drg_pcolor(repmat(odor_c_bounds',1,no_miss),repmat([1:no_miss],length(odor_c_bounds),1),these_dFF_op_activity(miss_trials,:)')
+            colormap(this_cmap)
+            clim([0 1])
+
+
+
+            shading flat
+
+
+            ylim([1 sum(miss_trials)])
+            xlim([-10 -2 ])
+            xlabel('log(odor concentration) AU')
+            ylabel('Trial #')
+            title(['Neural activity vs. odor conc, miss trials'])
+
+             if (fileNo==7)
+                pffft=1;
+            end
+
+            if (fileNo==7)&(ii_ROI==23)
+                pffft=1;
+            end
+
+            if (fileNo==7)&(ii_ROI==99)
+                pffft=1;
+            end
+
+            if (fileNo==7)&(ii_ROI==154)
+                pffft=1;
+            end
+
+            if (fileNo==13)&(ii_ROI==92)
+                pffft=1;
+            end
+
+            %For Figure 3
+            if (fileNo==7)&(ii_ROI==121)
+                pffft=1;
+            end
+
+            if (fileNo==7)&(ii_ROI==176)
+                pffft=1;
+            end
+
+            if (fileNo==7)&(ii_ROI==180)
+                pffft=1;
+            end
+
+            if (fileNo==13)&(ii_ROI==143)
+                pffft=1;
+            end
         end
     end
 end
@@ -5090,7 +5265,7 @@ for ii_oc=1:oc_ii
 end
 
 %Plot the histogram for odor_c peaks
-figureNo=figureNo+2;
+figureNo=figureNo+4;
 try
     close(figureNo)
 catch
@@ -5313,6 +5488,25 @@ ylim([1 oc_ii_all])
 title('Odor concentration activity map, all trials')
 xlabel('log(odor concentrtion) AU')
 ylabel('ROI number')
+
+%Plot rainbow
+figureNo=figureNo+1;
+try
+    close(figureNo)
+catch
+end
+hFig=figure(figureNo);
+
+set(hFig, 'units','normalized','position',[.49 .1 .05 .3])
+
+
+prain=[0:1/99:1];
+pcolor(repmat([1:10],100,1)',repmat(prain,10,1),repmat(prain,10,1))
+%             colormap jet
+colormap(this_cmap)
+shading interp
+ax=gca;
+set(ax,'XTickLabel','')
 
 fclose(fileID);
 
