@@ -1,4 +1,4 @@
-%drgMini_information_contentv3
+%drgMini_information_content_hit_vs_miss_odor_concv2
 close all
 clear all
 
@@ -53,9 +53,9 @@ switch is_sphgpu
         save_PathPredImp='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
         save_FilePredImp='outputPredictionImportanceHitMiss.mat';
 
-        %The output of drgMini_information_contentv2 is saved here
-        save_PathIC='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
-        save_FileIC='outputPerROIInformationContentHitMiss.mat';
+        %The output of drgMini_information_contentv_hit_vs_miss_odor_concv2 is saved here
+        save_PathOCMI='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        save_FileOCMI='outputPerROIInformationContentOC.mat';
 
     case 1
         fileID = fopen('/data2/SFTP/PreProcessed/decoder_odor_conc_hitmiss_stats.txt','w');
@@ -91,8 +91,18 @@ eval(['handles_Moser=' choiceMoserFileName(1:end-2) ';'])
 
 figureNo=0;
 
-colormap fire
-this_cmap=colormap;
+try
+    colormap fire
+    this_cmap=colormap;
+catch
+    %This is here because of the lack of definition of fire in Matlab 2025b
+    % Load the saved colormap matrix from the .mat file
+    load('/Users/restrepd/Documents/GitHub/drgMiniscope/fireColormap2023b.mat');
+    this_cmap=fireMap;
+end
+
+
+
 this_cmap(1,:)=[0.3 0.3 0.3];
 
 %Find which files are included in the analysis
@@ -1408,6 +1418,8 @@ title('Histogram for SSI MI odor concentration x bindFF')
 xlabel('Sigma')
 ylabel('Count')
 
+
+
 %Plot histograms for SSI mutual info for xy x bindFF
 figureNo=figureNo+1;
 try
@@ -2052,7 +2064,7 @@ set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
 bar_offset=0;
 
 
-%lBoth mutual spatial information 
+%Both mutual spatial information 
 for ii_k=1:3
     this_fraction=sum(sig_ssi_all_op_info(cluster_ssi_all_op_info==ii_k))/sum(sig_ssi_all_op_info);
        switch ii_k
@@ -2210,6 +2222,8 @@ xlabel('t-SNE Component 1');
 ylabel('t-SNE Component 2');
 title(['t-SNE for SSI for odor concentration and dFF and space and dFF (useful?)' ]);
 
+save([save_PathOCMI save_FileOCMI],'handles_outic','-v7.3')
+ 
 pfff=1;
 % 
 % %Plot cumulative histograms for SSIs
@@ -4808,8 +4822,16 @@ for fileNo=1:length(handles_conc.arena_file)
             max_this_Miss_activity=max(this_Miss_activity(:));
             max_this_Hit_activity=max(this_Hit_activity(:));
 
-            colormap fire
-            this_cmap=colormap;
+            try
+                colormap fire
+                this_cmap=colormap;
+            catch
+                %This is here because of the lack of definition of fire in Matlab 2025b
+                % Load the saved colormap matrix from the .mat file
+                load('/Users/restrepd/Documents/GitHub/drgMiniscope/fireColormap2023b.mat');
+                this_cmap=fireMap;
+            end
+
             this_cmap(1,:)=[0.3 0.3 0.3];
 
             if max_this_Hit_activity>max_this_Miss_activity
@@ -5335,8 +5357,16 @@ hFig=figure(figureNo);
 set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 
-colormap fire
-this_cmap=colormap;
+try
+    colormap fire
+    this_cmap=colormap;
+catch
+    %This is here because of the lack of definition of fire in Matlab 2025b
+    % Load the saved colormap matrix from the .mat file
+    load('/Users/restrepd/Documents/GitHub/drgMiniscope/fireColormap2023b.mat');
+    this_cmap=fireMap;
+end
+
 this_cmap(1,:)=[0.8 0.8 0.8];
 
 drg_pcolor(repmat(odor_c_bounds,oc_ii,1),repmat([1:oc_ii]',1,11),oc_dFF_norm_map_hit_sorted)
@@ -5366,8 +5396,16 @@ hFig=figure(figureNo);
 set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
 hold on
 
-colormap fire
-this_cmap=colormap;
+try
+    colormap fire
+    this_cmap=colormap;
+catch
+    %This is here because of the lack of definition of fire in Matlab 2025b
+    % Load the saved colormap matrix from the .mat file
+    load('/Users/restrepd/Documents/GitHub/drgMiniscope/fireColormap2023b.mat');
+    this_cmap=fireMap;
+end
+
 this_cmap(1,:)=[0.8 0.8 0.8];
 
 drg_pcolor(repmat(odor_c_bounds,oc_ii,1),repmat([1:oc_ii]',1,11),oc_dFF_norm_map_miss_sorted)

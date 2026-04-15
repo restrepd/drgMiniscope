@@ -109,8 +109,10 @@ behavior_analysis=[];
 behavior_analysis.files_included=[];
 percent_correct=[];
 time_set=0;
+no_sessions=0;
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
+        no_sessions=no_sessions+1;
         if time_set==0
             display_t=[display_dt(1):handles_XY.dt:display_dt(2)];
             time_set=1;
@@ -149,6 +151,7 @@ for fileNo=1:length(handles_conc.arena_file)
     end
 end
 
+fprintf(1,['Number of sessions ' num2str(no_sessions) '\n'])
 
 %Now plot pseudocolor locations for last turn angles, start and end points,
 %etc
@@ -684,8 +687,8 @@ lane1_miss_end_positions=lane1_miss_end_positions/sum(lane1_miss_end_positions(:
 lane4_hit_end_positions=lane4_hit_end_positions/sum(lane4_hit_end_positions(:));
 lane4_miss_end_positions=lane4_miss_end_positions/sum(lane4_miss_end_positions(:));
 
-% colormap fire
-colormap gray
+colormap fire
+% colormap gray
 this_cmap=colormap;
 this_cmap(1,:)=[0.2 0.2 0.2];
 mult_cmax=0.35;
@@ -2062,6 +2065,161 @@ text(-1,70,'Misses','Color',[86/255 180/255 233/255])
 xlabel('Time (sec)')
 ylabel('Speed (cm/sec)')
 title('Mouse speed aligned to turn (normalized)')
+
+
+
+
+%Plot the normalized speed graph
+figNo = figNo + 1;
+try
+    close(figNo)
+catch
+end
+hFig=figure(figNo);
+hold on
+
+ax=gca;ax.LineWidth=3;
+set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+
+bar_offset=0;
+
+edges=[0:20:400];
+rand_offset=0.5;
+
+bin_zero=16;
+bin_after=16;
+bin_before=15;
+% 
+% normalized_speed_before_turn_hits=per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_before,:)./...
+%     per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_zero,:);
+% normalized_speed_after_turn_hits=per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_after,:)./...
+%     per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_zero,:);
+% normalized_speed_before_turn_misses=per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_before,:)./...
+%     per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_zero,:);
+% normalized_speed_after_turn_misses=per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_after,:)./...
+%     per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_zero,:);
+
+normalized_speed_before_turn_hits=per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_before,:);
+normalized_speed_after_turn_hits=per_session_normalized_speed_timecourse_aligned_to_turn_hits(bin_after,:);
+normalized_speed_before_turn_misses=per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_before,:);
+normalized_speed_after_turn_misses=per_session_normalized_speed_timecourse_aligned_to_turn_miss(bin_after,:);
+
+%Speed before turn hits
+bar(bar_offset,mean(normalized_speed_before_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_before_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn hits
+bar(bar_offset,mean(normalized_speed_after_turn_hits),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_after_turn_hits...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+2;
+
+%Speed before turn miss
+bar(bar_offset,mean(normalized_speed_before_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_before_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+
+%Speed after turn miss
+bar(bar_offset,mean(normalized_speed_after_turn_misses),'LineWidth', 3,'EdgeColor','none','FaceColor',[86/255 180/255 233/255])
+
+%Violin plot
+[mean_out, CIout]=drgViolinPoint(normalized_speed_after_turn_misses...
+    ,edges,bar_offset,rand_offset,'k','k',4);
+bar_offset=bar_offset+1;
+% 
+% for ii=1:length(normalized_speed_before_turn_hits)
+%     plot([0 1],[normalized_speed_before_turn_hits(ii),normalized_speed_after_turn_hits(ii)],...
+%         'o-','Color',[0.7 0.7 0.7],'MarkerEdgeColor',[0.7 0.7 0.7],'MarkerFaceColor',[0.7 0.7 0.7],'markerSize',8,'LineWidth',2)
+% 
+%     plot([3 4],[normalized_speed_before_turn_misses(ii),normalized_speed_after_turn_misses(ii)],...
+%         'o-','Color',[0.7 0.7 0.7],'MarkerEdgeColor',[0.7 0.7 0.7],'MarkerFaceColor',[0.7 0.7 0.7],'markerSize',8,'LineWidth',2)
+% end
+
+x_pos=-0.5;
+text(x_pos,1.5,'Hits','Color',[230/255 159/255 0/255])
+text(x_pos,1.2,'Misses','Color',[86/255 180/255 233/255])
+
+
+xticks([0 1 3 4])
+xticklabels({'Before','After','Before','After'})
+
+ 
+title(['Mouse speed'])
+ylabel('Speed (cm/sec)')
+% ylim([0 2])
+xlim([-1 5])
+
+glm_norm_speed=[];
+glm_norm_speed_ii=0;
+
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=normalized_speed_before_turn_hits;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=0;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_hits))=0;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_before_turn_hits);
+
+input_norm_speed_data(1).data=normalized_speed_before_turn_hits;
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=normalized_speed_after_turn_hits;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=1;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_hits))=0;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_after_turn_hits);
+
+input_norm_speed_data(2).data=normalized_speed_after_turn_hits;
+
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=normalized_speed_before_turn_misses;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=0;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_before_turn_misses))=1;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_before_turn_misses);
+
+input_norm_speed_data(3).data=normalized_speed_before_turn_misses;
+
+glm_norm_speed.data(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=normalized_speed_after_turn_misses;
+glm_norm_speed.before_after(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=1;
+glm_norm_speed.hit_miss(glm_norm_speed_ii+1:glm_norm_speed_ii+length(normalized_speed_after_turn_misses))=1;
+glm_norm_speed_ii=glm_norm_speed_ii+length(normalized_speed_after_turn_misses);
+
+input_norm_speed_data(4).data=normalized_speed_after_turn_misses;
+
+
+
+%Perform the glm mouse normalized speed
+fprintf(1, ['\nglm for mouse normalized speed\n'])
+fprintf(fileID, ['\nglm for mouse normalized speed\n']);
+
+
+tbl = table(glm_norm_speed.data',glm_norm_speed.before_after',glm_norm_speed.hit_miss',...
+    'VariableNames',{'speed','before_after','hit_miss'});
+mdl = fitglm(tbl,'speed~before_after+hit_miss+before_after*hit_miss'...
+    ,'CategoricalVars',[2,3])
+
+txt = evalc('mdl');
+txt=regexp(txt,'<strong>','split');
+txt=cell2mat(txt);
+txt=regexp(txt,'</strong>','split');
+txt=cell2mat(txt);
+
+fprintf(fileID,'%s\n', txt);
+
+
+%Do the ranksum/t-test
+fprintf(1, ['\n\nRanksum or t-test p values for mouse speed\n'])
+fprintf(fileID, ['\n\nRanksum or t-test p values for mouse speed\n']);
+
+
+[output_data] = drgMutiRanksumorTtest(input_norm_speed_data, fileID,0);
+
+
 
 fclose(fileID);
 

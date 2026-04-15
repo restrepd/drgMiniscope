@@ -4,7 +4,12 @@ close all
 clear all
 
 
-[FileName,PathName] = uigetfile({'*.mat'},'Select the dec .mat file for analysis');
+%Trained with all trials and mult=1 taking on account when mouse detects the odor
+PathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/OdorArenaOutput01122925/';
+FileName='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mmctreexy0.mat';
+
+
+% [FileName,PathName] = uigetfile({'*.mat'},'Select the dec .mat file for analysis');
 
 load([PathName FileName])
 

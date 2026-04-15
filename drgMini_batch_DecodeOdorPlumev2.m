@@ -2,7 +2,7 @@
 close all
 clear all
 
-run_slurm=1;
+run_slurm=0;
 
 algo_name{1}='SVZ';
 algo_name{2}='NN';
@@ -20,6 +20,7 @@ if run_slurm==1
     choiceBatchPathName='/pl/active/restrepo-lab/PreProcessed/';
     choiceFileName='drgMiniOPPredChoices_03052025.m';
 else
+    % [choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniOPPredChoices_*.m'},'Select the .m file with all the choices for analysis');
     [choiceFileName,choiceBatchPathName] = uigetfile({'drgMiniOPPredChoices_*.m'},'Select the .m file with all the choices for analysis');
 end
 

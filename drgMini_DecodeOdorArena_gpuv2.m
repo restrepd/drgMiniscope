@@ -108,10 +108,10 @@ setenv('MW_PCT_TRANSPORT_HEARTBEAT_INTERVAL', '700')
 
 switch is_sphgpu
     case 1
-        addpath('/home/restrepd/Documents/MATLAB/drgMiniscope')
-        addpath('/home/restrepd/Documents/MATLAB/m new/Chi Squared')
-        addpath('/home/restrepd/Documents/MATLAB/drgMaster')
-        addpath(genpath('/home/restrepd/Documents/MATLAB/m new/kakearney-boundedline-pkg-32f2a1f'))
+        addpath('/data2/DRMatlab/drgMiniscope')
+        addpath('/data2/DRMatlab/m new/Chi Squared')
+        addpath('/data2/DRMatlab/drgMaster')
+        addpath(genpath('/data2/DRMatlab/m new/kakearney-boundedline-pkg-32f2a1f'))
     case 2
         addpath('/projects/drestrepo@xsede.org/software/DR_matlab/drgMiniscope')
         addpath('/projects/drestrepo@xsede.org/software/DR_matlab/m new/Chi Squared')

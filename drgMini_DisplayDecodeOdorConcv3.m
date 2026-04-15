@@ -2,9 +2,9 @@
 clear all
 close all
 
-%Trained with hits only
-% save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01122025/';
-% choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01122025.m'
+%Trained with all trials
+% save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeOdorConc01062025/';
+% choiceOdorConcFileName='drgOdorConcChoices_Fabio_Good_01062025.m'
 
 %Trained with hits only taking on account when mouse detects the odor
 save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
@@ -57,6 +57,11 @@ end
 all_percents=[];
 
 figNo=0;
+
+all_aligned_hit_logoc=[];
+all_aligned_miss_logoc=[];
+all_aligned_hit_logoc_pred=[];
+all_aligned_miss_logoc_pred=[];
 
 for fileNo=1:length(handles_conc.arena_file)
     if (sum(handles_conc.group(fileNo)==these_groups)>0)&(files_included(fileNo)==1)
@@ -382,6 +387,73 @@ for fileNo=1:length(handles_conc.arena_file)
         xlabel('Time (sec)')
         ylabel('log10(odor) AU')
 
+        figNo=figNo+1;
+        try
+            close(figNo)
+        catch
+        end
+
+        hFig = figure(figNo);
+
+        set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+
+
+        hold on
+
+        %Plot hit
+        this_time=[1:-ii_t_before+ii_t_after+1]*dt;
+
+
+        CIsp = bootci(1000, @mean, aligned_hit_template);
+        meansp=mean(aligned_hit_template,1);
+        CIsp(1,:)=meansp-CIsp(1,:);
+        CIsp(2,:)=CIsp(2,:)-meansp;
+
+        [hlpvl, hppvl] = boundedline(this_time,mean(aligned_hit_template,1)', CIsp','cmap',[230/255 159/255 0/255]);
+        plot(this_time,mean(aligned_hit_template,1)','Color',[230/255 159/255 0/255],'LineWidth',3);
+
+        % CIsp = bootci(1000, @mean, aligned_hit_predicted);
+        % meansp=mean(aligned_hit_predicted,1);
+        % CIsp(1,:)=meansp-CIsp(1,:);
+        % CIsp(2,:)=CIsp(2,:)-meansp;
+        % 
+        % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_hit_predicted,1)', CIsp','cmap',[0 0 0]);
+
+        plot(this_time,mean(aligned_hit_predicted,1)','-k','LineWidth',2)
+
+
+        %Plot miss
+        this_time=this_time+1.2*(-ii_t_before+ii_t_after+1)*dt;
+
+
+        CIsp = bootci(1000, @mean, aligned_miss_template);
+        meansp=mean(aligned_miss_template,1);
+        CIsp(1,:)=meansp-CIsp(1,:);
+        CIsp(2,:)=CIsp(2,:)-meansp;
+
+        [hlpvl, hppvl] = boundedline(this_time,mean(aligned_miss_template,1)', CIsp','cmap',[86/255 180/255 233/255]);
+        plot(this_time,mean(aligned_miss_template,1)','Color',[86/255 180/255 233/255],'LineWidth',3);
+
+        % % CIsp = bootci(1000, @mean, aligned_miss_predicted);
+        % % meansp=mean(aligned_miss_predicted,1);
+        % % CIsp(1,:)=meansp-CIsp(1,:);
+        % % CIsp(2,:)=CIsp(2,:)-meansp;
+        % % 
+        % % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_miss_predicted,1)', CIsp','cmap',[0 0 0]);
+        % 
+        plot(this_time,mean(aligned_miss_predicted,1)','-k','LineWidth',2)
+
+        title(['Mean log10(odor) vs. predicted for miss, file No ' num2str(fileNo) ])
+        this_ylim=ylim;
+        plot([this_time(-ii_t_before) this_time(-ii_t_before)],this_ylim,'-k','LineWidth',1)
+        xlabel('Time (sec)')
+        ylabel('log10(odor) AU')
+
+        all_aligned_hit_logoc=[all_aligned_hit_logoc; aligned_hit_template];
+        all_aligned_miss_logoc=[all_aligned_miss_logoc; aligned_miss_template];
+        all_aligned_hit_logoc_pred=[all_aligned_hit_logoc_pred; aligned_hit_predicted];
+        all_aligned_miss_logoc_pred=[all_aligned_miss_logoc_pred; aligned_miss_predicted];
+ 
         if fileNo==7
             pffft=1;
         end
@@ -498,6 +570,70 @@ for fileNo=1:length(handles_conc.arena_file)
 
     end
 end
+
+%Plot the overall timecourse predictions
+
+figNo=figNo+1;
+try
+    close(figNo)
+catch
+end
+
+hFig = figure(figNo);
+
+set(hFig, 'units','normalized','position',[.1 .1 .3 .3])
+
+
+hold on
+
+%Plot hit
+this_time=[1:-ii_t_before+ii_t_after+1]*dt;
+
+
+CIsp = bootci(1000, @mean, all_aligned_hit_logoc);
+meansp=mean(all_aligned_hit_logoc,1);
+CIsp(1,:)=meansp-CIsp(1,:);
+CIsp(2,:)=CIsp(2,:)-meansp;
+
+[hlpvl, hppvl] = boundedline(this_time,mean(all_aligned_hit_logoc,1)', CIsp','cmap',[230/255 159/255 0/255]);
+plot(this_time,mean(all_aligned_hit_logoc,1)','Color',[230/255 159/255 0/255],'LineWidth',3);
+
+% CIsp = bootci(1000, @mean, aligned_hit_predicted);
+% meansp=mean(aligned_hit_predicted,1);
+% CIsp(1,:)=meansp-CIsp(1,:);
+% CIsp(2,:)=CIsp(2,:)-meansp;
+%
+% [hlpvl, hppvl] = boundedline(this_time,mean(aligned_hit_predicted,1)', CIsp','cmap',[0 0 0]);
+
+plot(this_time,mean(all_aligned_hit_logoc_pred,1)','Color',[0.7*230/255 0.7*159/255 0.7*0/255],'LineWidth',2)
+
+
+%Plot miss
+%this_time=this_time+1.2*(-ii_t_before+ii_t_after+1)*dt;
+
+
+CIsp = bootci(1000, @mean, all_aligned_miss_logoc);
+meansp=mean(all_aligned_miss_logoc,1);
+CIsp(1,:)=meansp-CIsp(1,:);
+CIsp(2,:)=CIsp(2,:)-meansp;
+
+[hlpvl, hppvl] = boundedline(this_time,mean(all_aligned_miss_logoc,1)', CIsp','cmap',[86/255 180/255 233/255]);
+plot(this_time,mean(all_aligned_miss_logoc,1)','Color',[86/255 180/255 233/255],'LineWidth',3);
+
+% % CIsp = bootci(1000, @mean, aligned_miss_predicted);
+% % meansp=mean(aligned_miss_predicted,1);
+% % CIsp(1,:)=meansp-CIsp(1,:);
+% % CIsp(2,:)=CIsp(2,:)-meansp;
+% %
+% % [hlpvl, hppvl] = boundedline(this_time,mean(aligned_miss_predicted,1)', CIsp','cmap',[0 0 0]);
+%
+plot(this_time,mean(all_aligned_miss_logoc_pred,1)','Color',[0.7*86/255 0.7*180/255 0.7*233/255],'LineWidth',2)
+
+title(['Mean log10(odor) vs. predicted for all files'])
+this_ylim=ylim;
+plot([this_time(-ii_t_before) this_time(-ii_t_before)],this_ylim,'-k','LineWidth',1)
+xlabel('Time (sec)')
+ylabel('log10(odor) AU')
 
 %Calculate percent correct behavior
 date_zero = datetime('01012020', 'InputFormat', 'MMddyyyy');

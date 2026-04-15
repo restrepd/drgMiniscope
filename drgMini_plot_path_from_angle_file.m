@@ -1,4 +1,3 @@
-
 %drgMini_plot_path_from_angle_file
 %This file is for Kira to use to find the start and end points for
 %each trial
@@ -177,6 +176,15 @@ for trNo=1:trials.odor_trNo
     yticks([50 100 200 300 400 430])
     yticklabels({'lane 4','100','200','300','400','lane 1'})
  
+
+    if (trNo==28)||(trNo==30)
+        fprintf(1,['\n\nTrial number ' num2str(trNo) '\n'])
+        fprintf(1,['Frame number for start of movie (5 sec before trial start)  ' num2str((ii_trialstart-5*10)*3) '\n'])
+        fprintf(1,['Frame number for trial start  ' num2str(ii_trialstart*3) '\n'])
+        fprintf(1,['Frame number for last turn  ' num2str((ii_predictedstart+last_turn_ii-1)*3) '\n'])
+        fprintf(1,['Frame number for odor encounter  ' num2str((ii_predictedstart+ii_first_odor_encounter(trNo)-1)*3) '\n'])
+        fprintf(1,['Frame number end  ' num2str(ii_trialend*3) '\n'])
+    end
 
     pffft1=1;
 

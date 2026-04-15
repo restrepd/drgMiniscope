@@ -12,7 +12,7 @@ if exist('handles_choices')==0
     clear all
 
     handles_choices.save_results=1;
-    handles_choices.is_sphgpu=1; %0 Diego's Mac, 1 sphgpu, 2 Alpine
+    handles_choices.is_sphgpu=0; %0 Diego's Mac, 1 sphgpu, 2 Alpine
     is_sphgpu=handles_choices.is_sphgpu;
     %Troubleshooting Fabio's files May 14th
     % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/';
@@ -34,17 +34,17 @@ if exist('handles_choices')==0
 
     % %For Mac
     % %20221117_FCM22_lanes_1_4 for first figure in manuscript 
-    % this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
-    % dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
-    % arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
-    % 
-    % handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
+    this_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/20221117_FCM22_lanes_1_4/';
+    dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
+    arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
+
+    handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/PreProcessed/Temp/';
 
     %For sphgpu
     %20221117_FCM22_lanes_1_4 for first figure in manuscript 
-    this_path='/data2/SFTP/PreProcessed/20221117_FCM22_lanes_1_4/';
-    dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
-    arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
+    % this_path='/data2/SFTP/PreProcessed/20221117_FCM22_lanes_1_4/';
+    % dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
+    % arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
 
     handles_choices.save_path='/data2/SFTP/PreProcessed/Temp/';
 

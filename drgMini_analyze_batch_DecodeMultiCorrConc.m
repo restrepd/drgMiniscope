@@ -41,25 +41,25 @@ switch is_sphgpu
         % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc04192024/';
         % choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_Good_04192024.m'
 
-        %Trained with all trials and mult=0.5 taking on account when mouse detects the odor
-        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc11112025/';
-        % choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_bin_all_11112025.m';
+        % Trained with all trials and mult=0.5 taking on account when mouse detects the odor
+        save_PathConc{1}='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc11112025/';
+        choiceOdorConcFileName{1}='drgDynamicOdorConcChoices_Fabio_bin_all_11112025.m';
 
-        %Trained with all trials and mult=0.1 taking on account when mouse detects the odor
-        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc0p1_11212025/';
-        % choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_bin_all_0p1_11212025.m';
+        % Trained with all trials and mult=0.1 taking on account when mouse detects the odor
+        save_PathConc{2}='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc0p1_11212025/';
+        choiceOdorConcFileName{2}='drgDynamicOdorConcChoices_Fabio_bin_all_0p1_11212025.m';
 
-        %Trained with all trials and mult=1 taking on account when mouse detects the odor
-        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_1_11222025/';
-        % choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_bin_all_1_11222025.m';
+        % Trained with all trials and mult=1 taking on account when mouse detects the odor
+        save_PathConc{3}='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_1_11222025/';
+        choiceOdorConcFileName{3}='drgDynamicOdorConcChoices_Fabio_bin_all_1_11222025.m';
+
+        % Trained with all trials and mult=0.3 taking on account when mouse detects the odor
+        save_PathConc{4}='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_0p3_11223025/';
+        choiceOdorConcFileName{4}='drgDynamicOdorConcChoices_Fabio_bin_all_0p3_11223025.m';
 
         %Trained with all trials and mult=0.3 taking on account when mouse detects the odor
-        % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_0p3_11223025/';
-        % choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_bin_all_0p3_11223025.m';
-
-        %Trained with all trials and mult=0.3 taking on account when mouse detects the odor
-        save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_0p6_11224025/';
-        choiceOdorConcFileName='drgDynamicOdorConcChoices_Fabio_bin_all_0p6_11224025.m';
+        save_PathConc{5}='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_0p6_11224025/';
+        choiceOdorConcFileName{5}='drgDynamicOdorConcChoices_Fabio_bin_all_0p6_11224025.m';
 
         % %Re-run trained with all trials and mult=0.1 taking on account when mouse detects the odor
         % save_PathConc='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/DecodeDynOdorConc_0p1_10202025/';

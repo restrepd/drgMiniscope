@@ -1,9 +1,12 @@
 function [rER2] = drgMini_r2ER(y_actual, y_predicted)
-    % Calculate rER² (Normalized Signal Power Explained)
-    %this is a method used to quantify goodness of fit
-    %that, unlike R2, is not biased by trial to trial variability
+    % Calculate rER², the fraction of the variance explained
+    %by the model
+    %
     %Popsil and Bair, PLOS Computational Biology, 2021
     %https://doi.org/10.1371/journal.pcbi.1009212
+    %
+    %Note that this is not r_carrot_ER2, the unbiased estimator of
+    %the variance
 
     nu = y_predicted(:); % Ensure column vectors
     mu = y_actual(:);
