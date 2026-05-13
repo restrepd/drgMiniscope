@@ -151,7 +151,9 @@ switch is_sphgpu
         save_PathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/Angle05152025/';
         choiceAngleFileName='drgMiniAngleChoices_Fabio_Good_05102025.m';
 
-        
+        %The output from drgMini_analyze_batch_PathAnglev2 is saved here
+        save_outPathAngle='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/';
+        save_outFileAngle='outputAngle.mat';
 
         choiceBatchPathName='/Users/restrepd/Documents/Projects/SFTP/Fabio_OdorArena_GoodData/CurrentChoices/';
         fileID = fopen([choiceBatchPathName 'decode_XYandconc_stats.txt'],'w');
@@ -213,6 +215,8 @@ eval(['handles_conc=' choiceOdorConcFileName(1:end-2) ';'])
 eval(['handles_XY=' choiceXYFileName(1:end-2) ';'])
 eval(['handles_Angle=' choiceAngleFileName(1:end-2) ';'])
 
+load([save_outPathAngle save_outFileAngle])
+ 
 figureNo=0;
 %Exclude one file with high fraction_other_angle
 %We will exclude fraction_other_angle>thr_froa
