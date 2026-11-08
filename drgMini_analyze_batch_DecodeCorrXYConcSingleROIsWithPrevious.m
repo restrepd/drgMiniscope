@@ -1516,315 +1516,56 @@ catch
     pffft=1;
 end
 bar_offset=bar_offset+1;
-
-%r2ERs_x
-glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=these_r2ERs;
-% glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=ROIsubset*ones(1,length(these_r2ERs));
-glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=0*ones(1,length(these_r2ERs));
-glm_r2ER_ii=glm_r2ER_ii+length(these_r2ERs);
-
-id_r2ER_ii=id_r2ER_ii+1;
-input_r2ER_data(id_r2ER_ii).data=these_r2ERs;
-
-
-input_r2ER_data(id_r2ER_ii).description='Original';
-
-
-
-%r2ER_x_sh
-glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=these_r2ER_sh;
-% glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=ROIsubset*ones(1,length(these_r2ER_sh));
-glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=1*ones(1,length(these_r2ER_sh));
-glm_r2ER_ii=glm_r2ER_ii+length(these_r2ER_sh);
-
-id_r2ER_ii=id_r2ER_ii+1;
-input_r2ER_data(id_r2ER_ii).data=these_r2ER_sh;
-
-
-input_r2ER_data(id_r2ER_ii).description='Shuffled';
-
-
-
-
-bar_offsets=[0:2:bar_offset-2];
-plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
-
-xlim([-0.5 bar_offset-0.5])
-% xticklabels(ROIsubset_labels);   % tick labels from your cell array
-xlabel('No ROIs')
-ylabel('r2ER for x')
-title('Decoding x with different subsets of ROIs')
-
-%Perform the glm  for prediction of odor all, hit, miss, shuffled
-fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x vs ROI number\n']);
-% fprintf(1, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
-fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x vs ROI number\n']);
-% fprintf(fileID, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
-
-
-
-tbl = table(glm_r2ER.data',glm_r2ER.shuffled',...
-    'VariableNames',{'r2ES','shuffled'});
-mdl = fitglm(tbl,'r2ES~shuffled'...
-    ,'CategoricalVars',[2])
-
-txt = evalc('mdl');
-txt=regexp(txt,'<strong>','split');
-txt=cell2mat(txt);
-txt=regexp(txt,'</strong>','split');
-txt=cell2mat(txt);
-
-fprintf(fileID,'%s\n', txt);
-
-
-%Do the ranksum/t-test
-fprintf(1, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n'])
-fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n']);
-
-
-[output_data] = drgMutiRanksumorTtest(input_r2ER_data, fileID,0);
-
-
-%Now plot r2ER for y, original vs. shuffled
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-bar_offset=0;
-
-edges=[0:0.05:1];
-rand_offset=0.5;
-
-glm_r2ER=[];
-glm_r2ER_ii=0;
-
-id_r2ER_ii=0;
-input_r2ER_data=[];
-
-
-these_groups=[1 5]; %2 cm and 1 cm all trials
-these_r2ER_y_means=[];
-these_r2ERs_y=[];
-these_r2ER_y_sh_means=[];
-these_r2ER_y_sh=[];
-
-%First get the r2ERs for each number of ROIs
-these_r2ERs=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials];
-        end
-    end
-end
-
-these_r2ERs_y=[these_r2ERs_y  these_r2ERs];
-these_r2ER_y_means=[these_r2ER_y_means mean(these_r2ERs)];
-
-
-%Then get the r2ERs_sh for each number of ROIs
-these_r2ER_sh=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials_sh];
-        end
-    end
-end
-
-these_r2ER_y_sh=[these_r2ER_y_sh  these_r2ER_sh];
-these_r2ER_y_sh_means=[these_r2ER_y_sh_means mean(these_r2ER_sh)];
-
-
-%plot bar
-bar(bar_offset,mean(these_r2ERs),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
-
-%Violin plot
-try
-    [mean_out, CIout,violin_y]=drgViolinPoint(these_r2ERs...
-        ,edges,bar_offset,rand_offset,'k','k',1);
-catch
-    pffft=1;
-end
-bar_offset=bar_offset+1;
-
-%plot bar
-bar(bar_offset,mean(these_r2ER_sh),'LineWidth', 3,'EdgeColor','none','FaceColor',[240/255 228/255 66/255])
-
-%Violin plot
-try
-    [mean_out, CIout,violin_y]=drgViolinPoint(these_r2ER_sh...
-        ,edges,bar_offset,rand_offset,'k','k',1);
-catch
-    pffft=1;
-end
-bar_offset=bar_offset+1;
-
-%r2ERs_y
-glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=these_r2ERs;
-% glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=ROIsubset*ones(1,length(these_r2ERs));
-glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=0*ones(1,length(these_r2ERs));
-glm_r2ER_ii=glm_r2ER_ii+length(these_r2ERs);
-
-id_r2ER_ii=id_r2ER_ii+1;
-input_r2ER_data(id_r2ER_ii).data=these_r2ERs;
-
-
-input_r2ER_data(id_r2ER_ii).description='Original';
-
-
-%r2ER_y_sh
-glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=these_r2ER_sh;
-% glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=ROIsubset*ones(1,length(these_r2ER_sh));
-glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=1*ones(1,length(these_r2ER_sh));
-glm_r2ER_ii=glm_r2ER_ii+length(these_r2ER_sh);
-
-id_r2ER_ii=id_r2ER_ii+1;
-input_r2ER_data(id_r2ER_ii).data=these_r2ER_sh;
-input_r2ER_data(id_r2ER_ii).description='Shuffled';
-
-bar_offsets=[0:2:bar_offset-2];
-plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
-
-xlim([-0.5 bar_offset-0.5])
-% xticklabels(ROIsubset_labels);   % tick labels from your cell array
-xlabel('No ROIs')
-ylabel('r2ER for y')
-title('Decoding y with different subsets of ROIs')
-
-%Perform the glm  for prediction of odor all, hit, miss, shuffled
-fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER y vs ROI number\n']);
-% fprintf(1, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
-fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER y vs ROI number\n']);
-% fprintf(fileID, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
-
-
-
-tbl = table(glm_r2ER.data',glm_r2ER.shuffled',...
-    'VariableNames',{'r2ES','shuffled'});
-mdl = fitglm(tbl,'r2ES~shuffled'...
-    ,'CategoricalVars',[2])
-
-txt = evalc('mdl');
-txt=regexp(txt,'<strong>','split');
-txt=cell2mat(txt);
-txt=regexp(txt,'</strong>','split');
-txt=cell2mat(txt);
-
-fprintf(fileID,'%s\n', txt);
-
-
-%Do the ranksum/t-test
-fprintf(1, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n'])
-fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n']);
-
-
-[output_data] = drgMutiRanksumorTtest(input_r2ER_data, fileID,0);
-
-
-%Now plot histogram of significant x r2ER
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-% bar_offset=0;
-%
-% edges=[0:0.05:1];
-% rand_offset=0.5;
-%
-% glm_r2ER=[];
-% glm_r2ER_ii=0;
-%
-% id_r2ER_ii=0;
-% input_r2ER_data=[];
-
-
-these_groups=[1 5]; %2 cm and 1 cm all trials
-these_r2ER_x_means=[];
-these_r2ERs_x=[];
-these_r2ER_x_sh_means=[];
-these_r2ER_x_sh=[];
-these_SD_significant_r2ERs_x=[];
-
-%First get the r2ERs for each number of ROIs
-these_r2ERs=[];
-  these_ROIs_x=[];
-            these_files_x=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_x_all_trials];
-             these_ROIs_x=[these_ROIs_x ii_sub];
-            these_files_x=[these_files_x fileNo];
-        end
-    end
-end
-
-these_r2ERs_x=[these_r2ERs_x  these_r2ERs];
-these_r2ER_x_means=[these_r2ER_x_means mean(these_r2ERs)];
-
-
-
-%Then get the r2ERs_sh for each number of ROIs
-these_r2ER_sh=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_x_all_trials_sh];
-        end
-    end
-end
-
-
-these_r2ER_x_sh=[these_r2ER_x_sh  these_r2ER_sh];
-these_r2ER_x_sh_means=[these_r2ER_x_sh_means mean(these_r2ER_sh)];
-
-
-%Estimate significant r2ERs
-SD_these_r2ERs_sh=std(these_r2ER_sh);
-mean_these_r2ERs_sh=mean(these_r2ER_sh);
-these_SD_significant_r2ERs_x=[these_SD_significant_r2ERs_x these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh];
-
-%plot histogram
-histogram(these_r2ERs(these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh),hedges)
-
-xlabel('No ROIs')
-title('Significant r2ER for x')
-
-handles_anal_XY.these_r2ERs_x=these_r2ERs;
-handles_anal_XY.these_r2ER_sh_x=these_r2ER_sh;
-handles_anal_XY.these_ROIs_x=these_ROIs_x;
-handles_anal_XY.these_files_x=these_files_x;
-handles_anal_XY.these_sig_x=these_SD_significant_r2ERs_x;
-handles_anal_XY.r2ERx_sig_thr=mean_these_r2ERs_sh+3*SD_these_r2ERs_sh;
-
+% 
+% %r2ERs_x
+% glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=these_r2ERs;
+% % glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=ROIsubset*ones(1,length(these_r2ERs));
+% glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=0*ones(1,length(these_r2ERs));
+% glm_r2ER_ii=glm_r2ER_ii+length(these_r2ERs);
+% 
+% id_r2ER_ii=id_r2ER_ii+1;
+% input_r2ER_data(id_r2ER_ii).data=these_r2ERs;
+% 
+% 
+% input_r2ER_data(id_r2ER_ii).description='Original';
+% 
+% 
+% 
+% %r2ER_x_sh
+% glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=these_r2ER_sh;
+% % glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=ROIsubset*ones(1,length(these_r2ER_sh));
+% glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=1*ones(1,length(these_r2ER_sh));
+% glm_r2ER_ii=glm_r2ER_ii+length(these_r2ER_sh);
+% 
+% id_r2ER_ii=id_r2ER_ii+1;
+% input_r2ER_data(id_r2ER_ii).data=these_r2ER_sh;
+% 
+% 
+% input_r2ER_data(id_r2ER_ii).description='Shuffled';
+% 
+% 
+% 
+% 
+% bar_offsets=[0:2:bar_offset-2];
+% plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
+% 
+% xlim([-0.5 bar_offset-0.5])
+% % xticklabels(ROIsubset_labels);   % tick labels from your cell array
+% xlabel('No ROIs')
+% ylabel('r2ER for x')
 % title('Decoding x with different subsets of ROIs')
 % 
 % %Perform the glm  for prediction of odor all, hit, miss, shuffled
-% fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x significant vs ROI number\n']);
+% fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x vs ROI number\n']);
 % % fprintf(1, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
-% fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x significant vs ROI number\n']);
+% fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x vs ROI number\n']);
 % % fprintf(fileID, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
 % 
 % 
 % 
-% tbl = table(glm_r2ER.data',glm_r2ER.ROIsubset',...
-%     'VariableNames',{'r2ES','ROI_number'});
-% mdl = fitglm(tbl,'r2ES~ROI_number'...
+% tbl = table(glm_r2ER.data',glm_r2ER.shuffled',...
+%     'VariableNames',{'r2ES','shuffled'});
+% mdl = fitglm(tbl,'r2ES~shuffled'...
 %     ,'CategoricalVars',[2])
 % 
 % txt = evalc('mdl');
@@ -1837,25 +1578,25 @@ handles_anal_XY.r2ERx_sig_thr=mean_these_r2ERs_sh+3*SD_these_r2ERs_sh;
 % 
 % 
 % %Do the ranksum/t-test
-% fprintf(1, ['\n\nRanksum or t-test p values for r2ER x significant vs ROI number\n'])
-% fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x significant vs ROI number\n']);
+% fprintf(1, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n'])
+% fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n']);
 % 
 % 
 % [output_data] = drgMutiRanksumorTtest(input_r2ER_data, fileID,0);
-
-
-%Now plot histogram of significant y r2ER
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
+% 
+% 
+% %Now plot r2ER for y, original vs. shuffled
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
 % bar_offset=0;
 % 
 % edges=[0:0.05:1];
@@ -1866,314 +1607,573 @@ set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
 % 
 % id_r2ER_ii=0;
 % input_r2ER_data=[];
-
-
-these_groups=[1 5]; %2 cm and 1 cm all trials
-these_r2ER_y_means=[];
-these_r2ERs_y=[];
-these_r2ER_y_sh_means=[];
-these_r2ER_y_sh=[];
-these_SD_significant_r2ERs_y=[];
-
-%First get the r2ERs for each number of ROIs
-these_r2ERs=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials];
-        end
-    end
-end
-
-these_r2ERs_y=[these_r2ERs_y  these_r2ERs];
-these_r2ER_y_means=[these_r2ER_y_means mean(these_r2ERs)];
-
-
-
-%Then get the r2ERs_sh for each number of ROIs
-these_r2ER_sh=[];
-for fileNo=1:length(handles_conc.arena_file)
-    if sum(handles_conc.group(fileNo)==these_groups)>0
-        for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
-            these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials_sh];
-        end
-    end
-end
-
-
-these_r2ER_y_sh=[these_r2ER_y_sh  these_r2ER_sh];
-these_r2ER_y_sh_means=[these_r2ER_y_sh_means mean(these_r2ER_sh)];
-
-
-%Estimate significant r2ERs
-SD_these_r2ERs_sh=std(these_r2ER_sh);
-mean_these_r2ERs_sh=mean(these_r2ER_sh);
-these_SD_significant_r2ERs_y=[these_SD_significant_r2ERs_y these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh];
-
-%plot bar
-histogram(these_r2ERs(these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh),hedges)
-
-xlabel('No ROIs')
-title('Significant r2ER for y')
-
-
-handles_anal_XY.these_r2ERs_y=these_r2ERs;
-handles_anal_XY.these_r2ER_sh_y=these_r2ER_sh;
-handles_anal_XY.these_sig_y=these_SD_significant_r2ERs_y;
-handles_anal_XY.r2ERy_sig_thr=mean_these_r2ERs_sh+3*SD_these_r2ERs_sh;
-
-percent_sig=100*sum(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant ' num2str(percent_sig) '\n']);
-
-percent_sig_conc=100*sum(these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant for odor concentration ' num2str(percent_sig_conc) '\n']);
-
-percent_sig_x=100*sum(these_SD_significant_r2ERs_x)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant x ' num2str(percent_sig_x) '\n']);
-
-percent_sig_y=100*sum(these_SD_significant_r2ERs_y)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant y ' num2str(percent_sig_y) '\n']);
-
-percent_sig_xy=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_y)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant x and y ' num2str(percent_sig_xy) '\n']);
-
-percent_sig_xconc=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant x and conc ' num2str(percent_sig_xconc) '\n']);
-
-percent_sig_yconc=100*sum(these_SD_significant_r2ERs_y&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant y and conc ' num2str(percent_sig_yconc) '\n']);
-
-percent_sig_xyconc=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_y&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
-fprintf(1, ['\nPercent significant x, y and conc ' num2str(percent_sig_xyconc) '\n']);
-
-%Plot a bar graph of percent significant
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-bar_offset=0;
-
-%All significant
-bar(bar_offset,percent_sig,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%x significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_x,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%y significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_y,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%conc significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_conc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%xconc significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_xconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%yconc significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_yconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-%xyconc significant
-bar_offset=bar_offset+1;
-bar(bar_offset,percent_sig_xyconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
-
-xticks([0:6])
-xticklabels({'All','x','y','odor', 'x&odor', 'y&odor','x&y&odor'})
-xtickangle(45)
-
-xlim([-1 7])
-ylim([0 35])
-ylabel('Percent')
-title('Percent ROIs with r2ER > 3xSD')
-
-
-%Now plot r2ER x vs r2ER_conc for r2ERs that are significant for either
-%conc or x
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-r2ERboundary=0.65;
-
-%Calculate mean
-these_r2ERs_x_sig=these_r2ERs_x(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-these_r2ERs_conc_sig=these_r2ERs_conc(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-
-% light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
-patch([0 r2ERboundary r2ERboundary 0], ...
-      [0 0   handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-% light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
-patch([0 handles_anal_conc.r2ERconc_sig_thr handles_anal_conc.r2ERconc_sig_thr 0], ...
-      [0 0   r2ERboundary r2ERboundary], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-plot([0 r2ERboundary], [handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
-plot([handles_anal_conc.r2ERconc_sig_thr handles_anal_conc.r2ERconc_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
-
-plot(these_r2ERs_conc_sig,these_r2ERs_x_sig,'.k')
-
-
-plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
-
-xlim([0 r2ERboundary])
-ylim([0 r2ERboundary])
-
-
-xlabel('sig r2ER odor concentration')
-ylabel('sig r2ER for x')
-title('sig r2ERx vs r2ER odor concentration')
-
-
-%Now plot r2ER y vs r2ER_conc for r2ERs that are significant for either
-%conc or y
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-r2ERboundary=0.65;
-
-%Calculate mean
-these_r2ERs_y_sig=these_r2ERs_y(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-these_r2ERs_conc_sig=these_r2ERs_conc(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-
-% light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
-patch([0 r2ERboundary r2ERboundary 0], ...
-      [0 0   handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-% light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
-patch([0 handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr 0], ...
-      [0 0   r2ERboundary r2ERboundary], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-plot([0 r2ERboundary], [handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
-plot([handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
-
-plot(these_r2ERs_conc_sig,these_r2ERs_y_sig,'.k')
-
-
-plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
-
-xlim([0 r2ERboundary])
-ylim([0 r2ERboundary])
-
-
-xlabel('sig r2ER odor concentration')
-ylabel('sig r2ER for y')
-title('sig r2ERy vs r2ER odor concentration')
-
-
-
-%Now plot r2ER y vs r2ER_conc for r2ERs that are significant for either
-%conc or y
-figureNo = figureNo + 1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-r2ERboundary=0.65;
-
-%Calculate mean
-these_r2ERs_y_sig=these_r2ERs_y(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-these_r2ERs_x_sig=these_r2ERs_x(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
-
-
-% light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
-patch([0 r2ERboundary r2ERboundary 0], ...
-      [0 0   handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-% light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
-patch([0 handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr 0], ...
-      [0 0   r2ERboundary r2ERboundary], ...
-      [0 0.8 0.8], ...          % light gray
-      'EdgeColor','none', ...
-      'FaceAlpha',0.3);           % optional transparency
-
-plot([0 r2ERboundary], [handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
-plot([handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
-
-plot(these_r2ERs_x_sig,these_r2ERs_y_sig,'.k')
-
-
-plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
-
-xlim([0 r2ERboundary])
-ylim([0 r2ERboundary])
-
-
-xlabel('sig r2ER for x')
-ylabel('sig r2ER for y')
-title('sig r2ERy vs r2ERx')
-
-%Now plot cumulative histograms for significant r2ERs
-figureNo=figureNo+1;
-try
-    close(figureNo)
-catch
-end
-hFig=figure(figureNo);
-hold on
-
-ax=gca;ax.LineWidth=3;
-set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
-
-[f_aic,x_aic] = drg_ecdf(handles_anal_conc.these_r2ERs_conc(logical(handles_anal_conc.these_sig_conc)));
-plot(x_aic,f_aic,'Color',[0.7 0.7 0.7],'LineWidth',3)
-
-
-[f_aic,x_aic] = drg_ecdf(handles_anal_XY.these_r2ERs_x(logical(handles_anal_XY.these_sig_x)));
-plot(x_aic,f_aic,'Color',[0 0.6 0.5],'LineWidth',3)
-
-
-[f_aic,x_aic] = drg_ecdf(handles_anal_XY.these_r2ERs_y(logical(handles_anal_XY.these_sig_y)));
-plot(x_aic,f_aic,'Color',[0.9 0.6 0],'LineWidth',3)
-
-ylabel('Fraction')
-xlabel('r2ER')
-title('Cumulative histogram r2ER x, y and odor')
+% 
+% 
+% these_groups=[1 5]; %2 cm and 1 cm all trials
+% these_r2ER_y_means=[];
+% these_r2ERs_y=[];
+% these_r2ER_y_sh_means=[];
+% these_r2ER_y_sh=[];
+% 
+% %First get the r2ERs for each number of ROIs
+% these_r2ERs=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials];
+%         end
+%     end
+% end
+% 
+% these_r2ERs_y=[these_r2ERs_y  these_r2ERs];
+% these_r2ER_y_means=[these_r2ER_y_means mean(these_r2ERs)];
+% 
+% 
+% %Then get the r2ERs_sh for each number of ROIs
+% these_r2ER_sh=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials_sh];
+%         end
+%     end
+% end
+% 
+% these_r2ER_y_sh=[these_r2ER_y_sh  these_r2ER_sh];
+% these_r2ER_y_sh_means=[these_r2ER_y_sh_means mean(these_r2ER_sh)];
+% 
+% 
+% %plot bar
+% bar(bar_offset,mean(these_r2ERs),'LineWidth', 3,'EdgeColor','none','FaceColor',[0/255 158/255 115/255])
+% 
+% %Violin plot
+% try
+%     [mean_out, CIout,violin_y]=drgViolinPoint(these_r2ERs...
+%         ,edges,bar_offset,rand_offset,'k','k',1);
+% catch
+%     pffft=1;
+% end
+% bar_offset=bar_offset+1;
+% 
+% %plot bar
+% bar(bar_offset,mean(these_r2ER_sh),'LineWidth', 3,'EdgeColor','none','FaceColor',[240/255 228/255 66/255])
+% 
+% %Violin plot
+% try
+%     [mean_out, CIout,violin_y]=drgViolinPoint(these_r2ER_sh...
+%         ,edges,bar_offset,rand_offset,'k','k',1);
+% catch
+%     pffft=1;
+% end
+% bar_offset=bar_offset+1;
+% 
+% %r2ERs_y
+% glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=these_r2ERs;
+% % glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=ROIsubset*ones(1,length(these_r2ERs));
+% glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ERs))=0*ones(1,length(these_r2ERs));
+% glm_r2ER_ii=glm_r2ER_ii+length(these_r2ERs);
+% 
+% id_r2ER_ii=id_r2ER_ii+1;
+% input_r2ER_data(id_r2ER_ii).data=these_r2ERs;
+% 
+% 
+% input_r2ER_data(id_r2ER_ii).description='Original';
+% 
+% 
+% %r2ER_y_sh
+% glm_r2ER.data(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=these_r2ER_sh;
+% % glm_r2ER.ROIsubset(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=ROIsubset*ones(1,length(these_r2ER_sh));
+% glm_r2ER.shuffled(glm_r2ER_ii+1:glm_r2ER_ii+length(these_r2ER_sh))=1*ones(1,length(these_r2ER_sh));
+% glm_r2ER_ii=glm_r2ER_ii+length(these_r2ER_sh);
+% 
+% id_r2ER_ii=id_r2ER_ii+1;
+% input_r2ER_data(id_r2ER_ii).data=these_r2ER_sh;
+% input_r2ER_data(id_r2ER_ii).description='Shuffled';
+% 
+% bar_offsets=[0:2:bar_offset-2];
+% plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
+% 
+% xlim([-0.5 bar_offset-0.5])
+% % xticklabels(ROIsubset_labels);   % tick labels from your cell array
+% xlabel('No ROIs')
+% ylabel('r2ER for y')
+% title('Decoding y with different subsets of ROIs')
+% 
+% %Perform the glm  for prediction of odor all, hit, miss, shuffled
+% fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER y vs ROI number\n']);
+% % fprintf(1, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
+% fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER y vs ROI number\n']);
+% % fprintf(fileID, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
+% 
+% 
+% 
+% tbl = table(glm_r2ER.data',glm_r2ER.shuffled',...
+%     'VariableNames',{'r2ES','shuffled'});
+% mdl = fitglm(tbl,'r2ES~shuffled'...
+%     ,'CategoricalVars',[2])
+% 
+% txt = evalc('mdl');
+% txt=regexp(txt,'<strong>','split');
+% txt=cell2mat(txt);
+% txt=regexp(txt,'</strong>','split');
+% txt=cell2mat(txt);
+% 
+% fprintf(fileID,'%s\n', txt);
+% 
+% 
+% %Do the ranksum/t-test
+% fprintf(1, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n'])
+% fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x vs ROI number\n']);
+% 
+% 
+% [output_data] = drgMutiRanksumorTtest(input_r2ER_data, fileID,0);
+% 
+% 
+% %Now plot histogram of significant x r2ER
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% % bar_offset=0;
+% %
+% % edges=[0:0.05:1];
+% % rand_offset=0.5;
+% %
+% % glm_r2ER=[];
+% % glm_r2ER_ii=0;
+% %
+% % id_r2ER_ii=0;
+% % input_r2ER_data=[];
+% 
+% 
+% these_groups=[1 5]; %2 cm and 1 cm all trials
+% these_r2ER_x_means=[];
+% these_r2ERs_x=[];
+% these_r2ER_x_sh_means=[];
+% these_r2ER_x_sh=[];
+% these_SD_significant_r2ERs_x=[];
+% 
+% %First get the r2ERs for each number of ROIs
+% these_r2ERs=[];
+%   these_ROIs_x=[];
+%             these_files_x=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_x_all_trials];
+%              these_ROIs_x=[these_ROIs_x ii_sub];
+%             these_files_x=[these_files_x fileNo];
+%         end
+%     end
+% end
+% 
+% these_r2ERs_x=[these_r2ERs_x  these_r2ERs];
+% these_r2ER_x_means=[these_r2ER_x_means mean(these_r2ERs)];
+% 
+% 
+% 
+% %Then get the r2ERs_sh for each number of ROIs
+% these_r2ER_sh=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_x_all_trials_sh];
+%         end
+%     end
+% end
+% 
+% 
+% these_r2ER_x_sh=[these_r2ER_x_sh  these_r2ER_sh];
+% these_r2ER_x_sh_means=[these_r2ER_x_sh_means mean(these_r2ER_sh)];
+% 
+% 
+% %Estimate significant r2ERs
+% SD_these_r2ERs_sh=std(these_r2ER_sh);
+% mean_these_r2ERs_sh=mean(these_r2ER_sh);
+% these_SD_significant_r2ERs_x=[these_SD_significant_r2ERs_x these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh];
+% 
+% %plot histogram
+% histogram(these_r2ERs(these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh),hedges)
+% 
+% xlabel('No ROIs')
+% title('Significant r2ER for x')
+% 
+% handles_anal_XY.these_r2ERs_x=these_r2ERs;
+% handles_anal_XY.these_r2ER_sh_x=these_r2ER_sh;
+% handles_anal_XY.these_ROIs_x=these_ROIs_x;
+% handles_anal_XY.these_files_x=these_files_x;
+% handles_anal_XY.these_sig_x=these_SD_significant_r2ERs_x;
+% handles_anal_XY.r2ERx_sig_thr=mean_these_r2ERs_sh+3*SD_these_r2ERs_sh;
+% 
+% % title('Decoding x with different subsets of ROIs')
+% % 
+% % %Perform the glm  for prediction of odor all, hit, miss, shuffled
+% % fprintf(1, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x significant vs ROI number\n']);
+% % % fprintf(1, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
+% % fprintf(fileID, ['\nglm for Fig ' num2str(figureNo) ' for r2ER x significant vs ROI number\n']);
+% % % fprintf(fileID, ['\n1 Hit, 2 All, 3 Miss, 4 Shuffled\n']);
+% % 
+% % 
+% % 
+% % tbl = table(glm_r2ER.data',glm_r2ER.ROIsubset',...
+% %     'VariableNames',{'r2ES','ROI_number'});
+% % mdl = fitglm(tbl,'r2ES~ROI_number'...
+% %     ,'CategoricalVars',[2])
+% % 
+% % txt = evalc('mdl');
+% % txt=regexp(txt,'<strong>','split');
+% % txt=cell2mat(txt);
+% % txt=regexp(txt,'</strong>','split');
+% % txt=cell2mat(txt);
+% % 
+% % fprintf(fileID,'%s\n', txt);
+% % 
+% % 
+% % %Do the ranksum/t-test
+% % fprintf(1, ['\n\nRanksum or t-test p values for r2ER x significant vs ROI number\n'])
+% % fprintf(fileID, ['\n\nRanksum or t-test p values for r2ER x significant vs ROI number\n']);
+% % 
+% % 
+% % [output_data] = drgMutiRanksumorTtest(input_r2ER_data, fileID,0);
+% 
+% 
+% %Now plot histogram of significant y r2ER
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% % bar_offset=0;
+% % 
+% % edges=[0:0.05:1];
+% % rand_offset=0.5;
+% % 
+% % glm_r2ER=[];
+% % glm_r2ER_ii=0;
+% % 
+% % id_r2ER_ii=0;
+% % input_r2ER_data=[];
+% 
+% 
+% these_groups=[1 5]; %2 cm and 1 cm all trials
+% these_r2ER_y_means=[];
+% these_r2ERs_y=[];
+% these_r2ER_y_sh_means=[];
+% these_r2ER_y_sh=[];
+% these_SD_significant_r2ERs_y=[];
+% 
+% %First get the r2ERs for each number of ROIs
+% these_r2ERs=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ERs=[these_r2ERs handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials];
+%         end
+%     end
+% end
+% 
+% these_r2ERs_y=[these_r2ERs_y  these_r2ERs];
+% these_r2ER_y_means=[these_r2ER_y_means mean(these_r2ERs)];
+% 
+% 
+% 
+% %Then get the r2ERs_sh for each number of ROIs
+% these_r2ER_sh=[];
+% for fileNo=1:length(handles_conc.arena_file)
+%     if sum(handles_conc.group(fileNo)==these_groups)>0
+%         for ii_sub=1:length(handles_anal_XY.file(fileNo).ii_sub)
+%             these_r2ER_sh=[these_r2ER_sh handles_anal_XY.file(fileNo).ii_sub(ii_sub).r2ER_y_all_trials_sh];
+%         end
+%     end
+% end
+% 
+% 
+% these_r2ER_y_sh=[these_r2ER_y_sh  these_r2ER_sh];
+% these_r2ER_y_sh_means=[these_r2ER_y_sh_means mean(these_r2ER_sh)];
+% 
+% 
+% %Estimate significant r2ERs
+% SD_these_r2ERs_sh=std(these_r2ER_sh);
+% mean_these_r2ERs_sh=mean(these_r2ER_sh);
+% these_SD_significant_r2ERs_y=[these_SD_significant_r2ERs_y these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh];
+% 
+% %plot bar
+% histogram(these_r2ERs(these_r2ERs>mean_these_r2ERs_sh+3*SD_these_r2ERs_sh),hedges)
+% 
+% xlabel('No ROIs')
+% title('Significant r2ER for y')
+% 
+% 
+% handles_anal_XY.these_r2ERs_y=these_r2ERs;
+% handles_anal_XY.these_r2ER_sh_y=these_r2ER_sh;
+% handles_anal_XY.these_sig_y=these_SD_significant_r2ERs_y;
+% handles_anal_XY.r2ERy_sig_thr=mean_these_r2ERs_sh+3*SD_these_r2ERs_sh;
+% 
+% percent_sig=100*sum(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant ' num2str(percent_sig) '\n']);
+% 
+% percent_sig_conc=100*sum(these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant for odor concentration ' num2str(percent_sig_conc) '\n']);
+% 
+% percent_sig_x=100*sum(these_SD_significant_r2ERs_x)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant x ' num2str(percent_sig_x) '\n']);
+% 
+% percent_sig_y=100*sum(these_SD_significant_r2ERs_y)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant y ' num2str(percent_sig_y) '\n']);
+% 
+% percent_sig_xy=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_y)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant x and y ' num2str(percent_sig_xy) '\n']);
+% 
+% percent_sig_xconc=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant x and conc ' num2str(percent_sig_xconc) '\n']);
+% 
+% percent_sig_yconc=100*sum(these_SD_significant_r2ERs_y&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant y and conc ' num2str(percent_sig_yconc) '\n']);
+% 
+% percent_sig_xyconc=100*sum(these_SD_significant_r2ERs_x&these_SD_significant_r2ERs_y&these_SD_significant_r2ERs_conc)/length(these_SD_significant_r2ERs_y);
+% fprintf(1, ['\nPercent significant x, y and conc ' num2str(percent_sig_xyconc) '\n']);
+% 
+% %Plot a bar graph of percent significant
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% bar_offset=0;
+% 
+% %All significant
+% bar(bar_offset,percent_sig,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %x significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_x,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %y significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_y,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %conc significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_conc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %xconc significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_xconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %yconc significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_yconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% %xyconc significant
+% bar_offset=bar_offset+1;
+% bar(bar_offset,percent_sig_xyconc,'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+% 
+% xticks([0:6])
+% xticklabels({'All','x','y','odor', 'x&odor', 'y&odor','x&y&odor'})
+% xtickangle(45)
+% 
+% xlim([-1 7])
+% ylim([0 35])
+% ylabel('Percent')
+% title('Percent ROIs with r2ER > 3xSD')
+% 
+% 
+% %Now plot r2ER x vs r2ER_conc for r2ERs that are significant for either
+% %conc or x
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% r2ERboundary=0.65;
+% 
+% %Calculate mean
+% these_r2ERs_x_sig=these_r2ERs_x(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% these_r2ERs_conc_sig=these_r2ERs_conc(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% 
+% % light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
+% patch([0 r2ERboundary r2ERboundary 0], ...
+%       [0 0   handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% % light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
+% patch([0 handles_anal_conc.r2ERconc_sig_thr handles_anal_conc.r2ERconc_sig_thr 0], ...
+%       [0 0   r2ERboundary r2ERboundary], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% plot([0 r2ERboundary], [handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% plot([handles_anal_conc.r2ERconc_sig_thr handles_anal_conc.r2ERconc_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% 
+% plot(these_r2ERs_conc_sig,these_r2ERs_x_sig,'.k')
+% 
+% 
+% plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
+% 
+% xlim([0 r2ERboundary])
+% ylim([0 r2ERboundary])
+% 
+% 
+% xlabel('sig r2ER odor concentration')
+% ylabel('sig r2ER for x')
+% title('sig r2ERx vs r2ER odor concentration')
+% 
+% 
+% %Now plot r2ER y vs r2ER_conc for r2ERs that are significant for either
+% %conc or y
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% r2ERboundary=0.65;
+% 
+% %Calculate mean
+% these_r2ERs_y_sig=these_r2ERs_y(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% these_r2ERs_conc_sig=these_r2ERs_conc(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% 
+% % light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
+% patch([0 r2ERboundary r2ERboundary 0], ...
+%       [0 0   handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% % light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
+% patch([0 handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr 0], ...
+%       [0 0   r2ERboundary r2ERboundary], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% plot([0 r2ERboundary], [handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% plot([handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% 
+% plot(these_r2ERs_conc_sig,these_r2ERs_y_sig,'.k')
+% 
+% 
+% plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
+% 
+% xlim([0 r2ERboundary])
+% ylim([0 r2ERboundary])
+% 
+% 
+% xlabel('sig r2ER odor concentration')
+% ylabel('sig r2ER for y')
+% title('sig r2ERy vs r2ER odor concentration')
+% 
+% 
+% 
+% %Now plot r2ER y vs r2ER_conc for r2ERs that are significant for either
+% %conc or y
+% figureNo = figureNo + 1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% r2ERboundary=0.65;
+% 
+% %Calculate mean
+% these_r2ERs_y_sig=these_r2ERs_y(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% these_r2ERs_x_sig=these_r2ERs_x(these_SD_significant_r2ERs_x|these_SD_significant_r2ERs_y|these_SD_significant_r2ERs_conc);
+% 
+% 
+% % light gray rectangle from [0 0] to [0.5 handles_anal_XY.r2ERy_sig_thr]
+% patch([0 r2ERboundary r2ERboundary 0], ...
+%       [0 0   handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% % light gray rectangle from [0 0] to [handles_anal_conc.r2ERconc_sig_thr 0.5]
+% patch([0 handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr 0], ...
+%       [0 0   r2ERboundary r2ERboundary], ...
+%       [0 0.8 0.8], ...          % light gray
+%       'EdgeColor','none', ...
+%       'FaceAlpha',0.3);           % optional transparency
+% 
+% plot([0 r2ERboundary], [handles_anal_XY.r2ERy_sig_thr handles_anal_XY.r2ERy_sig_thr],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% plot([handles_anal_XY.r2ERx_sig_thr handles_anal_XY.r2ERx_sig_thr],[0 r2ERboundary],'-','Color',[0 0.7 0.7],'LineWidth',2)
+% 
+% plot(these_r2ERs_x_sig,these_r2ERs_y_sig,'.k')
+% 
+% 
+% plot([0 r2ERboundary],[0 r2ERboundary],'-','LineWidth',2,'Color',[1 0 1])
+% 
+% xlim([0 r2ERboundary])
+% ylim([0 r2ERboundary])
+% 
+% 
+% xlabel('sig r2ER for x')
+% ylabel('sig r2ER for y')
+% title('sig r2ERy vs r2ERx')
+% 
+% %Now plot cumulative histograms for significant r2ERs
+% figureNo=figureNo+1;
+% try
+%     close(figureNo)
+% catch
+% end
+% hFig=figure(figureNo);
+% hold on
+% 
+% ax=gca;ax.LineWidth=3;
+% set(hFig, 'units','normalized','position',[.2 .2 .3 .3])
+% 
+% [f_aic,x_aic] = drg_ecdf(handles_anal_conc.these_r2ERs_conc(logical(handles_anal_conc.these_sig_conc)));
+% plot(x_aic,f_aic,'Color',[0.7 0.7 0.7],'LineWidth',3)
+% 
+% 
+% [f_aic,x_aic] = drg_ecdf(handles_anal_XY.these_r2ERs_x(logical(handles_anal_XY.these_sig_x)));
+% plot(x_aic,f_aic,'Color',[0 0.6 0.5],'LineWidth',3)
+% 
+% 
+% [f_aic,x_aic] = drg_ecdf(handles_anal_XY.these_r2ERs_y(logical(handles_anal_XY.these_sig_y)));
+% plot(x_aic,f_aic,'Color',[0.9 0.6 0],'LineWidth',3)
+% 
+% ylabel('Fraction')
+% xlabel('r2ER')
+% title('Cumulative histogram r2ER x, y and odor')
 
 save(saveFile,'handles_anal_XY','handles_anal_conc','-v7.3')
 

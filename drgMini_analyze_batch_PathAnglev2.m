@@ -113,6 +113,7 @@ files_included = drgMini_included_files(handles_Angle,save_PathAngle, handles_co
 behavior_analysis=[];
 behavior_analysis.files_included=[];
 percent_correct=[];
+mouse_for_pc=[];
 time_set=0;
 no_sessions=0;
 for fileNo=1:length(handles_conc.arena_file)
@@ -131,6 +132,7 @@ for fileNo=1:length(handles_conc.arena_file)
 
         behavior_analysis.file(fileNo).percent_correct=100*(sum(trials.hit4)+sum(trials.hit1))/length(trials.hit4);
         percent_correct=[percent_correct behavior_analysis.file(fileNo).percent_correct];
+        mouse_for_pc=[mouse_for_pc handles_conc.mouse(fileNo)];
         behavior_analysis.file(fileNo).percent_correct1=100*(sum(trials.hit1))/(sum(trials.hit1)+sum(trials.miss1));
         behavior_analysis.file(fileNo).percent_correct4=100*(sum(trials.hit4))/(sum(trials.hit4)+sum(trials.miss4));
         fprintf(1,['\nFor file No ' num2str(fileNo) '\n'])
@@ -2011,6 +2013,90 @@ xticklabels({''})
 
 fprintf(1,['\np value for percent corect ' num2str(p) '\n'])
 
+
+%Now plot a bar graph of behavioral accuracy per mouse
+glm_ba=[];
+glm_ba_ii=0;
+
+id_ba_ii=0;
+input_ba_data=[];
+
+edges=[0:5:100];
+rand_offset=0.5;
+bar_offset=0;
+
+figNo=figNo+1;
+try
+    close(figNo)
+catch
+end
+
+hFig = figure(figNo);
+
+set(hFig, 'units','normalized','position',[.3 .3 .3 .3])
+hold on
+
+for ii_mouse=1:max(mouse_for_pc)
+
+    %Hits
+    these_sessions=(mouse_for_pc==ii_mouse);
+    these_pcs=zeros(1,sum(these_sessions));
+    these_pcs(1,:)=percent_correct(1,logical(these_sessions));
+    ii_sessions=sum(these_sessions);
+
+    %Per mouse bar
+    bar_offset=bar_offset+1;
+    bar(bar_offset,mean(these_pcs),'LineWidth', 3,'EdgeColor','none','FaceColor',[230/255 159/255 0/255])
+    [mean_out, CIout]=drgViolinPoint(these_pcs...
+        ,edges,bar_offset,rand_offset,'k','k',3);
+
+    glm_ba.data(glm_ba_ii+1:glm_ba_ii+ii_sessions)=these_pcs;
+    glm_ba.mouse(glm_ba_ii+1:glm_ba_ii+ii_sessions)=ii_mouse*ones(1,ii_sessions);
+    glm_ba_ii=glm_ba_ii+ii_sessions;
+
+    id_ba_ii=id_ba_ii+1;
+    input_ba_data(id_ba_ii).data=these_pcs;
+    input_ba_data(id_ba_ii).description=['Mouse no ' num2str(ii_mouse)];
+
+
+end
+
+xticks([1 2 3])
+xticklabels({'Mouse 1','Mouse 2','Mouse 3'})
+
+
+title(['Behavioral accuracy'])
+ylabel('Accuracy')
+xlim([0 4])
+ylim([0 80])
+
+%Perform the glm  for errors
+fprintf(1, ['\nglm for Fig ' num2str(figNo) ' behavioral accuracy per mouse\n'])
+fprintf(fileID, ['\nglm for Fig ' num2str(figNo) ' behavioral accuracy per mouse\n']);
+
+
+tbl = table(glm_ba.data',glm_ba.mouse',...
+    'VariableNames',{'accuracy','mouse'});
+mdl = fitglm(tbl,'accuracy~mouse'...
+    ,'CategoricalVars',[2])
+
+txt = evalc('mdl');
+txt=regexp(txt,'<strong>','split');
+txt=cell2mat(txt);
+txt=regexp(txt,'</strong>','split');
+txt=cell2mat(txt);
+
+fprintf(fileID,'%s\n', txt);
+
+
+%Do the ranksum/t-test
+fprintf(1, ['\n\nRanksum or t-test p values for behavioral accuracy vs mouse\n'])
+fprintf(fileID, ['\n\nRanksum or t-test p values for behavioral accuracy vs mouse\n']);
+
+
+[output_data] = drgMutiRanksumorTtest(input_ba_data, fileID,0);
+
+
 %Plot the histogram for the time for odor encounter with respect to the
 %final turn
 figNo = figNo + 1;
@@ -2352,7 +2438,7 @@ txt=regexp(txt,'</strong>','split');
 txt=cell2mat(txt);
 
 fprintf(fileID,'%s\n', txt);
-
+ 
 
 %Do the ranksum/t-test
 fprintf(1, ['\n\nRanksum or t-test p values for mouse speed\n'])

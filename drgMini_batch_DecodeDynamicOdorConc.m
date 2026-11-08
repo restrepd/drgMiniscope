@@ -134,7 +134,7 @@ if all_files_present==1
                     % ii_failures=0;
                     % while is_done==0
                     %     try
-                            handles_out=drgMini_DecodeDynamicOdorConc(handles_choices);
+                            handles_out=drgMini_DecodeDynamicOdorConcv2(handles_choices);
                             is_done=1;
                     %     catch
                     %         ii_failures=ii_failures+1;

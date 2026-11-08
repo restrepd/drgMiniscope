@@ -638,6 +638,7 @@ bar_offsets=[0:2:bar_offset-2];
 plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('r2ER for odor concentration')
@@ -769,6 +770,7 @@ bar_offsets=[0:bar_offset-1];
 plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('Significant r2ER for odor concentration')
@@ -1214,6 +1216,7 @@ bar_offsets=[0:2:bar_offset-2];
 plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('r2ER for x')
@@ -1371,6 +1374,7 @@ bar_offsets=[0:2:bar_offset-2];
 plot(bar_offsets,these_r2ER_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('r2ER for y')
@@ -1507,6 +1511,7 @@ bar_offsets=[0:bar_offset-1];
 plot(bar_offsets,these_r2ER_x_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('Significant r2ER for x')
@@ -1645,6 +1650,7 @@ bar_offsets=[0:1:bar_offset-1];
 plot(bar_offsets,these_r2ER_y_means,'-o','Color',[0.7 0.7 0.7],'LineWidth',2,'MarkerFaceColor',[0.7 0.7 0.7])
 
 xlim([-0.5 bar_offset-0.5])
+ylim([0 0.9])
 xticklabels(ROIsubset_labels);   % tick labels from your cell array
 xlabel('No ROIs')
 ylabel('Significant r2ER for y')

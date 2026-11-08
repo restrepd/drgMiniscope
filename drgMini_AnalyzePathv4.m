@@ -46,7 +46,7 @@ if exist('handles_choices')==0
     % dFF_file='20221117_FCM22_withodor_nearfloor_miniscope_sync_L1andL4_ncorre_fix_ext.mat';
     % arena_file='20221117_FCM22withodor_nearfloor_odorarena_L1andL4_fix_sync_mm.mat';
 
-    handles_choices.save_path='/data2/SFTP/PreProcessed/Temp/';
+    handles_choices.save_path='/Users/restrepd/Documents/Projects/SFTPl/Temp/';
 
 
     % arena_file='20220804_FCM22withodor_odorarena_L1andL4_sync.mat';

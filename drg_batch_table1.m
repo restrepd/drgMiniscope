@@ -174,6 +174,8 @@ all_info_mutual_xy_op_bin=[];
 handles_outic=[];
 
 no_trials=[];
+no_hits=[];
+no_miss=[];
 no_neurons=[];
 mouse_no=[];
 cm_from_floor=[];
@@ -189,6 +191,8 @@ for fileNo=1:length(handles_conc.arena_file)
         load([save_PathXY arena_file(1:end-4) handles_XY.save_tag{ii_run} '.mat'])
         trials=handles_out.trials;
         no_neurons(ii_files)=handles_out.no_neurons;
+        no_hits(ii_files)=sum((logical(trials.hit1==1))|(logical(trials.hit4==1)));
+        no_miss(ii_files)=sum((logical(trials.miss1==1))|(logical(trials.miss4==1)));
         no_trials(ii_files)=trials.odor_trNo;
         mouse_no(ii_files)=handles_conc.mouse(fileNo);
 
@@ -210,7 +214,7 @@ for fileNo=1:length(handles_conc.arena_file)
 end
 
 % Create table
-T = table([1:ii_files]',mouse_no', no_trials', no_neurons', cm_from_floor','VariableNames', {'File #','mouse #','# of trials','# of neurons','cm from floor'});
+T = table([1:ii_files]',mouse_no', no_trials', no_hits', no_miss', no_neurons', cm_from_floor','VariableNames', {'File #','mouse #','# of trials','# of ROP trials','# of MOP trials','# of neurons','cm from floor'});
 
 % Save so it opens in Excel
 writetable(T, [save_PathTable save_FileTable]);
